@@ -3,14 +3,14 @@
 use Livewire\Attibutes\Modelable;
 use Livewire\Component;
 
-new class extends Component
-{
+new class extends Component {
     public $heads;
-
+    public $messageSearch;
     #[Modelable]
     public $search = '';
 
-    public function mount($heads){
+    public function mount($heads)
+    {
         $this->heads = $heads;
     }
 };
@@ -21,7 +21,7 @@ new class extends Component
     <div class="d-flex justify-content-end mb-3">
         <div class="d-flex justify-content-end w-50 align-items-center">
             <span class="me-1">Buscar:</span>
-            <input type="text" class="form-control w-50" placeholder="Ingrese texto" wire:model.live="search">
+            <input type="text" class="form-control w-50" placeholder="{{ $messageSearch  }}" wire:model.live="search">
         </div>
     </div>
     <table class="table table-striped">
