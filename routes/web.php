@@ -15,14 +15,18 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 Route::middleware('auth')->group(function () {
     Route::get('/admin/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/admin/changePassword', [App\Http\Controllers\ProfileController::class, 'changePassword'])->name('profile.changePassword');
+
+
+    Route::get('/admin/access', [App\Http\Controllers\AccessController::class, 'show'])->name('access.show');
+
 });
 
 
-Route::prefix('/dashboard')->group(function(){
+Route::prefix('/dashboard')->group(function () {
 
-    Route::get('/',[App\Http\Controllers\HomeController::class,'dashboard'])->name('dashboard');
+    Route::get('/', [App\Http\Controllers\HomeController::class, 'dashboard'])->name('dashboard');
 
-    Route::controller(AdministrationController::class)->group(function(){
-        Route::get('/users','users')->name('administration.users');
+    Route::controller(AdministrationController::class)->group(function () {
+        Route::get('/users', 'users')->name('administration.users');
     });
 });

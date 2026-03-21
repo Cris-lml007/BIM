@@ -327,6 +327,12 @@ return [
             'label' => 4,
             'label_color' => 'success',
         ],
+
+        [
+            'text' => 'Gestion de accesos',
+            'url' => 'admin/access',
+            'icon' => 'far fa-fw fa-file',
+        ],
         ['header' => 'CONFIGURACIÓN DE CUENTA'],
         [
             'text' => 'Perfil',
@@ -338,7 +344,7 @@ return [
             'url' => 'admin/changePassword',
             'icon' => 'fas fa-fw fa-lock',
         ],
-        
+
     ],
 
     /*
