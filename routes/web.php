@@ -22,7 +22,7 @@ Route::middleware('auth')->group(function () {
 });
 
 
-Route::prefix('/dashboard')->middleware('auth')->group(function(){
+Route::prefix('/dashboard')->group(function () {
 
     Route::get('/', [App\Http\Controllers\HomeController::class, 'dashboard'])->name('dashboard');
 

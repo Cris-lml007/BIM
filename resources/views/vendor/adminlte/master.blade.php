@@ -57,7 +57,6 @@
                 @endif
         @endswitch
     @endif
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 
     {{-- Extra Configured Plugins Stylesheets --}}
     @include('adminlte::plugins', ['type' => 'css'])
