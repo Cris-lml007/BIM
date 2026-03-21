@@ -12,6 +12,10 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
+Route::middleware('auth')->group(function () {
+    Route::get('/admin/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/admin/changePassword', [App\Http\Controllers\ProfileController::class, 'changePassword'])->name('profile.changePassword');
+});
 
 
 Route::prefix('/dashboard')->group(function(){
