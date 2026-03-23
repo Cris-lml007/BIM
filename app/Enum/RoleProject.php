@@ -1,0 +1,12 @@
+<?php
+
+namespace App\Enum;
+
+enum RoleProject: int
+{
+    CASE OWNER = 1;
+    CASE CONSTRUCTION_MANAGER = 2;
+    CASE CONSTRUCTION_SUPERVISOR = 3;
+    CASE SPECIALIST_ENGINEER = 4;
+    CASE SITE_RESIDENT = 5;
+}
