@@ -17,10 +17,10 @@ new class extends Component
 
     public $sortDirection = 'asc';
 
-    public function mount($heads){
+    public function mount($heads, $placeholder == 'Ingrese Texto'){
         $this->heads = $heads;
-        $this->sortField = $this->list['sortField'];
-        $this->sortDirection = $this->list['sortDirection'];
+        $this->sortField = $this->list['sortField'] ?? null;
+        $this->sortDirection = $this->list['sortDirection'] ?? null;
     }
 
     public function sortBy($field){
@@ -46,7 +46,7 @@ new class extends Component
     <div class="d-flex justify-content-end mb-3">
         <div class="d-flex justify-content-end w-50 align-items-center">
             <span class="me-1">Buscar:</span>
-            <input wire:key="table-1" type="text" class="form-control w-50" placeholder="Ingrese texto" wire:model.live="search">
+            <input wire:key="table-1" type="text" class="form-control w-50" placeholder="{{ $placeholder }}" wire:model.live="search">
         </div>
     </div>
     <table class="table table-striped">
