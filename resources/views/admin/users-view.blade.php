@@ -6,6 +6,6 @@
 
 @section('content')
 <x-card>
-    <livewire:users-view></livewire:users-view>
+    <livewire:admin.users-view></livewire:admin.users-view>
 </x-card>
 @endsection
