@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdministrationController;
+use App\Livewire\Admin\UsersForm;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -29,4 +30,6 @@ Route::prefix('/dashboard')->middleware('auth')->group(function(){
     Route::controller(AdministrationController::class)->group(function () {
         Route::get('/users', 'users')->name('administration.users');
     });
+
+    Route::get('/users/{id}',UsersForm::class)->name('administration.users.form');
 });

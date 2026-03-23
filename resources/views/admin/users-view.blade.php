@@ -1,11 +1,17 @@
-@extends('adminlte::page')
+@extends('layouts.main')
 
-@section('content_header')
-<h1>Gestión de Usuarios</h1>
+@section('header')
+    <h1>Gestión de Usuarios</h1>
+    <button data-bs-toggle="modal" data-bs-target="#modal-user" class="btn btn-primary"><i class="fa fa-plus"></i>
+        Añadir Nuevo Usuario</button>
 @endsection
 
-@section('content')
-<x-card>
-    <livewire:admin.users-view></livewire:admin.users-view>
-</x-card>
+@section('content_body')
+    <x-card>
+        <livewire:admin.users-view></livewire:admin.users-view>
+    </x-card>
+
+    <x-modal id="modal-user" title="Nuevo Usuario" class="modal-lg">
+        <livewire:admin.users-form></livewire:admin.users-form>
+    </x-modal>
 @endsection

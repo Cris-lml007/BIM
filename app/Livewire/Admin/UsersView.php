@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Enum\RoleSaas;
 use App\Models\User;
 use Livewire\Component;
 
@@ -14,6 +15,14 @@ class UsersView extends Component
         'sortDirection' => 'asc'
     ];
 
+
+
+    public function changeStatus(User $user){
+        $user->is_active = !$user->is_active;
+        $user->save();
+    }
+
+
     public function render()
     {
         $heads = [
@@ -22,6 +31,7 @@ class UsersView extends Component
             'Organización' => 'organization',
             'Celular' => 'phone',
             'Email' => 'email',
+            'Rol' => null,
             'Opciones' => null
         ];
 
@@ -39,6 +49,10 @@ class UsersView extends Component
             $data = User::orderBy($this->actions['sortField'],$this->actions['sortDirection'])
                 ->paginate();
         }
-        return view('livewire.admin.users-view',compact(['heads','data']));
+
+        $title = 'Nuevo Usuario';
+        $roles = RoleSaas::cases();
+
+        return view('livewire.admin.users-view',compact(['heads','data','title','roles']));
     }
 }
