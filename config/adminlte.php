@@ -154,8 +154,8 @@ return [
 
     'layout_topnav' => null,
     'layout_boxed' => null,
-    'layout_fixed_sidebar' => null,
-    'layout_fixed_navbar' => null,
+    'layout_fixed_sidebar' => true,
+    'layout_fixed_navbar' => true,
     'layout_fixed_footer' => null,
     'layout_dark_mode' => null,
 
@@ -332,6 +332,12 @@ return [
             'text' => 'Gestion de accesos',
             'url' => 'admin/access',
             'icon' => 'far fa-fw fa-file',
+        ],
+        [
+            'text' => 'Gestión de Usuarios',
+            'route' => 'administration.users',
+            'icon' => 'fa fa-users',
+            'can' => 'isAdministration'
         ],
         ['header' => 'CONFIGURACIÓN DE CUENTA'],
         [
