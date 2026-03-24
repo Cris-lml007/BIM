@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class UsersForm extends Component
@@ -22,7 +23,28 @@ class UsersForm extends Component
     public $password_confirmation;
     public User $user;
 
-    public function mount($id = null){
+    public $page = false;
+    public $modal_name = null;
+
+    public function mount($modal_name = null,$id = null){
+        $this->modal_name = $modal_name;
+        if(User::find($id) != null){
+            $this->user = User::find($id);
+            $this->name = $this->user->name;
+            $this->email = $this->user->email;
+            $this->phone = $this->user->phone;
+            $this->role = $this->user->role;
+            $this->status = $this->user->is_active;
+            $this->organization = $this->user->organization;
+
+            $this->page = true;
+        }else{
+            $this->user = new User();
+        }
+    }
+
+    #[On('getUser')]
+    public function getUser($id){
         if(User::find($id) != null){
             $this->user = User::find($id);
             $this->name = $this->user->name;
@@ -48,9 +70,14 @@ class UsersForm extends Component
     }
 
     public function updatedPasswordConfirmation(){
-        $this->validate([
-            'password' => [ Password::min(8)->mixedCase()->numbers()->symbols(), 'confirmed']
-        ]);
+        if($this->password != ''){
+            $this->validate([
+                'password' => [ Password::min(8)->mixedCase()->numbers()->symbols(), 'confirmed']
+            ]);
+
+        }else{
+            $this->resetValidation('password');
+        }
     }
 
 
@@ -76,11 +103,12 @@ class UsersForm extends Component
         $id = $this->user->id;
         $this->user->save();
 
-        if($id == null){
+        if($id == null || !$this->page){
+            $text = $id == null ? 'Usuario Creado' : 'Usuario Actualizado';
             $this->user = new User();
             $id = null;
             $this->js('closeModal');
-            $this->js('Swal.fire({icon:"success",title: "Usuario Creado",confirmButtonText: "Entendido"})');
+            $this->js("Swal.fire({icon:'success',title: '$text',confirmButtonText: 'Entendido'})");
         }else{
             return $this->redirect(route('administration.users'));
         }

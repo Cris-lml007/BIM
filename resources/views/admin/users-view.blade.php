@@ -12,6 +12,6 @@
     </x-card>
 
     <x-modal id="modal-user" title="Nuevo Usuario" class="modal-lg">
-        <livewire:admin.users-form></livewire:admin.users-form>
+        <livewire:admin.users-form modal_name="modal-user"></livewire:admin.users-form>
     </x-modal>
 @endsection

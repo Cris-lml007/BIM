@@ -22,6 +22,11 @@ class UsersView extends Component
         $user->save();
     }
 
+    public function getUser($id){
+        $this->dispatch('getUser',$id)->to(UsersForm::class);
+        $this->js("$('#modal-info').modal('show');");
+    }
+
 
     public function render()
     {

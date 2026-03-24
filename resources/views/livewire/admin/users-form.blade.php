@@ -1,5 +1,5 @@
 <div>
-    @if ($user->id != null)
+    @if ($user->id != null && !$page)
         <x-slot name="header">
             <h1>Administrar Usuario</h1>
         </x-slot>
@@ -96,7 +96,7 @@
                 </div>
             </div>
         </div>
-        @if ($user->id == null)
+        @if ($user->id == null || !$page)
             <div class="modal-footer">
                 <button class="btn btn-primary" type="submit">Guardar</button>
                 <button class="btn btn-secondary" type="reset" data-bs-dismiss="modal">Cancelar</button>
@@ -116,7 +116,7 @@
 @script
     <script>
         this.$js.closeModal = () => {
-            $('#modal-user').modal('hide');
+            $("#" + $wire.modal_name).modal('hide');
         };
     </script>
 @endscript
