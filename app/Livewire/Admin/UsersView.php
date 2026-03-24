@@ -58,6 +58,10 @@ class UsersView extends Component
         $title = 'Nuevo Usuario';
         $roles = RoleSaas::cases();
 
-        return view('livewire.admin.users-view',compact(['heads','data','title','roles']));
+        $actives = User::where('is_active',1)->count();
+        $blockeds = User::where('is_active',0)->count();
+        $total = User::all()->count();
+
+        return view('livewire.admin.users-view',compact(['heads','data','title','roles','actives','blockeds','total']));
     }
 }
