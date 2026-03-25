@@ -337,19 +337,14 @@ return [
             'text' => 'Gestión de Usuarios',
             'route' => 'administration.users',
             'icon' => 'fa fa-users',
-            'can' => 'isAdministration'
         ],
         ['header' => 'CONFIGURACIÓN DE CUENTA'],
         [
             'text' => 'Perfil',
-            'url' => 'admin/profile',
+            'url' => 'profile',
             'icon' => 'fas fa-fw fa-user',
         ],
-        [
-            'text' => 'Cambiar contraseña',
-            'url' => 'admin/changePassword',
-            'icon' => 'fas fa-fw fa-lock',
-        ],
+
 
     ],
 

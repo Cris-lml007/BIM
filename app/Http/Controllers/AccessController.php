@@ -8,6 +8,6 @@ class AccessController extends Controller
 {
     public function show()
     {
-        return view('access');
+        return view('admin.access-view');
     }
 }
