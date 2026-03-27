@@ -43,7 +43,10 @@ new class extends Component
 ?>
 
 <div>
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex justify-content-between mb-3">
+        <div class="d-flex align-items-center" style="height: 50px;">
+            {{ $slot['title'] }}
+        </div>
         <div class="d-flex justify-content-end w-50 align-items-center">
             <span class="me-1">Buscar:</span>
             <input wire:key="table-1" type="text" class="form-control w-50" placeholder="Ingrese texto" wire:model.live="search">
