@@ -62,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
                         ],
                         [
                             'text' => 'Modelos 3D',
-                            'url' => route('app.project.view',['project' => $project->id]),
+                            'url' => route('app.project.model3d',['project' => $project->id]),
                             'icon' => 'nf nf-fa-cube',
                         ],
                         [

@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Enum\RoleSaas;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -104,7 +105,11 @@ class UsersForm extends Component
         $this->user->save();
 
         if($id == null || !$this->page){
-            $text = $id == null ? 'Usuario Creado' : 'Usuario Actualizado';
+            if($id == null){
+                $text = 'Usuario Creado';
+            }else{
+                $text = 'Usuario Actualizado';
+            }
             $this->user = new User();
             $id = null;
             $this->js('closeModal');

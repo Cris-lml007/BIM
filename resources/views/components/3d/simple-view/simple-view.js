@@ -4,6 +4,37 @@ const rgbeLoader = new RGBELoader();
 let renderer, scene, camera, controls;
 let currentModel = null;
 
+
+function attachToInput(blob) {
+    const file = new File([blob], 'thumbnail.png', {
+        type: 'image/png'
+    });
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+
+    const input = document.getElementById('thumbnail');
+    input.files = dataTransfer.files;
+
+    // 🔥 IMPORTANTE para Livewire
+    input.dispatchEvent(new Event('change'));
+}
+
+function generateThumbnail() {
+    const dataURL = renderer.domElement.toDataURL('image/png');
+
+    fetch(dataURL)
+        .then(res => res.blob())
+        .then(blob => {
+            attachToInput(blob);
+        });
+}
+
+
+
+
+
+
 function preview(file) {
     const url = URL.createObjectURL(file);
 
@@ -41,8 +72,11 @@ function preview(file) {
                 }
             });
 
-            console.log("Modelo cargado correctamente");
 
+            setTimeout(() => {
+                generateThumbnail();
+            }, 300);
+            console.log("Modelo cargado correctamente");
         },
         undefined,
         function (error) {
@@ -81,7 +115,7 @@ document.addEventListener('shown.bs.modal', function (event) {
         1000
     );
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.physicallyCorrectLights = true;
     renderer.outputEncoding = THREE.sRGBEncoding;
@@ -134,4 +168,8 @@ document.addEventListener('shown.bs.modal', function (event) {
     animate();
 
     console.log("Three.js inicializado correctamente");
+});
+
+document.getElementById('btn-generate').addEventListener('click',()=>{
+    generateThumbnail();
 });

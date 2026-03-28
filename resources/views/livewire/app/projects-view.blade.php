@@ -11,7 +11,7 @@
         <x-card>
             <livewire:table :heads="$heads" wire:model.live="list">
                 <livewire:slot name="title">
-                    <h4><strong><a href="{{ route('app.projects') }}">Proyectos</a></strong></h4>
+                    <h4>Proyectos</h4>
                 </livewire:slot>
 
                 @foreach ($data as $item)
