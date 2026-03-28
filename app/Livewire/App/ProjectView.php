@@ -8,6 +8,12 @@ use Livewire\Component;
 class ProjectView extends Component
 {
 
+    public $list = [
+        'search' => '',
+        'sortField' => 'id',
+        'sortDirection' => 'asc'
+    ];
+
     public $project;
 
 
@@ -17,6 +23,13 @@ class ProjectView extends Component
 
     public function render()
     {
-        return view('livewire.app.project-view');
+        $heads = [
+            'ID' => 'id',
+            'Nombre' => 'name',
+            'Modelo' => 'model',
+            'Creado' => 'create_at',
+            'Opciones' => null
+        ];
+        return view('livewire.app.project-view',compact(['heads']));
     }
 }
