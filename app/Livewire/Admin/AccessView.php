@@ -18,8 +18,23 @@ class AccessView extends Component
 
     public function changeStatus(Access $access)
     {
+        //*
         $access->is_active = !$access->is_active;
+        $text = $access->is_active ? 'Acceso Habilitado' : 'Acceso Deshabilitado';
+
+        $this->js("
+Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'info',
+    title: '$text',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true
+});
+");
         $access->save();
+
     }
 
     public function getAccess($id)
@@ -48,12 +63,12 @@ class AccessView extends Component
         if ($search != '' || $search != null) {
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('email', 'like', '%' . $search . '%');
+                    ->orWhere('email', 'like', '%' . $search . '%');
             });
         }
 
         $accesses = $query->orderBy($this->actions['sortField'], $this->actions['sortDirection'])
-                      ->paginate();
+            ->paginate();
 
         $actives = Access::where('is_active', 1)->count();
         $blockeds = Access::where('is_active', 0)->count();

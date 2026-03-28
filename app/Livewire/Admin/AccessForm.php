@@ -48,8 +48,8 @@ class AccessForm extends Component
         $this->max_projects = $access->max_projects;
         $this->max_users = $access->max_users;
         $this->is_active = $access->is_active;
-        $this->available = $access->available ? date('Y-m-d\TH:i', strtotime($access->available)) : null;
-        $this->available_end = $access->available_end ? date('Y-m-d\TH:i', strtotime($access->available_end)) : null;
+        $this->available = $access->available ? date('Y-m-d', strtotime($access->available)) : null;
+        $this->available_end = $access->available_end ? date('Y-m-d', strtotime($access->available_end)) : null;
     }
 
     public function save()
@@ -83,7 +83,7 @@ class AccessForm extends Component
         $this->js('closeModal');
         $this->js("Swal.fire({icon:'success',title: '$text',confirmButtonText: 'Entendido'})");
 
-        $this->dispatch('refreshAccessList')->to(AccessView::class);
+        //$this->dispatch('refreshAccessList')->to(AccessView::class);
     }
 
     public function render()

@@ -52,22 +52,16 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cerrar</button>
-            <button class="btn btn-primary" type="submit">Guardar Cambios</button>
+            <button class="btn btn-primary" type="submit">Guardar</button>
         </div>
     </form>
 </div>
 
 @script
-    <script>
-        this.$js.closeModal = () => {
-            const modalElement = document.getElementById($wire.modal_name);
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            } else {
-                // Fallback if instance is not found
-                $("#" + $wire.modal_name).modal('hide');
-            }
-        };
-    </script>
+<script>
+
+    this.$js.closeModal = () => {
+        $("#" + $wire.modal_name).modal('hide');
+    };
+</script>
 @endscript

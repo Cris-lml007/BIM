@@ -14,6 +14,12 @@ class Access extends Model
         'available',
         'available_end',
     ];
+    
+    protected $casts = [
+        'is_active' => 'boolean',
+        'available' => 'date',
+        'available_end' => 'date',
+    ];
 
     public function user()
     {

@@ -4,7 +4,7 @@
     <div class="container d-flex justify-content-between">
         <h1>Gestión de accesos</h1>
         <button data-bs-toggle="modal" data-bs-target="#modal-user" class="btn btn-primary"><i class="fa fa-plus"></i>
-            Añadir Nuevo Acceso</button>
+            Nuevo Acceso</button>
 
     </div>
 @endsection
@@ -14,7 +14,7 @@
         <livewire:admin.access-view></livewire:admin.access-view>
     </div>
 
-    <x-modal id="modal-user" title="Nuevo Usuario" class="modal-lg">
+    <x-modal id="modal-user" title="Nuevo Acceso" class="modal-lg">
         <livewire:admin.access-form modal_name="modal-user"></livewire:admin.access-form>
     </x-modal>
 @endsection

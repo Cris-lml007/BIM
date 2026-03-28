@@ -29,15 +29,21 @@
                     <td>{{ $item->user->name }} <br><small class="text-muted">{{ $item->user->email }}</small></td>
                     <td>{{ $item->max_projects }}</td>
                     <td>{{ $item->max_users }}</td>
-                    <td>{{ $item->available }}</td>
-                    <td>{{ $item->available_end }}</td>
+
+                    <td>
+                        {{ \Carbon\Carbon::parse($item->available)->translatedFormat('d M Y') }}
+                    </td>
+
+                    <td>
+                        {{ \Carbon\Carbon::parse($item->available_end)->translatedFormat('d M Y') }}
+                    </td>
                     <td>
                         <span @class(['badge', 'bg-success' => $item->is_active, 'bg-danger' => !$item->is_active])>
                             {{ $item->is_active ? 'Activo' : 'Inactivo' }}
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-info" wire:click="getAccess({{ $item->id }})">
+                        <button class="btn btn-sm btn-primary" wire:click="getAccess({{ $item->id }})">
                             <i class="nf nf-fa-eye"></i>
                         </button>
                         <button wire:click="changeStatus({{ $item->id }})" @class(['btn btn-sm', 'btn-success' => $item->is_active, 'btn-secondary' => !$item->is_active])>
