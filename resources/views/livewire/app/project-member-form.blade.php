@@ -121,46 +121,14 @@
 
 
 
-    <!-- Scripts para eventos -->
-    @push('scripts')
-        <script>
-            document.addEventListener('livewire:init', function () {
-                Livewire.on('member-invited', (data) => {
-                    if (data.type === 'success') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Éxito!',
-                            text: data.message,
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 3000,
-                            timerProgressBar: true
-                        });
-                    } else if (data.type === 'error') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: data.message
-                        });
-                    } else if (data.type === 'warning') {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Atención',
-                            text: data.message
-                        });
-                    }
-                });
 
-                Livewire.on('close-modal', () => {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modal-invite'));
-                    if (modal) modal.hide();
-                });
-
-                Livewire.on('refresh-members-list', () => {
-                    Livewire.dispatch('$refresh');
-                });
-            });
-        </script>
-    @endpush
 </div>
+
+@script
+<script>
+
+    this.$js.closeModal = () => {
+        $("#" + $wire.modal_name).modal('hide');
+    };
+</script>
+@endscript

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class ProjectMembersView extends Component
 {
     use AuthorizesRequests;
-public Project $project;
+    public Project $project;
     public $email = '';
     public $userSearch = '';
     public $role = '';
@@ -45,7 +45,7 @@ public Project $project;
         'role' => 'required|in:admin,member',
     ];
 
-       
+
     public function mount(Project $project)
     {
         $this->project = $project;
@@ -56,7 +56,7 @@ public Project $project;
         }
         */
     }
-    
+
 
     public function openInviteModal()
     {
@@ -266,10 +266,10 @@ Swal.fire({
         $sortColumn = match ($sortField) {
             'pivot_role' => 'project_user.role',
             'created_at' => 'project_user.created_at',
-            'id'         => 'users.id',
-            'name'       => 'users.name',
-            'email'      => 'users.email',
-            default      => $sortField
+            'id' => 'users.id',
+            'name' => 'users.name',
+            'email' => 'users.email',
+            default => $sortField
         };
 
         $members = $query->orderBy($sortColumn, $this->actions['sortDirection'])->get();

@@ -15,6 +15,6 @@
     </div>
 
     <x-modal id="modal-member" title="Invitar" class="modal-md">
-        <livewire:app.project-member-form modal_name="modal-member"></livewire:app.project-member-form>
+        <livewire:app.project-member-form :project="$project" modal_name="modal-member"></livewire:app.project-member-form>
     </x-modal>
 @endsection

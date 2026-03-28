@@ -146,20 +146,13 @@ class ProjectMemberForm extends Component
                 'role' => $this->role
             ]);
 
-            // Enviar notificación de invitación aceptada
-            $this->sendInvitationNotification($this->selectedUser['email'], $this->selectedUser['name']);
-
-            $this->dispatch('member-invited', [
-                'type' => 'success',
-                'message' => "{$this->selectedUser['name']} ha sido invitado al proyecto exitosamente"
-            ]);
-
             $this->reset(['email', 'role', 'selectedUser', 'isExistingUser']);
-            $this->dispatch('close-modal');
-            $this->dispatch('refresh-members-list');
+
+            $this->js("Swal.fire({icon:'success',title: 'Invitacion enviada',confirmButtonText: 'Entendido'})");
+            $this->js('closeModal');
 
         } catch (\Exception $e) {
-            Log::error('Error al invitar usuario: ' . $e->getMessage());
+            dd('Error al invitar usuario: ' . $e->getMessage());
             $this->dispatch('member-invited', [
                 'type' => 'error',
                 'message' => 'Error al invitar al usuario. Por favor intenta de nuevo.'
@@ -219,7 +212,7 @@ class ProjectMemberForm extends Component
             $this->dispatch('close-modal');
 
         } catch (\Exception $e) {
-            Log::error('Error al enviar invitación externa: ' . $e->getMessage());
+            dd('Error al enviar invitación externa: ' . $e->getMessage());
             $this->dispatch('member-invited', [
                 'type' => 'error',
                 'message' => 'Error al enviar la invitación. Por favor intenta de nuevo.'
@@ -227,12 +220,7 @@ class ProjectMemberForm extends Component
         }
     }
 
-    private function sendInvitationNotification($email, $name)
-    {
-        // Aquí puedes implementar el envío de notificación por correo o WhatsApp
-        // Por ahora solo registramos en log
-        Log::info("Invitación enviada a {$name} ({$email}) para el proyecto {$this->project->name}");
-    }
+
 
     private function getAvatar($name)
     {

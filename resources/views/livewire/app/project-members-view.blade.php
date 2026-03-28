@@ -55,7 +55,7 @@
                         @if ($member->id === $owner->id)
                             <span class="badge bg-warning">Propietario</span>
                         @else
-                            <span class="badge bg-{{ $member->pivot->role === 'admin' ? 'success' : 'info' }}">
+                            <span class="badge bg-{{ $member->pivot->role === 'admin' ? 'success' : 'primary' }}">
                                 {{ ucfirst($member->pivot->role) }}
                             </span>
                         @endif
@@ -63,12 +63,8 @@
                     <td>{{ $member->pivot->created_at ? $member->pivot->created_at->format('d/m/Y') : '-' }}</td>
                     <td>
                         @if ($member->id !== $owner->id)
-                            <button wire:click="removeMember({{ $member->id }})" class="btn btn-sm btn-danger"
-                                onclick="confirm('¿Estás seguro de eliminar a {{ $member->name }} del proyecto?') || event.stopImmediatePropagation()">
+                            <button wire:click="removeMember({{ $member->id }})" class="btn btn-sm btn-danger">
                                 <i class="fa fa-trash"></i>
-                            </button>
-                            <button wire:click="getUser({{ $member->id }})" class="btn btn-sm btn-info">
-                                <i class="fa fa-eye"></i>
                             </button>
                         @else
                             <span class="text-muted">-</span>

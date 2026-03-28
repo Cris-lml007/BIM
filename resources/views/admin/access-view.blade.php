@@ -5,7 +5,6 @@
         <h1>Gestión de accesos</h1>
         <button data-bs-toggle="modal" data-bs-target="#modal-user" class="btn btn-primary"><i class="fa fa-plus"></i>
             Nuevo Acceso</button>
-
     </div>
 @endsection
 
