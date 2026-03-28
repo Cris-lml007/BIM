@@ -154,8 +154,8 @@ return [
 
     'layout_topnav' => null,
     'layout_boxed' => null,
-    'layout_fixed_sidebar' => null,
-    'layout_fixed_navbar' => null,
+    'layout_fixed_sidebar' => true,
+    'layout_fixed_navbar' => true,
     'layout_fixed_footer' => null,
     'layout_dark_mode' => null,
 
@@ -312,38 +312,30 @@ return [
 
         // Sidebar items:
         [
-            'type' => 'sidebar-menu-search',
-            'text' => 'search',
+            'key' => 'dashboard',
+            'text' => 'Principal',
+            'route' => 'dashboard',
+            'icon' => 'fa fa-home',
         ],
-        [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
-        ],
-        [
-            'text' => 'pages',
-            'url' => 'admin/pages',
-            'icon' => 'far fa-fw fa-file',
-            'label' => 4,
-            'label_color' => 'success',
-        ],
-
         [
             'text' => 'Gestion de accesos',
             'url' => 'admin/access',
             'icon' => 'far fa-fw fa-file',
+            'can' => 'isAdministration'
+        ],
+        [
+            'text' => 'Gestión de Usuarios',
+            'route' => 'administration.users',
+            'icon' => 'fa fa-users',
+            'can' => 'isAdministration'
         ],
         ['header' => 'CONFIGURACIÓN DE CUENTA'],
         [
             'text' => 'Perfil',
-            'url' => 'admin/profile',
+            'url' => 'profile',
             'icon' => 'fas fa-fw fa-user',
         ],
-        [
-            'text' => 'Cambiar contraseña',
-            'url' => 'admin/changePassword',
-            'icon' => 'fas fa-fw fa-lock',
-        ],
+
 
     ],
 
@@ -357,7 +349,7 @@ return [
     | For detailed instructions you can look the menu filters section here:
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
     |
-    */
+     */
 
     'filters' => [
         JeroenNoten\LaravelAdminLte\Menu\Filters\GateFilter::class,
@@ -379,7 +371,7 @@ return [
     | For detailed instructions you can look the plugins section here:
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Plugins-Configuration
     |
-    */
+     */
 
     'plugins' => [
         'Datatables' => [
@@ -465,7 +457,7 @@ return [
     | For detailed instructions you can look the iframe mode section here:
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/IFrame-Mode-Configuration
     |
-    */
+     */
 
     'iframe' => [
         'default_tab' => [
@@ -497,7 +489,7 @@ return [
     | For detailed instructions you can look the livewire here:
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Other-Configuration
     |
-    */
+     */
 
     'livewire' => true,
 ];

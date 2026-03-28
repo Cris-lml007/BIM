@@ -47,30 +47,34 @@ new class extends Component {
 ?>
 
 <div>
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex justify-content-between mb-3">
+        <div class="d-flex align-items-center" style="height: 50px;">
+            {{ $slot['title'] }}
+        </div>
         <div class="d-flex justify-content-end w-50 align-items-center">
             <span class="me-1">Buscar:</span>
             <input type="text" class="form-control w-50" placeholder="{{ $messageSearch  }}" wire:model.live="search">
         </div>
     </div>
-    <table class="table table-striped">
-        <thead>
-            @foreach ($heads as $label => $item)
-                <th @if($item != null) style="cursor: pointer;" wire:click="sortBy('{{ $item }}')" @endif>
-                    <div class="d-flex justify-content-between align-items-center">
-                        {{ $label }} @if($item != null) <i @class(['nf', 'nf-fa-arrow_down_a_z', 'nf-fa-arrow_down_z_a' => ($sortField == $item && $sortDirection == 'desc'), 'text-secondary' => $sortField != $item, 'text-dark' => $sortField == $item])></i> @endif
-                    </div>
-                </th>
-            @endforeach
-        </thead>
-        <tbody>
-            {{ $slot }}
-        </tbody>
-        <tfoot>
-            {{ $slot['footer'] }}
-        </tfoot>
-    </table>
-
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                @foreach ($heads as $label => $item)
+                    <th @if($item != null) style="cursor: pointer;" wire:click="sortBy('{{ $item }}')" @endif>
+                        <div class="d-flex justify-content-between align-items-center">
+                            {{ $label }} @if($item != null) <i @class(['nf', 'nf-fa-arrow_down_a_z', 'nf-fa-arrow_down_z_a' => ($sortField == $item && $sortDirection == 'desc'), 'text-secondary' => $sortField != $item, 'text-dark' => $sortField == $item])></i> @endif
+                        </div>
+                    </th>
+                @endforeach
+            </thead>
+            <tbody>
+                {{ $slot }}
+            </tbody>
+            <tfoot>
+                {{ $slot['footer'] }}
+            </tfoot>
+        </table>
+    </div>
     <div class="d-flex justify-content-end">
         {{ $slot['paginate'] }}
     </div>
