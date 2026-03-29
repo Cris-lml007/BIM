@@ -39,16 +39,6 @@
                     @error('available_end') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
             </div>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label for="is_active">Estado*</label>
-                    <select class="form-select" wire:model="is_active">
-                        <option value="1">Habilitado</option>
-                        <option value="0">Deshabilitado</option>
-                    </select>
-                    @error('is_active') <span class="text-danger">{{ $message }}</span> @enderror
-                </div>
-            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cerrar</button>

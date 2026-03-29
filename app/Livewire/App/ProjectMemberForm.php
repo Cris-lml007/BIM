@@ -17,7 +17,7 @@ class ProjectMemberForm extends Component
 {
     public Project $project;
     public $email = '';
-    public $role = 'member';
+    public $role = '';
     public $selectedUser = null;
     public $searchResults = [];
     public $showSearchResults = false;

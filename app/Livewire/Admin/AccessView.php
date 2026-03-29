@@ -15,26 +15,61 @@ class AccessView extends Component
         'sortField' => 'id',
         'sortDirection' => 'asc'
     ];
+    protected $listeners = [
+        'refreshAccessList' => 'refreshAccessList',
+    ];
+
+    public function refreshAccessList()
+    {
+
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Acceso creado',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+        $this->resetPage();
+    }
 
     public function changeStatus(Access $access)
     {
-        //*
         $access->is_active = !$access->is_active;
         $text = $access->is_active ? 'Acceso Habilitado' : 'Acceso Deshabilitado';
 
         $this->js("
-Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'info',
-    title: '$text',
-    showConfirmButton: false,
-    timer: 3000,
-    timerProgressBar: true
-});
-");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: '$text',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            ");
         $access->save();
+    }
 
+
+    public function delete(Access $access)
+    {
+        $access->delete();
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'Acceso Eliminado',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            ");
     }
 
     public function getAccess($id)
@@ -52,7 +87,8 @@ Swal.fire({
             'Usuarios' => 'max_users',
             'Inicio' => 'available',
             'Fin' => 'available_end',
-            'Estado' => 'is_active',
+            'Estado' => 'is_expired',
+            'Acceso' => 'is_active',
             'Opciones' => null
         ];
 
@@ -70,10 +106,32 @@ Swal.fire({
         $accesses = $query->orderBy($this->actions['sortField'], $this->actions['sortDirection'])
             ->paginate();
 
-        $actives = Access::where('is_active', 1)->count();
-        $blockeds = Access::where('is_active', 0)->count();
+        $actives = Access::where('is_active', 1)
+            ->where(function ($query) {
+                $query->whereNull('available')
+                    ->orWhere('available', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('available_end')
+                    ->orWhere('available_end', '>=', now());
+            })
+            ->count();
+        $blockeds = Access::where('is_active', 0)
+            ->where(function ($query) {
+                $query->whereNull('available')
+                    ->orWhere('available', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('available_end')
+                    ->orWhere('available_end', '>=', now());
+            })
+            ->count();
+
+        $expired = Access::whereNotNull('available_end')
+            ->where('available_end', '<', now())
+            ->count();
         $total = Access::count();
 
-        return view('livewire.admin.access-view', compact('heads', 'accesses', 'actives', 'blockeds', 'total'));
+        return view('livewire.admin.access-view', compact('heads', 'accesses', 'actives', 'blockeds', 'expired', 'total'));
     }
 }
