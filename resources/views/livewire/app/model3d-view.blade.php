@@ -18,8 +18,8 @@
                             <p class="card-text">{{ $item->description }}</p>
                             <span>por: {{ $item->user->name }}</span>
                         </div>
-                        <button class="btn btn-primary"
-                            style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</button>
+                        <a href="{{ route('app.project.model3d.id',['project' => $this->project->id, 'model' => $item->id]) }}" class="btn btn-primary"
+                            style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
                     </div>
                 </div>
             @endforeach
