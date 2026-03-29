@@ -51,4 +51,11 @@ class User extends Authenticatable
             'role' => RoleSaas::class
         ];
     }
+
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'project_user')
+                    ->withPivot('role')
+                    ->withTimestamps();
+    }
 }
