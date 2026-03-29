@@ -1,4 +1,4 @@
-<div class="p-5">
+<div class="p-4">
     <!-- Formulario de invitación -->
     <form wire:submit.prevent="checkExistingUser">
         <div class="mb-4">
@@ -34,7 +34,7 @@
                             <div class="fw-bold">{{ $result['name'] }}</div>
                             <div class="small text-muted">{{ $result['email'] }}</div>
                         </div>
-                        <i class="fa fa-chevron-right text-muted"></i>
+                        <i class="fa fa-circle text-secondary fa-2x"></i>
                     </button>
                 @endforeach
             </div>
@@ -69,10 +69,12 @@
                 <i class="fa fa-user-tag me-1"></i> Rol en el proyecto
             </label>
             <select class="form-select" wire:model="role">
-                <option value="member">Miembro</option>
-                <option value="admin">Administrador</option>
+                <option value="">Seleccione Rol</option>
+                @foreach ($roles as $role)
+                    <option value="{{ $role->value }}">{{ __('messages.' . $role->name)  }}</option>
+                @endforeach
             </select>
-            <div class="form-text">
+            <div class="form-text pt-2">
                 <i class="fa fa-info-circle"></i> Los administradores pueden gestionar miembros y configuraciones del
                 proyecto
             </div>
@@ -118,15 +120,10 @@
             </div>
         </div>
     @endif
-
-
-
-
 </div>
 
 @script
 <script>
-
     this.$js.closeModal = () => {
         $("#" + $wire.modal_name).modal('hide');
     };

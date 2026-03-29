@@ -21,9 +21,6 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/admin/access', [App\Http\Controllers\AccessController::class, 'show'])->name('access.show');
-
-    //Route::get()
-
 });
 
 

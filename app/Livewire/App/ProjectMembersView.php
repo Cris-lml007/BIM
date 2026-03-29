@@ -46,9 +46,30 @@ class ProjectMembersView extends Component
     ];
 
 
+    protected $listeners = [
+        'member-created' => 'refreshMembers',
+    ];
+    public function refreshMembers()
+    {
+        $this->loadMembers();
+        $this->js("
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Nuevo miembro agregado',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            ");
+
+    }
+
     public function mount(Project $project)
     {
         $this->project = $project;
+
         /*
         // Ensure the current user is authorized to see the project
         if (Auth::user()->id !== $this->project->user_id && !$this->project->members()->where('user_id', Auth::user()->id)->exists()) {
@@ -56,7 +77,31 @@ class ProjectMembersView extends Component
         }
         */
     }
+    protected function loadMembers()
+    {
+        $query = $this->project->members();
 
+        // Aplicar búsqueda si existe
+        if (!empty($this->actions['search'])) {
+            $query->where(function ($q) {
+                $q->where('users.name', 'like', '%' . $this->actions['search'] . '%')
+                    ->orWhere('users.email', 'like', '%' . $this->actions['search'] . '%');
+            });
+        }
+
+        $sortField = $this->actions['sortField'];
+        $sortColumn = match ($sortField) {
+            'pivot_role' => 'project_user.role',
+            'created_at' => 'project_user.created_at',
+            'id' => 'users.id',
+            'name' => 'users.name',
+            'email' => 'users.email',
+            default => $sortField
+        };
+
+        // Guardar en una propiedad para usar en render
+        $this->membersList = $query->orderBy($sortColumn, $this->actions['sortDirection'])->get();
+    }
 
     public function openInviteModal()
     {
@@ -231,16 +276,16 @@ class ProjectMembersView extends Component
             $this->project->members()->detach($userId);
 
             $this->js("
-Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'info',
-    title: 'Miembro eliminado del proyecto',
-    showConfirmButton: false,
-    timer: 3000,
-    timerProgressBar: true
-});
-");
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'Miembro eliminado del proyecto',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            ");
         }
     }
 
@@ -295,7 +340,6 @@ Swal.fire({
         $admins = $this->project->members()->wherePivot('role', 'admin')->count() + 1;
         $basic_members = $this->project->members()->wherePivot('role', 'member')->count();
 
-        Log::info('Render ejecutado para el proyecto ID: ' . $this->project->id);
         return view('livewire.app.project-members-view', compact('members', 'owner', 'total_members', 'admins', 'basic_members', 'usersSearchList'));
     }
 

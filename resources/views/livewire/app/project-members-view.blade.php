@@ -55,12 +55,20 @@
                         @if ($member->id === $owner->id)
                             <span class="badge bg-warning">Propietario</span>
                         @else
-                            <span class="badge bg-{{ $member->pivot->role === 'admin' ? 'success' : 'primary' }}">
-                                {{ ucfirst($member->pivot->role) }}
+                            @php
+                                $role = App\Enum\RoleProject::tryFrom($member->pivot->role);
+                            @endphp
+
+                            <span class="badge bg-{{ $role?->badgeColor() ?? 'secondary' }}">
+                                <i class="fa {{ $role?->icon() ?? 'fa-user' }} me-1"></i>
+                                {{ $role?->label() ?? 'Desconocido' }}
                             </span>
                         @endif
                     </td>
-                    <td>{{ $member->pivot->created_at ? $member->pivot->created_at->format('d/m/Y') : '-' }}</td>
+
+                    <td>
+                        {{ $member->pivot->created_at ? \Carbon\Carbon::parse($member->pivot->created_at)->translatedFormat('d M Y - H:i') : '-' }}
+                    </td>
                     <td>
                         @if ($member->id !== $owner->id)
                             <button wire:click="removeMember({{ $member->id }})" class="btn btn-sm btn-danger">

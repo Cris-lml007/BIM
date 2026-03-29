@@ -86,11 +86,6 @@ class AppServiceProvider extends ServiceProvider
                             'icon' => 'nf nf-fa-folder',
                         ],
                         [
-                            'text' => 'Compartido',
-                            'url' => 'menu/child2',
-                            'icon' => 'nf nf-fa-share',
-                        ],
-                        [
                             'text' => 'Miembros del proyecto',
                             'url' => route('app.project.members', ['project' => $project->id]),
                             'icon' => 'nf nf-fa-users',

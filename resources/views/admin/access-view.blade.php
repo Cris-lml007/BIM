@@ -13,7 +13,7 @@
         <livewire:admin.access-view></livewire:admin.access-view>
     </div>
 
-    <x-modal id="modal-user" title="Nuevo Acceso" class="modal-lg">
+    <x-modal id="modal-user" title="Nuevo Acceso" class="modal-md">
         <livewire:admin.access-form modal_name="modal-user"></livewire:admin.access-form>
     </x-modal>
 @endsection

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\App;
 
+use App\Enum\RoleProject;
 use App\Mail\ProjectInvitationMail;
 use App\Models\Project;
 use App\Models\ProjectInvitation;
@@ -9,6 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ProjectMemberForm extends Component
@@ -24,7 +26,7 @@ class ProjectMemberForm extends Component
 
     protected $rules = [
         'email' => 'required|email',
-        'role' => 'required|in:admin,member',
+        'role' => 'required|numeric',
     ];
 
     protected $messages = [
@@ -140,6 +142,7 @@ class ProjectMemberForm extends Component
             return;
         }
 
+        // dd("her");
         try {
             // Agregar miembro al proyecto
             $this->project->members()->attach($this->selectedUser['id'], [
@@ -148,9 +151,9 @@ class ProjectMemberForm extends Component
 
             $this->reset(['email', 'role', 'selectedUser', 'isExistingUser']);
 
-            $this->js("Swal.fire({icon:'success',title: 'Invitacion enviada',confirmButtonText: 'Entendido'})");
-            $this->js('closeModal');
+            $this->dispatch('member-created')->to('app.project-members-view');
 
+            $this->js("$('#modal-member').modal('hide');");
         } catch (\Exception $e) {
             dd('Error al invitar usuario: ' . $e->getMessage());
             $this->dispatch('member-invited', [
@@ -158,6 +161,7 @@ class ProjectMemberForm extends Component
                 'message' => 'Error al invitar al usuario. Por favor intenta de nuevo.'
             ]);
         }
+
     }
 
     public function inviteExternalUser()
@@ -236,6 +240,7 @@ class ProjectMemberForm extends Component
 
     public function render()
     {
-        return view('livewire.app.project-member-form');
+        $roles = RoleProject::cases();
+        return view('livewire.app.project-member-form', compact('roles'));
     }
 }
