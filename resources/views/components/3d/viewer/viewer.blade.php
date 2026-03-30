@@ -1,4 +1,10 @@
 <div>
+
+    <x-slot name="header">
+        <h1>{{ $project->name }} > {{ $model->name }}</h1>
+    </x-slot>
+
+
     <div id="viewer-wrapper" style="position: relative;">
 
         <div id="loading"
@@ -21,7 +27,7 @@
 
             <!-- VIEWER -->
             <div class="col d-flex" style="height: 100%;">
-                <div id="viewer" data-url="{{ route('model3d', $model->model->id) }}" style="flex: 1;">
+                <div id="viewer" data-url="{{ route('app.Attachment', $model->model->id) }}" style="flex: 1;">
                 </div>
                 <div id="viewer-controls" style="position:absolute; top:10px; right:10px; z-index:20;">
                     <button class="btn btn-sm btn-light" data-view="front">Front</button>
