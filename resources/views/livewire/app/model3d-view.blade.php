@@ -14,9 +14,10 @@
                              src="{{ route('app.thumbnail',$item->model->id) }}"
                             alt="">
                         <div class="card-body">
-                            <h5 class="card-title">{{ $item->name }}</h5>
+                            <h5 class="card-title">{{ $item->name }}<span class="badge text-bg-primary">{{ strtoupper($item->model->type) }}</span></h5>
                             <p class="card-text">{{ $item->description }}</p>
                             <span>por: {{ $item->user->name }}</span>
+                            <span>fecha: {{ \Carbon\Carbon::parse($item->created_at)->format('') }}</span>
                         </div>
                         <a href="{{ route('app.project.model3d.id',['project' => $this->project->id, 'model' => $item->id]) }}" class="btn btn-primary"
                             style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>

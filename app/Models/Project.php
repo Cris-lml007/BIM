@@ -16,4 +16,8 @@ class Project extends Model
     public function owner(){
         return $this->belongsTo(User::class,'user_id','id');
     }
+
+    public function models(){
+        return $this->hasMany(Model3D::class,'project_id','id');
+    }
 }

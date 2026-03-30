@@ -30,6 +30,7 @@ class ProjectView extends Component
             'Creado' => 'create_at',
             'Opciones' => null
         ];
-        return view('livewire.app.project-view',compact(['heads']));
+        $number_models = $this->project->models()->count();
+        return view('livewire.app.project-view',compact(['heads','number_models']));
     }
 }

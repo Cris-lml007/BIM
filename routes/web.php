@@ -43,7 +43,7 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
 
     Route::can('isUser')->get('/projects',ProjectsView::class)->name('app.projects');
-    Route::prefix('/project/{project}')->group(function(){
+    Route::can('isUser')->prefix('/project/{project}')->group(function(){
         Route::get('/',ProjectView::class)->name('app.project');
         Route::get('/model3d',Model3dView::class)->name('app.project.model3d');
         Route::livewire('/model3d/{model}','3d.viewer')->name('app.project.model3d.id');
