@@ -30,20 +30,20 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">1/5</h3>
+                        <h3 class="fw-bold">{{ $projects_active }}/5</h3>
                         <h6 class="mb-1 text-secondary">Proyectos Activos</h6>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">2/5</h3>
+                        <h3 class="fw-bold">{{ $projects_blocked }}/5</h3>
                         <h6 class="mb-1 text-secondary">Proyectos Bloquados</h6>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">3/5</h3>
+                        <h3 class="fw-bold">{{ $number_projects }}/5</h3>
                         <h6 class="mb-1 text-secondary">Total Compartidos</h6>
                     </div>
                 </div>

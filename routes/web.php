@@ -27,17 +27,22 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
     Route::get('/', [App\Http\Controllers\HomeController::class, 'dashboard'])->name('dashboard');
 
-    Route::controller(AdministrationController::class)->group(function () {
-        Route::get('/users', 'users')->name('administration.users');
+
+    Route::can('isAdministration')->group(function(){
+        Route::controller(AdministrationController::class)->group(function () {
+            Route::get('/users', 'users')->name('administration.users');
+        });
+        Route::get('/users/{id}', UsersForm::class)->name('administration.users.form');
     });
-    Route::get('/users/{id}', UsersForm::class)->name('administration.users.form');
+
 
     Route::controller(AttachmentController::class)->group(function(){
         Route::get('thumbnail/{id}','getThumbnail')->name('app.thumbnail');
         Route::get('Attachment/{id}','getAttachment')->name('app.Attachment');
     });
 
-    Route::get('/projects',ProjectsView::class)->name('app.projects');
+
+    Route::can('isUser')->get('/projects',ProjectsView::class)->name('app.projects');
     Route::prefix('/project/{project}')->group(function(){
         Route::get('/',ProjectView::class)->name('app.project');
         Route::get('/model3d',Model3dView::class)->name('app.project.model3d');

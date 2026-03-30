@@ -51,4 +51,8 @@ class User extends Authenticatable
             'role' => RoleSaas::class
         ];
     }
+
+    public function projects(){
+        return $this->hasMany(Project::class,'user_id','id');
+    }
 }
