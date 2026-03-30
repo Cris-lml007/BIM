@@ -29,11 +29,13 @@ class Model3dForm extends Component
 
     public function save(){
         // dd($this->thumbnail);
+        // dd($this->file->extension());
         $this->validate([
             'name' => 'required',
             'description' => 'required',
             'file' => 'required|file|extensions:glb,ifc'
         ]);
+        $type = $this->file->getClientOriginalExtension();
 
         $id = $this->project->id;
 
@@ -52,7 +54,6 @@ class Model3dForm extends Component
             $hash = Str::random(64);
         }while(Attachment::where('file',$hash)->exists());
 
-        $type = $this->file->extension();
         $hash = "$hash.$type";
         $this->file->storeAs(path: "projects/$id",name: $hash);
 
