@@ -114,6 +114,8 @@ class UsersForm extends Component
             $id = null;
             $this->js('closeModal');
             $this->js("Swal.fire({icon:'success',title: '$text',confirmButtonText: 'Entendido'})");
+
+            $this->dispatch('refresh')->to(UsersView::class);
         }else{
             return $this->redirect(route('administration.users'));
         }

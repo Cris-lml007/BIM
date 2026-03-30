@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Enum\RoleSaas;
 use App\Models\User;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class UsersView extends Component
@@ -28,6 +29,7 @@ class UsersView extends Component
     }
 
 
+    #[On('refresh')]
     public function render()
     {
         $heads = [
