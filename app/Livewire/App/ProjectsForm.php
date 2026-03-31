@@ -24,7 +24,7 @@ class ProjectsForm extends Component
             'user_id' => Auth::user()->id
         ]);
 
-        $this->js("$('modal-project').modal('hide')");
+        $this->js("$('#modal-project').modal('hide')");
         $this->js("Swal.fire({icon: 'success', title: 'Proyecto Creado Satisfactoriamente'})");
 
         $this->dispatch('refresh')->to(ProjectsView::class);
