@@ -70,8 +70,10 @@
             </label>
             <select class="form-select" wire:model="role">
                 <option value="">Seleccione Rol</option>
-                @foreach ($roles as $role)
-                    <option value="{{ $role->value }}">{{ __('messages.' . $role->name)  }}</option>
+                @foreach ($roles as $index => $role)
+                    @if($index > 0)
+                        <option value="{{ $role->value }}">{{ __('messages.' . $role->name) }}</option>
+                    @endif
                 @endforeach
             </select>
             <div class="form-text pt-2">
@@ -101,8 +103,12 @@
             <div class="mb-3">
                 <label class="form-label fw-bold">Rol para la invitación</label>
                 <select class="form-select" wire:model="role">
-                    <option value="member">Miembro</option>
-                    <option value="admin">Administrador</option>
+                    <option value="">Seleccione Rol</option>
+                    @foreach ($roles as $index => $role)
+                        @if($index > 0)
+                            <option value="{{ $role->value }}">{{ __('messages.' . $role->name) }}</option>
+                        @endif
+                    @endforeach
                 </select>
             </div>
 

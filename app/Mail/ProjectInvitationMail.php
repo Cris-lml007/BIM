@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\Project;
+
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -9,20 +11,25 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-
 use App\Models\ProjectInvitation;
+use App\Models\User;
+
 
 class ProjectInvitationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct(
-        public ProjectInvitation $invitation
-    ) {
+    public $invitation;
+    public $project;
+    public $inviter;
+    public $acceptUrl;
 
+    public function __construct(ProjectInvitation $invitation, Project $project, User $inviter)
+    {
+        $this->invitation = $invitation;
+        $this->project = $project;
+        $this->inviter = $inviter;
+        $this->acceptUrl = route('invitations.accept', $invitation->token);
     }
 
     /**
@@ -31,7 +38,7 @@ class ProjectInvitationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Te invitaron al proyecto: {$this->invitation->project->name}",
+            subject: 'Invitación para unirte al proyecto ' . $this->project->name,
         );
     }
 
@@ -40,19 +47,10 @@ class ProjectInvitationMail extends Mailable
      */
     public function content(): Content
     {
-        $url = route('invitation.accept', ['token' => $this->invitation->token]);
-
         return new Content(
             view: 'emails.project-invitation',
-            with: [
-                'url' => $url,
-                'projectName' => $this->invitation->project->name,
-                'invitedBy' => $this->invitation->invitedBy->name,
-                'expiresAt' => $this->invitation->expires_at->translatedFormat('d M Y, H:i'),
-            ]
         );
     }
-
     /**
      * Get the attachments for the message.
      *

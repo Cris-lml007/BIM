@@ -16,10 +16,11 @@ class AccessView extends Component
         'sortDirection' => 'asc'
     ];
     protected $listeners = [
-        'refreshAccessList' => 'refreshAccessList',
+        'createAccess' => 'createAccess',
+        'updateAccess' => 'updateAccess'
     ];
 
-    public function refreshAccessList()
+    public function createAccess()
     {
 
         $this->js("
@@ -35,7 +36,22 @@ class AccessView extends Component
         ");
         $this->resetPage();
     }
+    public function updateAccess()
+    {
 
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Acceso modificado',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+        $this->resetPage();
+    }
     public function changeStatus(Access $access)
     {
         $access->is_active = !$access->is_active;
@@ -85,6 +101,7 @@ class AccessView extends Component
             'Usuario' => 'user_id',
             'Proyectos' => 'max_projects',
             'Usuarios' => 'max_users',
+            'Espacio' => 'max_storage',
             'Inicio' => 'available',
             'Fin' => 'available_end',
             'Estado' => 'is_expired',

@@ -36,6 +36,11 @@
                     <td>{{ $item->user->name }} <br><small class="text-muted">{{ $item->user->email }}</small></td>
                     <td>{{ $item->max_projects }}</td>
                     <td>{{ $item->max_users }}</td>
+                    <td>
+                        <span class='badge bg-success'>
+                            {{ $item->max_storage . ' MB'}}
+                        </span>
+                    </td>
 
                     <td>
                         {{ \Carbon\Carbon::parse($item->available)->translatedFormat('d M Y') }}

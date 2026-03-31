@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->integer('max_projects');
             $table->integer('max_users');
+            $table->integer('max_storage'); //mb
             $table->boolean('is_active')->default(true);
             $table->date('available');
             $table->date('available_end');

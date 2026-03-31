@@ -11,6 +11,7 @@ class AccessForm extends Component
 {
     public $user_id;
     public $max_projects;
+    public $max_space;
     public $max_users;
     public $is_active = true;
     public $available;
@@ -48,6 +49,8 @@ class AccessForm extends Component
         $this->user_id = $access->user_id;
         $this->max_projects = $access->max_projects;
         $this->max_users = $access->max_users;
+        $this->max_space = $access->max_storage;
+
         $this->is_active = $access->is_active;
         $this->available = $access->available ? date('Y-m-d', strtotime($access->available)) : null;
         $this->available_end = $access->available_end ? date('Y-m-d', strtotime($access->available_end)) : null;
@@ -59,6 +62,7 @@ class AccessForm extends Component
             'user_id' => 'required|exists:users,id',
             'max_projects' => 'required|integer|min:1',
             'max_users' => 'required|integer|min:1',
+            'max_space' => 'required|integer|min:1',
             'is_active' => 'required|boolean',
             'available' => 'required|date|after_or_equal:today',
             'available_end' => 'required|date|after_or_equal:available',
@@ -72,9 +76,11 @@ class AccessForm extends Component
         $this->access->user_id = $this->user_id;
         $this->access->max_projects = $this->max_projects;
         $this->access->max_users = $this->max_users;
+        $this->access->max_storage = $this->max_space;
         $this->access->is_active = $this->is_active;
         $this->access->available = $this->available;
         $this->access->available_end = $this->available_end;
+
 
         $isNew = !$this->access->exists;
         $this->access->save();
@@ -84,11 +90,13 @@ class AccessForm extends Component
         if ($isNew) {
             $this->access = new Access();
             $this->reset(['user_id', 'max_projects', 'max_users', 'is_active', 'available', 'available_end']);
+            $this->dispatch('createAccess')->to('admin.access-view');
+        } else {
+            $this->dispatch('updateAccess')->to('admin.access-view');
         }
 
         $this->js('closeModal');
 
-        $this->dispatch('refreshAccessList')->to('admin.access-view');
     }
 
     private function canUserHaveAccess(): bool

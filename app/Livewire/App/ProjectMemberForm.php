@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
+
+
 class ProjectMemberForm extends Component
 {
     public Project $project;
@@ -136,32 +138,52 @@ class ProjectMemberForm extends Component
     public function inviteExistingUser()
     {
         $this->validate();
+        // Verificar si el usuario ya es miembro
+        $isAlreadyMember = $this->project->members()
+            ->where('user_id', $this->selectedUser['id'])
+            ->exists();
 
-        if (!$this->selectedUser) {
-            $this->addError('email', 'Usuario no encontrado');
+        if ($isAlreadyMember) {
+            $this->addError('email', 'El usuario ya es miembro de este proyecto');
             return;
         }
 
-        // dd("her");
         try {
-            // Agregar miembro al proyecto
-            $this->project->members()->attach($this->selectedUser['id'], [
-                'role' => $this->role
-            ]);
+            $updatedStats = $this->project->getMembersStats();
+            if ($updatedStats['available'] <= 0) {
+                $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Limite de usuarios alcanzado para este proyecto',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
+
+            } else {
+                $this->project->members()->attach($this->selectedUser['id'], [
+                    'role' => $this->role
+                ]);
+
+                $this->dispatch('member-created')->to('app.project-members-view');
+            }
 
             $this->reset(['email', 'role', 'selectedUser', 'isExistingUser']);
 
-            $this->dispatch('member-created')->to('app.project-members-view');
 
             $this->js("$('#modal-member').modal('hide');");
+
         } catch (\Exception $e) {
-            dd('Error al invitar usuario: ' . $e->getMessage());
+            \Log::error('Error al invitar usuario: ' . $e->getMessage());
+
             $this->dispatch('member-invited', [
                 'type' => 'error',
-                'message' => 'Error al invitar al usuario. Por favor intenta de nuevo.'
+                'message' => '❌ Error al invitar al usuario. Por favor intenta de nuevo.'
             ]);
         }
-
     }
 
     public function inviteExternalUser()
@@ -172,55 +194,67 @@ class ProjectMemberForm extends Component
 
         try {
             // Verificar si ya existe una invitación pendiente
+
             $existingInvitation = ProjectInvitation::where('project_id', $this->project->id)
                 ->where('email', $this->email)
-                ->where('status', 'pending')
                 ->where('expires_at', '>', now())
                 ->first();
 
             if ($existingInvitation) {
-                $this->dispatch('member-invited', [
-                    'type' => 'warning',
-                    'message' => 'Ya existe una invitación pendiente para este correo electrónico'
-                ]);
+
+                $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Ya fue invitado',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
                 return;
             }
 
-            // Crear invitación
-            $invitation = ProjectInvitation::create([
-                'project_id' => $this->project->id,
-                'email' => $this->email,
-                'invited_by' => Auth::id(),
-                'token' => \Illuminate\Support\Str::random(64),
-                'role' => $this->role,
-                'status' => 'pending',
-                'expires_at' => now()->addDays(7),
-            ]);
+            $updatedStats = $this->project->getMembersStats();
+            if ($updatedStats['available'] <= 0) {
+                $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Limite de usuarios alcanzado para este proyecto',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
 
-            // Enviar correo de invitación
-            Mail::send('emails.project-invitation', [
-                'invitation' => $invitation,
-                'project' => $this->project,
-                'inviter' => Auth::user()
-            ], function ($message) {
-                $message->to($this->email)
-                    ->subject('Invitación para unirte al proyecto ' . $this->project->name);
-            });
+            } else {
 
-            $this->dispatch('member-invited', [
-                'type' => 'success',
-                'message' => "Invitación enviada exitosamente a {$this->email}"
-            ]);
+                // Crear invitación
+                $invitation = ProjectInvitation::create([
+                    'project_id' => $this->project->id,
+                    'email' => $this->email,
+                    'invited_by' => Auth::id(),
+                    'token' => \Illuminate\Support\Str::random(64),
+                    'role' => $this->role,
+                    'expires_at' => now()->addDays(7),
+                ]);
 
-            $this->reset(['email', 'role', 'selectedUser', 'isExistingUser', 'showExternalInviteConfirm']);
-            $this->dispatch('close-modal');
 
+                // En lugar de send(), usa queue()
+                Mail::to($this->email)->send(new ProjectInvitationMail($invitation, $this->project, Auth::user()));
+
+                $this->reset(['email', 'role', 'selectedUser', 'isExistingUser', 'showExternalInviteConfirm']);
+                $this->dispatch('close-modal');
+                $this->js("$('#modal-member').modal('hide');");
+
+                $this->dispatch('member-invited')->to('app.project-members-view');
+
+            }
         } catch (\Exception $e) {
             dd('Error al enviar invitación externa: ' . $e->getMessage());
-            $this->dispatch('member-invited', [
-                'type' => 'error',
-                'message' => 'Error al enviar la invitación. Por favor intenta de nuevo.'
-            ]);
         }
     }
 

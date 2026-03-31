@@ -3,6 +3,8 @@
 use App\Http\Controllers\AdministrationController;
 use App\Http\Controllers\DocumentsController;
 use App\Http\Controllers\MembersController;
+use App\Http\Controllers\InvitationController;
+
 use App\Livewire\Admin\UsersForm;
 use App\Livewire\App\Model3dView;
 use App\Livewire\App\ProjectsView;
@@ -48,7 +50,11 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
     });
 });
 
-
-use App\Http\Controllers\InvitationController;
 Route::get('/invitation/{token}', [InvitationController::class, 'accept'])
-    ->name('invitation.accept');
+    ->name('invitations.accept');
+
+
+//pages messages
+Route::get('/expired', function () {
+    return view('errors.custom.expired');
+})->name('invitations.expired');

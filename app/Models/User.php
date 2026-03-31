@@ -55,7 +55,50 @@ class User extends Authenticatable
     public function projects()
     {
         return $this->belongsToMany(Project::class, 'project_user')
-                    ->withPivot('role')
-                    ->withTimestamps();
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    /**
+     * Relación con el access del usuario
+     */
+    public function access()
+    {
+        return $this->hasOne(Access::class);
+    }
+    /**
+     * Relación con los proyectos donde el usuario es miembro
+     */
+    public function memberProjects()
+    {
+        return $this->belongsToMany(Project::class, 'project_user')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+    /**
+     * Verificar si el usuario puede crear un nuevo proyecto
+     */
+    public function canCreateProject(): bool
+    {
+        $maxProjectsAllowed = $this->access?->max_projects ?? 0;
+        $currentProjectsCount = $this->projects()->count();
+
+        return $currentProjectsCount < $maxProjectsAllowed;
+    }
+
+    /**
+     * Obtener estadísticas de proyectos del usuario
+     */
+    public function getProjectsStats(): array
+    {
+        $maxProjectsAllowed = $this->access?->max_projects ?? 0;
+        $currentProjectsCount = $this->projects()->count();
+
+        return [
+            'current' => $currentProjectsCount,
+            'max' => $maxProjectsAllowed,
+            'available' => max(0, $maxProjectsAllowed - $currentProjectsCount),
+            'can_create' => $currentProjectsCount < $maxProjectsAllowed
+        ];
     }
 }
