@@ -99,22 +99,18 @@ class AppServiceProvider extends ServiceProvider
                 ];
             }
 
-            if(empty($menu)){
-                $event->menu->addAfter('dashboard',[
-                    'text' => 'Proyectos',
-                    'icon' => 'fas fa-city',
-                    'route' => 'app.projects',
-                ]);
-            }else{
-                $event->menu->addAfter('dashboard',[
-                    'text' => 'Proyectos',
-                    'icon' => 'fas fa-city',
-                    'route' => 'app.projects',
-                    'submenu' => $menu
-                ]);
-
-            }
-
+            $event->menu->addAfter('dashboard',[
+                'key' => 'new-project',
+                'text' => 'Nuevo Projecto',
+                'icon' => 'fas fa-plus',
+                'route' => 'app.projects',
+            ]);
+            $event->menu->addAfter('new-project',[
+                'text' => 'Proyectos',
+                'icon' => 'fas fa-city',
+                // 'route' => 'app.projects',
+                'submenu' => $menu
+            ]);
         });
 
 
