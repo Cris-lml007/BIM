@@ -1,259 +1,451 @@
-const loader = new GLTFLoader();
+const gltfLoader = new GLTFLoader();
 const rgbeLoader = new RGBELoader();
 
 let renderer, scene, camera, controls;
 let currentModel = null;
 
-const materialLayers = {};
+const container = document.getElementById('viewer');
 
-function registerMaterial(material, mesh) {
-    const name = material.name || "Sin nombre";
+let components, world;
+let fragments;
+let model = null;
+let classesMap = {};
 
-    if (!materialLayers[name]) {
-        materialLayers[name] = {
-            material: material,
-            meshes: []
-        };
+let hider;
+
+
+async function initViewer(container) {
+    components = new OBC.Components();
+    hider = components.get(OBC.Hider);
+    const worlds = components.get(OBC.Worlds);
+    world = worlds.create();
+    world.scene = new OBC.SimpleScene(components);
+    world.renderer = new OBC.SimpleRenderer(components, container);
+    renderer = world.renderer.three;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    world.camera = new OBC.SimpleCamera(components);
+    components.init();
+    world.scene.setup();
+    // const pmremGenerator = new THREE.PMREMGenerator(world.renderer.three);
+    // pmremGenerator.compileEquirectangularShader();
+    // new RGBELoader()
+    //     .load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/venice_sunset_1k.hdr', function(texture) {
+    //         const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+    //         world.scene.three.environment = envMap;
+    //         texture.dispose();
+    //         pmremGenerator.dispose();
+    //     });
+    const scene = world.scene.three;
+    scene.background = new THREE.Color(0x1a1d25);
+    // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    // hemiLight.position.set(0, 50, 0);
+    // scene.add(hemiLight);
+    // const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    // dirLight.position.set(10, 20, 10);
+    // scene.add(dirLight);
+    // const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    // scene.add(ambient);
+    // world.camera.controls.setLookAt(10, 10, 10, 0, 0, 0);
+    // fragments = new FRAGS.FragmentsModels();
+    // world.camera.controls.addEventListener("control", () => {
+    //     fragments.update();
+    // });
+}
+
+async function loadIFC(file) {
+
+    if (model) {
+        model.dispose();
     }
 
-    materialLayers[name].meshes.push(mesh);
+    const buffer = await file.arrayBuffer();
+    const typedArray = new Uint8Array(buffer);
+    const serializer = new FRAGS.IfcImporter();
+
+    serializer.wasm = {
+        absolute: true,
+        path: "https://unpkg.com/web-ifc@0.0.75/",
+    };
+
+    const bytes = await serializer.process({
+        bytes: typedArray,
+        raw: true
+    });
+
+    model = await fragments.load(bytes, {
+        modelId: Date.now().toString(),
+        camera: world.camera.three,
+        raw: true,
+    });
+
+    // world.scene.three.clear();
+    world.scene.three.add(model.object);
+    await fragments.update(true);
+    console.log("IFC cargado correctamente 🚀");
+
 }
 
-function buildMaterialUI() {
-    const tbody = document.querySelector('#materials-table tbody');
-    tbody.innerHTML = '';
 
-    Object.keys(materialLayers).forEach(name => {
+async function ifcLoader(url){
+    const ifcLoader = components.get(OBC.IfcLoader);
+    await ifcLoader.setup({
+        autoSetWasm: false,
+        wasm: {
+            path: "https://unpkg.com/web-ifc@0.0.75/",
+            absolute: true,
+        },
+    });
+    const githubUrl =
+        "https://thatopen.github.io/engine_fragment/resources/worker.mjs";
+    const fetchedUrl = await fetch(githubUrl);
+    const workerBlob = await fetchedUrl.blob();
+    const workerFile = new File([workerBlob], "worker.mjs", {
+        type: "text/javascript",
+    });
+    const workerUrl = URL.createObjectURL(workerFile);
+    fragments = components.get(OBC.FragmentsManager);
+    fragments.init(workerUrl);
 
-        const row = document.createElement('tr');
+    world.camera.controls.addEventListener("update", () => fragments.core.update());
 
-        row.innerHTML = `
-            <td>${name}</td>
-            <td>
-                <input type="checkbox" checked data-material="${name}">
-            </td>
-        `;
+    fragments.list.onItemSet.add(({ value: model }) => {
+        model.useCamera(world.camera.three);
+        world.scene.three.add(model.object);
+        fragments.core.update(true);
+    });
 
-        tbody.appendChild(row);
+    fragments.core.models.materials.list.onItemSet.add(({ value: material }) => {
+        if (!("isLodMaterial" in material && material.isLodMaterial)) {
+            material.polygonOffset = true;
+            material.polygonOffsetUnits = 1;
+            material.polygonOffsetFactor = Math.random();
+        }
+    });
+    const loadIfc = async (path) => {
+        const file = await fetch(path);
+        const data = await file.arrayBuffer();
+        const buffer = new Uint8Array(data);
+        await ifcLoader.load(buffer, false, "example", {
+            processData: {
+                progressCallback: (progress) => console.log(progress),
+            },
+        });
+    };
+
+    await loadIfc(url)
+    await processModel();
+
+    // const classifier = components.get(OBC.Classifier);
+    // const classificationName = "Custom Classification";
+    // const groupName = "My Group";
+    // let localIds,data
+    // classifier.getGroupData("Custom Classification", "My Group");
+    // const slabsModelIdMap = {};
+    // for (const [modelId, model] of fragments.list) {
+    //     const items = await model.getItemsOfCategories([/IFC/]);
+    //     const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
+    //     localIds = Object.values(storeys).flat();
+    //     data = await model.getItemsData(localIds);
+    //     console.log(data)
+    //
+    //     const categories = await model.getItemsWithGeometryCategories()
+    //     for (const category of categories) {
+    //         if (!category) continue;
+    //         // modelCategories.add(category);
+    //         console.log("categoria: ",category);
+    //     }
+    //
+    //
+    // }
+    //
+    // classifier.addGroupItems(classificationName, groupName, slabsModelIdMap);
+}
+
+function loadGLB(file) {
+    return new Promise((resolve, reject) => {
+        if (model) {
+            world.scene.three.remove(model.object);
+            model = null;
+        }
+        if (currentModel) {
+            world.scene.three.remove(currentModel);
+            currentModel = null;
+        }
+        const url = URL.createObjectURL(file);
+        gltfLoader.load(url, (gltf) => {
+            const obj = gltf.scene;
+            const box = new THREE.Box3().setFromObject(obj);
+            const center = box.getCenter(new THREE.Vector3());
+            obj.position.sub(center);
+            const size = box.getSize(new THREE.Vector3()).length();
+            world.camera.controls.setLookAt(size, size, size, 0, 0, 0);
+            currentModel = obj;
+            world.scene.three.add(obj);
+            console.log("GLB cargado 🚀");
+            URL.revokeObjectURL(url);
+            resolve();
+        }, undefined, reject);
     });
 }
-
-
-
 
 const loading = document.getElementById('loading');
-const container = document.getElementById('viewer');
-const modelUrl = container.dataset.url;
-loading.style.display = 'flex';
 
-scene = new THREE.Scene();
-
-camera = new THREE.PerspectiveCamera(
-    75,
-    container.clientWidth / container.clientHeight,
-    0.1,
-    1000
-);
-
-renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setSize(container.clientWidth, container.clientHeight);
-renderer.physicallyCorrectLights = true;
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
-
-container.appendChild(renderer.domElement);
-
-// luces
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
-scene.add(hemiLight);
-
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(5, 10, 7.5);
-scene.add(dirLight);
-
-const ambient = new THREE.AmbientLight(0xffffff, 0.3);
-scene.add(ambient);
-
-scene.background = new THREE.Color(0xeeeeee);
-
-// HDRI (clave para materiales PBR)
-rgbeLoader.load(
-    'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/venice_sunset_1k.hdr',
-    function (texture) {
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        scene.environment = texture;
-    }
-);
-
-camera.position.set(0, 0, 5);
-
-// controles
-controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-const grid = new THREE.GridHelper(20, 20);
-scene.add(grid);
-
-const axes = new THREE.AxesHelper(10);
-scene.add(axes);
-
-// loop
-function animate() {
-    requestAnimationFrame(animate);
-
-    controls.update();
-    renderer.render(scene, camera);
+function showLoading() {
+    loading.style.display = 'flex';
 }
 
-function setView(view) {
-
-    if (!camera || !controls) return;
-
-    switch(view) {
-        case 'front':
-            camera.position.set(0, 0, 10);
-            break;
-
-        case 'top':
-            camera.position.set(0, 10, 0);
-            break;
-
-        case 'left':
-            camera.position.set(10, 0, 0);
-            break;
-
-        case 'iso':
-            camera.position.set(10, 10, 10);
-            break;
-    }
-
-    camera.lookAt(0, 0, 0);
-    controls.update();
+function hideLoading() {
+    loading.style.display = 'none';
 }
+
+async function loadFromUrl(url) {
+    showLoading();
+    const ext = container.dataset.type;
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const file = new File([blob], 'model.' + ext);
+        if (ext === 'ifc') {
+            // await loadIFC(file);
+            await ifcLoader(url)
+        } else if (ext === 'glb' || ext === 'gltf') {
+            await loadGLB(file);
+        } else {
+            console.warn("Formato no soportado");
+        }
+    } catch (e) {
+        console.error("Error cargando modelo:", e);
+    }
+    hideLoading();
+}
+
+document.querySelectorAll('#viewer-controls button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const action = btn.dataset.view;
+        const cam = world.camera.controls;
+        switch (action) {
+            case 'front':
+                cam.setLookAt(0, 0, 10, 0, 0, 0);
+                break;
+            case 'top':
+                cam.setLookAt(0, 10, 0, 0, 0, 0);
+                break;
+            case 'left':
+                cam.setLookAt(10, 0, 0, 0, 0, 0);
+                break;
+            case 'iso':
+                cam.setLookAt(10, 10, 10, 0, 0, 0);
+                break;
+        }
+        if (btn.dataset.action === 'fit') {
+            fitModel();
+        }
+    });
+});
+
+async function processModel() {
+
+    for (const [modelId, model] of fragments.list) {
+
+        console.log("Procesando modelo:", modelId);
+
+        // 🔹 1. CLASES (IFCWALL, IFCWINDOW, etc)
+        const categories = await model.getItemsOfCategories([/IFC/]);
+
+        console.log("Clases:", categories);
+
+
+        // 🔹 2. NIVELES (STOREYS)
+        const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
+
+        console.log("Niveles:", storeys);
+
+
+        // 🔹 3. GEOMETRÍA POR CATEGORÍA
+        const geomCategories = await model.getItemsWithGeometryCategories();
+
+        console.log("Geom categorías:", geomCategories);
+
+
+        // 🔹 4. DATOS (propiedades BIM reales)
+        const allIds = Object.values(categories).flat();
+
+        const data = await model.getItemsData(allIds);
+
+        console.log("Propiedades:", data);
+
+
+        // 👉 AQUÍ construyes tus tablas UI
+        buildUI({
+            categories,
+            storeys,
+            geomCategories,
+            data,
+            model
+        });
+    }
+}
+
+function buildUI({ categories }) {
+
+    const container = document.getElementById('layers-container');
+    container.innerHTML = '';
+
+    for (const groupName in categories) {
+
+        const group = document.createElement('div');
+        group.className = 'tree-group';
+
+        const header = document.createElement('div');
+        header.className = 'tree-header';
+
+        header.innerHTML = `
+            <input type="checkbox" checked class="group-checkbox">
+            <span class="tree-toggle">▾</span>
+            <strong>${groupName}</strong>
+        `;
+
+        const groupCheckbox = header.querySelector('.group-checkbox');
+
+        groupCheckbox.addEventListener('change', async (e) => {
+            const visible = e.target.checked;
+
+            // 🔥 toggle de TODA la categoría
+            await toggleCategory(groupName, visible);
+
+            // 🔁 sincronizar hijos
+            const childCheckboxes = childrenContainer.querySelectorAll('input');
+
+            childCheckboxes.forEach(cb => {
+                cb.checked = visible;
+            });
+        });
+
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'tree-children';
+
+        const categories1 = categories[groupName];
+
+        for (const type in categories1) {
+
+            const count = categories1[type].length;
+
+            const item = document.createElement('div');
+            item.className = 'tree-item';
+
+            item.innerHTML = `
+                <span class="tree-label" title="${type}">
+                    <i class="bi bi-box"></i>
+                    ${type} (${count})
+                </span>
+                <input type="checkbox" checked>
+            `;
+
+            const checkbox = item.querySelector('input');
+
+            checkbox.addEventListener('change', (e) => {
+                toggleItem(categories1[type], e.target.checked);
+            });
+
+            childrenContainer.appendChild(item);
+        }
+
+        group.classList.toggle('collapsed');
+        // Toggle expand/collapse
+        header.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            group.classList.toggle('collapsed');
+        });
+
+        group.appendChild(header);
+        group.appendChild(childrenContainer);
+
+        container.appendChild(group);
+    }
+}
+
+async function toggleCategory(category, visible) {
+    console.log("es la: ",category)
+    const modelIdMap = {};
+    for (const [, model] of fragments.list) {
+        const items = await model.getItemsOfCategories([
+            new RegExp(`^${category}$`)
+        ]);
+        const ids = Object.values(items).flat();
+        modelIdMap[model.modelId] = new Set(ids);
+    }
+    if(visible)
+        await hider.set(true,modelIdMap);
+    else
+        await hider.set(false,modelIdMap);
+}
+
+async function toggleItem(id, visible) {
+    const modelIdMap = {};
+    const modelId = fragments.list.keys().next().value;
+    modelIdMap[modelId] = new Set([id]);
+    if(visible)
+        await hider.set(true,modelIdMap);
+    else
+        await hider.set(false,modelIdMap);
+}
+
+
 
 function fitModel() {
-
-    if (!currentModel) return;
-
-    const box = new THREE.Box3().setFromObject(currentModel);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const fov = camera.fov * (Math.PI / 180);
-    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-
-    camera.position.set(center.x, center.y, cameraZ * 1.5);
-    camera.lookAt(center);
-
-    controls.target.copy(center);
-    controls.update();
+    const obj = model?.object || currentModel;
+    if (!obj) return;
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3()).length();
+    world.camera.controls.setLookAt(size, size, size, 0, 0, 0);
 }
 
 
 
 
+const splash = document.getElementById('app-splash');
 
-animate();
+// window.addEventListener('load', () => {
+    // Simulación opcional de inicialización
+    setTimeout(() => {
+        splash.classList.add('hidden');
+    }, 2000); // puedes ajustar o eliminar delay
+// });
 
 
-console.log("Three.js inicializado correctamente");
+const leftSidebar = document.getElementById('leftSidebar');
+const rightSidebar = document.getElementById('rightSidebar');
 
+const leftTab = document.getElementById('leftTab');
+const rightTab = document.getElementById('rightTab');
 
-loader.load(
-    modelUrl,
-    function (gltf) {
+// abrir desde pestaña
+leftTab.addEventListener('click', () => {
+    leftSidebar.classList.toggle('collapsed');
+});
 
-        const model = gltf.scene;
-        currentModel = gltf.scene;
-        scene.add(currentModel);
+rightTab.addEventListener('click', () => {
+    rightSidebar.classList.toggle('collapsed');
+});
 
-        // centrar modelo
-        const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
+// doble click para cerrar
+leftSidebar.addEventListener('dblclick', () => {
+    leftSidebar.classList.add('collapsed');
+});
 
-        model.position.sub(center);
-
-        // ajustar cámara
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = camera.fov * (Math.PI / 180);
-        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-
-        camera.position.set(0, 0, cameraZ * 1.5);
-        camera.lookAt(0, 0, 0);
-
-        // materiales doble cara
-        model.traverse((child) => {
-            if (child.isMesh) {
-                child.material.side = THREE.DoubleSide;
-                console.log(child.name);
-                console.log("material: "+child.material.name);
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => registerMaterial(mat, child));
-                } else {
-                    registerMaterial(child.material, child);
-                }
-            }
-        });
-        buildMaterialUI();
-
-        console.log("Modelo cargado correctamente");
-        loading.style.display = 'none';
-
-        console.log("Modelo cargado correctamente");
-
-    },
-    function (xhr) {
-        // progreso
-        if (xhr.total) {
-            const percent = (xhr.loaded / xhr.total * 100).toFixed(0);
-            loading.innerHTML = `
-                <div>
-                    <div class="spinner-border text-primary"></div>
-                    <p class="mt-2">Cargando ${percent}%</p>
-                </div>
-            `;
-        }
-    },
-    function (error) {
-        console.error("Error cargando modelo:", error);
-    }
-);
+rightSidebar.addEventListener('dblclick', () => {
+    rightSidebar.classList.add('collapsed');
+});
 
 
 
-function toggleMaterial(name, visible) {
-    const layer = materialLayers[name];
 
-    if (!layer) return;
 
-    layer.meshes.forEach(mesh => {
-        mesh.visible = visible;
-    });
+const url = container.dataset.url;
+initViewer(container);
+if (url) {
+    loadFromUrl(url);
 }
-
-
-
-document.addEventListener('change', (e) => {
-    if (!e.target.dataset.material) return;
-
-    const name = e.target.dataset.material;
-    const visible = e.target.checked;
-
-    toggleMaterial(name, visible);
-});
-
-document.addEventListener('click', (e) => {
-
-    // 👉 VISTAS
-    if (e.target.dataset.view) {
-        setView(e.target.dataset.view);
-    }
-
-    // 👉 FIT MODEL
-    if (e.target.dataset.action === 'fit') {
-        fitModel();
-    }
-
-});

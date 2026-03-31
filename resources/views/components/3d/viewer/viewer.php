@@ -2,9 +2,10 @@
 
 use App\Models\Model3D;
 use App\Models\Project;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-new class extends Component
+new #[Layout('layouts.viewer')] class extends Component
 {
 
     public Model3D $model;
