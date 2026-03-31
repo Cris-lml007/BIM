@@ -15,18 +15,45 @@
                     @error('user_id') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
             </div>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label for="max_projects">Máximo de Proyectos*</label>
-                    <input type="number" class="form-control" wire:model="max_projects" placeholder="Ej: 10">
-                    @error('max_projects') <span class="text-danger">{{ $message }}</span> @enderror
+
+            <div class="row g-4 mb-4">
+                <!-- Proyectos -->
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold ">
+                        <i class="fas fa-folder-open me-1"></i> Proyectos *
+                    </label>
+                    <input type="number" class="form-control" wire:model="max_projects" placeholder="" min="1">
+                    @error('max_projects')
+                        <span class="text-danger small">{{ $message }}</span>
+                    @enderror
                 </div>
-                <div class="col-md-6">
-                    <label for="max_users">Máximo de Usuarios*</label>
-                    <input type="number" class="form-control" wire:model="max_users" placeholder="Ej: 5">
-                    @error('max_users') <span class="text-danger">{{ $message }}</span> @enderror
+
+                <!-- Usuarios -->
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold ">
+                        <i class="fas fa-users me-1"></i> Usuarios *
+                    </label>
+                    <input type="number" class="form-control" wire:model="max_users" placeholder="" min="1">
+                    @error('max_users')
+                        <span class="text-danger small">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <!-- Espacio -->
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold ">
+                        <i class="fas fa-database me-1"></i> Espacio máximo *
+                    </label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" wire:model="max_space" placeholder="1024" min="1">
+                        <span class="input-group-text">MB</span>
+                    </div>
+                    @error('max_space')
+                        <span class="text-danger small">{{ $message }}</span>
+                    @enderror
                 </div>
             </div>
+
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="available">Fecha Inicio*</label>
