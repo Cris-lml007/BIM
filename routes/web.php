@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdministrationController;
+use App\Http\Controllers\DocumentsController;
 use App\Http\Controllers\MembersController;
 use App\Livewire\Admin\UsersForm;
 use App\Livewire\App\Model3dView;
@@ -42,6 +43,8 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
         Route::get('/', ProjectView::class)->name('app.project');
         Route::get('/model3d', Model3dView::class)->name('app.project.view');
         Route::get('/members', [MembersController::class, 'show'])->name('app.project.members');
+        Route::get('/documents', [DocumentsController::class, 'show'])->name('app.project.documents');
+
     });
 });
 

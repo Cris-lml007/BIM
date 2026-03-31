@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
                         ],
                         [
                             'text' => 'Documentos',
-                            'url' => 'menu/child2',
+                            'url' => route('app.project.documents', ['project' => $project->id]),
                             'icon' => 'nf nf-fa-folder',
                         ],
                         [
