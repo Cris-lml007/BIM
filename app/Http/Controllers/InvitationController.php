@@ -15,35 +15,19 @@ class InvitationController extends Controller
     public function accept(string $token)
     {
         $invitation = ProjectInvitation::where('token', $token)
-            ->where('status', 'pending')
-            ->firstOrFail();
+            ->where('expires_at', '>', now())
+            ->first();
 
-        if ($invitation->isExpired()) {
-            $invitation->update(['status' => 'expired']);
-            abort(410, 'La invitación ha expirado.');
+
+        if (!$invitation) {
+            return redirect()->route('invitations.expired');
         }
-
-        // ¿Ya tiene cuenta?
-        $user = User::where('email', $invitation->email)->first();
-
-        if ($user) {
-            // Caso A: ya tiene cuenta → unirlo directo
-            Auth::login($user);
-
-            $invitation->project->members()->syncWithoutDetaching([
-                $user->id => ['role' => $invitation->role]
-            ]);
-
-            $invitation->update(['status' => 'accepted']);
-
-            return redirect()->route('projects.show', $invitation->project_id)
-                ->with('success', '¡Bienvenido al proyecto!');
-        }
-
-        // Caso B: no tiene cuenta → mandarlo a registro con token en sesión
+        // Guardar token en sesión para usarlo después del registro
         session(['invitation_token' => $token]);
+        session(['invitation_email' => $invitation->email]);
+        session(['invitation_project' => $invitation->project_id]);
 
-        return redirect()->route('register')
-            ->with('info', 'Crea tu cuenta para unirte al proyecto.');
+        // Redirigir al registro con email precargado
+        return redirect()->route('register');
     }
 }

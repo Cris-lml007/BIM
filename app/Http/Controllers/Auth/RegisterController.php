@@ -71,10 +71,10 @@ class RegisterController extends Controller
             'organization' => $data['organization']
         ]);
 
-        // 👇 Aquí enganchamos la invitación
+
+        //crecion de cuenta por invitacion
         if (session('invitation_token')) {
             $invitation = ProjectInvitation::where('token', session('invitation_token'))
-                ->where('status', 'pending')
                 ->where('email', $user->email) // seguridad: email debe coincidir
                 ->first();
 
@@ -83,11 +83,23 @@ class RegisterController extends Controller
                     $user->id => ['role' => $invitation->role]
                 ]);
 
-                $invitation->update(['status' => 'accepted']);
+                $invitation->delete();
                 session()->forget('invitation_token');
 
-                // Redirigir al proyecto después del registro
-                $this->redirectTo = route('projects.show', $invitation->project_id);
+                //falta redirigir bien 
+                $this->redirectTo = route('app.project', $invitation->project_id);
+            } else {
+                $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Invitacion expirada',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
             }
         }
         return $user;

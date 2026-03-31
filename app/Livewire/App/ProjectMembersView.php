@@ -40,6 +40,14 @@ class ProjectMembersView extends Component
         'Acciones' => null
     ];
 
+    public $headsInvitations = [
+        'ID' => 'id',
+        'Email' => 'email',
+        'Rol' => 'pivot_role',
+        'Estado' => 'state',
+        'Expiracion' => 'expired',
+        'Acciones' => null
+    ];
     protected $rules = [
         'email' => 'required|email',
         'role' => 'required|in:admin,member',
@@ -48,6 +56,7 @@ class ProjectMembersView extends Component
 
     protected $listeners = [
         'member-created' => 'refreshMembers',
+        'member-invited' => 'memberInvited'
     ];
     public function refreshMembers()
     {
@@ -64,8 +73,23 @@ class ProjectMembersView extends Component
                 });
             ");
 
-    }
 
+    }
+    public function memberInvited()
+    {
+        $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Invitación enviada',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
+        //$this->resetPage();
+    }
     public function mount(Project $project)
     {
         $this->project = $project;
@@ -289,6 +313,21 @@ class ProjectMembersView extends Component
         }
     }
 
+    public function removeInvited($invitationId)
+    {
+        // Check if current user is the owner
+        if (Auth::user()->id !== $this->project->user_id) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'Solo el dueño del proyecto puede eliminar miembros.'})");
+            return;
+        }
+
+        // Prevent removing yourself if you're not the owner? Actually owner is not in members table
+        $this->project->invitations()
+            ->where('id', $invitationId)
+            ->delete();
+
+
+    }
     public function getUser($id)
     {
         $this->dispatch('getUser', $id)->to(\App\Livewire\Admin\UsersForm::class);
@@ -336,11 +375,13 @@ class ProjectMembersView extends Component
         $owner = $this->project->owner;
 
         // Statistics
-        $total_members = $this->project->members()->count() + 1;
-        $admins = $this->project->members()->wherePivot('role', 'admin')->count() + 1;
-        $basic_members = $this->project->members()->wherePivot('role', 'member')->count();
+        $total_members = $this->project->members()->count();
+        $total = $this->project->ownerAccess()->max_users;
 
-        return view('livewire.app.project-members-view', compact('members', 'owner', 'total_members', 'admins', 'basic_members', 'usersSearchList'));
+        $invites = $this->project->invitations()->get();
+
+
+        return view('livewire.app.project-members-view', compact('members', 'owner', 'total_members', 'total', 'invites', 'usersSearchList'));
     }
 
 }
