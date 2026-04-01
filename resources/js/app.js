@@ -10,7 +10,7 @@ import * as OBC from "@thatopen/components";
 import * as FRAGS from "@thatopen/fragments";
 import * as FB from "flatbuffers";
 import pako from "pako";
-
+import Stats from 'stats.js';
 
 window.Swal = Swal;
 window.THREE = THREE;
@@ -21,3 +21,4 @@ window.OBC = OBC;
 window.FRAGS = FRAGS;
 window.FB = FB;
 window.pako = pako;
+window.Stats = Stats;

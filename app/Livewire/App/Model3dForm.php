@@ -21,6 +21,7 @@ class Model3dForm extends Component
     public $file;
     public Project $project;
     public $thumbnail;
+    public $frag;
 
     public function mount(Project $project){
         $this->project = $project;
@@ -54,8 +55,10 @@ class Model3dForm extends Component
             $hash = Str::random(64);
         }while(Attachment::where('file',$hash)->exists());
 
+        $hash1 = "$hash.frag";
         $hash = "$hash.$type";
         $this->file->storeAs(path: "projects/$id",name: $hash);
+        $this->frag->storeAs(path: "projects/$id",name: $hash1);
 
         $attachment = Attachment::create([
             'name' => $model->name,

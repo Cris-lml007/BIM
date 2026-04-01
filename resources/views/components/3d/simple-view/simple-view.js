@@ -49,6 +49,96 @@ async function initViewer(container) {
     });
 }
 
+
+async function ifcLoader(file){
+
+    const ifcLoader = components.get(OBC.IfcLoader);
+
+    await ifcLoader.setup({
+        autoSetWasm: false,
+        wasm: {
+            path: "https://unpkg.com/web-ifc@0.0.75/",
+            absolute: true,
+        },
+    });
+
+    // 🔥 worker
+    const githubUrl =
+        "https://thatopen.github.io/engine_fragment/resources/worker.mjs";
+
+    const workerBlob = await (await fetch(githubUrl)).blob();
+
+    const workerUrl = URL.createObjectURL(
+        new File([workerBlob], "worker.mjs", { type: "text/javascript" })
+    );
+
+    fragments = components.get(OBC.FragmentsManager);
+    fragments.init(workerUrl);
+
+    world.camera.controls.addEventListener("update", () => {
+        fragments.core.update();
+    });
+
+    fragments.list.onItemSet.add(({ value: model }) => {
+        model.useCamera(world.camera.three);
+        world.scene.three.add(model.object);
+        fragments.core.update(true);
+    });
+
+    // 🔧 fix z-fighting
+    fragments.core.models.materials.list.onItemSet.add(({ value: material }) => {
+        if (!("isLodMaterial" in material && material.isLodMaterial)) {
+            material.polygonOffset = true;
+            material.polygonOffsetUnits = 1;
+            material.polygonOffsetFactor = Math.random();
+        }
+    });
+
+    // 🔥 AQUÍ ESTÁ EL CAMBIO
+    const buffer = await file.arrayBuffer();
+    const uint8 = new Uint8Array(buffer);
+
+    await ifcLoader.load(uint8, false, file.name, {
+        processData: {
+            progressCallback: (progress) => console.log(progress),
+        },
+    });
+
+    console.log("IFC cargado desde FILE 🚀");
+
+    setTimeout(() => generateThumbnail(), 1000);
+    // 👉 generar FRAG automáticamente
+    await generateFragmentsFile();
+}
+
+async function generateFragmentsFile() {
+
+    const [model] = fragments.list.values();
+    if (!model) return;
+
+    const fragsBuffer = await model.getBuffer(false);
+
+    const file = new File([fragsBuffer], "model.frag", {
+        type: "application/octet-stream"
+    });
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+
+    const input = document.getElementById('frag');
+    input.files = dataTransfer.files;
+
+    input.dispatchEvent(new Event('change'));
+
+    console.log("FRAG generado y guardado en input 💾");
+}
+
+
+
+
+
+
+
 async function loadIFC(file) {
 
     if (model) {
@@ -146,7 +236,7 @@ document.addEventListener('change', async (e) => {
     }
 
     if (ext === 'ifc') {
-        loadIFC(file);
+        ifcLoader(file);
     } else if (ext === 'glb' || ext === 'gltf') {
         loadGLB(file);
     }

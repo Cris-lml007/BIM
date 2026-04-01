@@ -3,7 +3,7 @@
         <div class="splash-content">
             <div class="spinner-border text-light"></div>
             <h5 class="mt-3 text-light"><span class="text-primary"><b>BIM</b>NOVA</span> AR</h5>
-            <p class="text-muted">Inicializando aplicación...</p>
+            <p class="text-light">Inicializando aplicación...</p>
         </div>
     </div>
 

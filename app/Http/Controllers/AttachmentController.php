@@ -18,9 +18,14 @@ class AttachmentController extends Controller
         return response()->file(storage_path("app/private/".$path));
     }
 
-    public function getAttachment($id){
+    public function getAttachment(Request $request, $id){
         $attachment = Attachment::findOrFail($id);
-        $path = "projects/{$attachment->fileable->project_id}/{$attachment->file}";
+        if($request->type != null){
+            $name = explode('.',$attachment->file);
+            $path = "projects/{$attachment->fileable->project_id}/{$name[0]}.{$request->type}";
+        }else{
+            $path = "projects/{$attachment->fileable->project_id}/{$attachment->file}";
+        }
         if (!Storage::exists($path)) {
             abort(404);
         }

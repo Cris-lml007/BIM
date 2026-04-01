@@ -52,6 +52,16 @@ async function initViewer(container) {
     // world.camera.controls.addEventListener("control", () => {
     //     fragments.update();
     // });
+
+    const stats = new Stats();
+    stats.showPanel(2);
+    stats.dom.style.position = 'absolute';
+    stats.dom.style.top = '10px';
+    stats.dom.style.left = '10px';
+    stats.dom.style.zIndex = '20';
+    container.append(stats.dom);
+    world.renderer.onBeforeUpdate.add(() => stats.begin());
+    world.renderer.onAfterUpdate.add(() => stats.end());
 }
 
 async function loadIFC(file) {
@@ -123,18 +133,44 @@ async function ifcLoader(url){
             material.polygonOffsetFactor = Math.random();
         }
     });
-    const loadIfc = async (path) => {
-        const file = await fetch(path);
-        const data = await file.arrayBuffer();
-        const buffer = new Uint8Array(data);
-        await ifcLoader.load(buffer, false, "example", {
-            processData: {
-                progressCallback: (progress) => console.log(progress),
-            },
-        });
+
+    const loadFragments = async () => {
+        // you can provide as many files as you need
+        const fragPaths = [
+            url+'?type=frag'
+        ];
+
+        // Promise.all loads models concurrently for faster execution.
+        await Promise.all(
+            fragPaths.map(async (path) => {
+                const modelId = path.split("/").pop()?.split(".").shift();
+                if (!modelId) return null;
+                console.log("aqui");
+                const file = await fetch(path);
+                const buffer = await file.arrayBuffer();
+                // this is the main function to load the fragments
+                return fragments.core.load(buffer, { modelId });
+            }),
+        );
     };
 
-    await loadIfc(url)
+    await loadFragments();
+
+
+
+
+    // const loadIfc = async (path) => {
+    //     const file = await fetch(path);
+    //     const data = await file.arrayBuffer();
+    //     const buffer = new Uint8Array(data);
+    //     await ifcLoader.load(buffer, false, "example", {
+    //         processData: {
+    //             progressCallback: (progress) => console.log(progress),
+    //         },
+    //     });
+    // };
+    //
+    // await loadIfc(url)
     await processModel();
 
     // const classifier = components.get(OBC.Classifier);
@@ -409,10 +445,10 @@ function fitModel() {
 const splash = document.getElementById('app-splash');
 
 // window.addEventListener('load', () => {
-    // Simulación opcional de inicialización
-    setTimeout(() => {
-        splash.classList.add('hidden');
-    }, 2000); // puedes ajustar o eliminar delay
+// Simulación opcional de inicialización
+setTimeout(() => {
+    splash.classList.add('hidden');
+}, 2000); // puedes ajustar o eliminar delay
 // });
 
 

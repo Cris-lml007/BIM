@@ -38,7 +38,7 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
     Route::controller(AttachmentController::class)->group(function(){
         Route::get('thumbnail/{id}','getThumbnail')->name('app.thumbnail');
-        Route::get('Attachment/{id}','getAttachment')->name('app.Attachment');
+        Route::get('attachment/{id}','getAttachment')->name('app.Attachment');
     });
 
 
