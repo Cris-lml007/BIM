@@ -6,6 +6,7 @@ use App\Livewire\Admin\UsersForm;
 use App\Livewire\App\Model3dView;
 use App\Livewire\App\ProjectsView;
 use App\Livewire\App\ProjectView;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,16 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+
+Route::get('/checkhealt',function(Request $request){
+    return response()->json([$request->headers->all(),
+        request()->getScheme(),
+        request()->isSecure(),
+        request()->getHost(),
+        url('/')
+    ]);
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
