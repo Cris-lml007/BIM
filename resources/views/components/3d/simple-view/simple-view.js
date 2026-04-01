@@ -79,7 +79,7 @@ async function loadIFC(file) {
     world.scene.three.add(model.object);
     await fragments.update(true);
     console.log("IFC cargado correctamente 🚀");
-    generateThumbnail();
+    setTimeout(() => generateThumbnail(), 1000);
 }
 
 function attachToInput(blob) {
@@ -129,7 +129,7 @@ async function loadGLB(file) {
         currentModel = obj;
         world.scene.three.add(obj);
         console.log("GLB cargado 🚀");
-        setTimeout(() => generateThumbnail(), 100);
+        setTimeout(() => generateThumbnail(), 1000);
     });
     URL.revokeObjectURL(url);
 }

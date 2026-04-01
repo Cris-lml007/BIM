@@ -10,16 +10,25 @@
             @foreach ($data as $item)
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
                     <div class="card">
-                        <img class="card-img-top" style="width: 100%;height: 150px;object-fit: contain;background: #eee;"
-                             src="{{ route('app.thumbnail',$item->model->id) }}"
-                            alt="">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ $item->name }}<span class="badge text-bg-primary">{{ strtoupper($item->model->type) }}</span></h5>
-                            <p class="card-text">{{ $item->description }}</p>
-                            <span>por: {{ $item->user->name }}</span>
-                            <span>fecha: {{ \Carbon\Carbon::parse($item->created_at)->format('') }}</span>
+                        <div class="position-relative" style="height: 150px; background: #eee;">
+
+                            <img src="{{ route('app.thumbnail', $item->model->id) }}" alt=""
+                                style="width: 100%; height: 100%; object-fit: contain;">
+
+                            <!-- BADGE -->
+                            <span class="badge text-bg-primary position-absolute bottom-0 end-0 m-2">
+                                {{ strtoupper($item->model->type) }}
+                            </span>
+
                         </div>
-                        <a href="{{ route('app.project.model3d.id',['project' => $this->project->id, 'model' => $item->id]) }}" class="btn btn-primary"
+                        <div class="card-body">
+                            <h5 class="card-title">{{ $item->name }}</h5>
+                            <p class="card-text">{{ $item->description }}</p>
+                            <span>por: {{ $item->user->name }}</span><br>
+                            <span>fecha: {{ \Carbon\Carbon::parse($item->created_at)->format('D M Y') }}</span>
+                        </div>
+                        <a href="{{ route('app.project.model3d.id', ['project' => $this->project->id, 'model' => $item->id]) }}"
+                            class="btn btn-primary"
                             style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
                     </div>
                 </div>

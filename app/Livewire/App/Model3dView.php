@@ -18,7 +18,7 @@ class Model3dView extends Component
 
     public function render()
     {
-        $data = Model3D::paginate();
+        $data = $this->project->models()->paginate();
 
         return view('livewire.app.model3d-view',compact(['data']));
     }
