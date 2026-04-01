@@ -22,8 +22,8 @@
             <div class="row mb-3">
                 <div class="col">
                     <label for="">Subir Modelo</label>
-                    <input type="file" class="form-control" id="file-input" wire:model="file" accept=".glb,.ifc">
-                    <input type="file" class="d-none" id="thumbnail" wire:model="thumbnail">
+                    <input type="file" class="form-control" id="file-input" wire:model="file" accept=".glb,.ifc" enctype="multipart/form-data">
+                    <input type="file" class="d-none" id="thumbnail" wire:model="thumbnail" enctype="multipart/form-data">
                     @error('file')
                         <span class="text-danger">{{ $message }}</span>
                     @enderror
