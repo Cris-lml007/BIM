@@ -4,210 +4,208 @@ namespace App\Livewire\App;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Document;
+use App\Models\Project;
+use Livewire\TemporaryUploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+
 class ProjectDocumentForm extends Component
 {
     use WithFileUploads;
 
-    // Propiedades
-    public $files = [];
-    public $externalLink = '';
-    public $uploadProgress = [];
-    public $uploadedFiles = [];
-    public $showLinkInput = false; // 👈 ESTA ES LA PROPIEDAD QUE FALTABA
-    public $isUploading = false;
-    public $maxFiles = 10;
-    public $maxSize = 10240; // 10MB en KB
-    public $acceptedTypes = [
-        'image/*',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ];
+    public Project $project;
+    public string $modal_name = '';
 
-    protected $rules = [
-        'files.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx|max:10240',
-        'externalLink' => 'nullable|url'
-    ];
+    public $files = [];
+    public string $externalLink = '';
+    public bool $showLinkInput = false;
+    public bool $isUploading = false;
+
+    public int $maxFiles = 10;
+
+    protected function rules(): array
+    {
+        if ($this->showLinkInput) {
+            return [
+                'externalLink' => 'required|url|max:2048',
+            ];
+        }
+
+        return [
+            'files' => 'required|array|min:1|max:10',
+            'files.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx|max:10240', // Añadimos max aquí
+        ];
+    }
 
     protected $messages = [
-        'files.*.mimes' => 'El archivo debe ser: imagen, PDF, Word o Excel',
-        'files.*.max' => 'El archivo no puede superar los 10MB',
-        'externalLink.url' => 'El enlace debe ser una URL válida'
+        'files.required' => 'Debes seleccionar al menos un archivo.',
+        'files.*.mimes' => 'Sólo se permiten: imagen, PDF, Word o Excel.',
+        'files.*.max' => 'Cada archivo no puede superar los 10 MB.',
+        'externalLink.required' => 'El enlace es obligatorio.',
+        'externalLink.url' => 'Debe ser una URL válida (incluye https://).',
     ];
 
-    public function mount()
+    public function mount(Project $project, string $modal_name = '')
     {
-        $this->uploadProgress = [];
-        $this->showLinkInput = false; // Inicializar como false
+        $this->project = $project;
+        $this->modal_name = $modal_name;
     }
 
-    // Drag & Drop
-    public function updatedFiles()
-    {
-        $this->validateOnly('files');
-
-        if (count($this->files) > $this->maxFiles) {
-            $this->addError('files', "No puedes subir más de {$this->maxFiles} archivos");
-            $this->files = array_slice($this->files, 0, $this->maxFiles);
-            return;
-        }
-
-        foreach ($this->files as $key => $file) {
-            $this->uploadProgress[$key] = 0;
-        }
-    }
-
-    // Cambiar entre modo archivos y enlace
-    public function toggleLinkInput()
+    public function toggleLinkInput(): void
     {
         $this->showLinkInput = !$this->showLinkInput;
+        $this->resetErrors();
+
         if ($this->showLinkInput) {
-            $this->files = []; // Limpiar archivos si se cambia a modo enlace
+            $this->files = [];
         } else {
-            $this->externalLink = ''; // Limpiar enlace si se cambia a modo archivos
+            $this->externalLink = '';
         }
     }
 
-    // Subir archivos
-    public function uploadFiles()
+    public function updatedFiles(): void
+    {
+        if (count($this->files) > $this->maxFiles) {
+            $this->addError('files', "No puedes agregar más de {$this->maxFiles} archivos a la vez.");
+            $this->files = array_slice($this->files, 0, $this->maxFiles);
+        }
+    }
+
+    public function removeFile(int $index): void
+    {
+        unset($this->files[$index]);
+        $this->files = array_values($this->files);
+    }
+    public function save(): void
     {
         $this->validate();
-
-        if (empty($this->files) && empty($this->externalLink)) {
-            $this->addError('general', 'Debes seleccionar al menos un archivo o proporcionar un enlace');
-            return;
-        }
 
         $this->isUploading = true;
 
         try {
-            // Subir archivos locales
-            if (!empty($this->files)) {
-                foreach ($this->files as $key => $file) {
-                    // Simular progreso
-                    for ($i = 0; $i <= 100; $i += 10) {
-                        $this->uploadProgress[$key] = $i;
-                        $this->dispatch('progress-update', key: $key, progress: $i);
-                        usleep(50000); // Simular tiempo de carga
+            $maxMB = $this->project->ownerAccess()->max_storage;
+            $maxBytes = $maxMB * (1024 ** 2);
+
+            $currentUsedBytes = Document::where('project_id', $this->project->id)->sum('size');
+
+            $newFilesBytes = 0;
+
+
+            if ($this->showLinkInput) {
+                $name = $this->extractNameFromUrl($this->externalLink);
+
+                Document::create([
+                    'name' => $name,
+                    'path' => $this->externalLink,
+                    'type' => 'link',
+                    'size' => 0,
+                    'project_id' => $this->project->id,
+                    'user_id' => Auth::id(),
+                ]);
+            } else {
+                // Calcular el tamaño total de los nuevos archivos
+
+                foreach ($this->files as $file) {
+                    $fileSize = $file->getSize(); // Este método es más confiable en Livewire
+                    $newFilesBytes += $fileSize;
+
+                }
+
+
+                // Verificar espacio disponible
+                $totalAfterUpload = $currentUsedBytes + $newFilesBytes;
+                if ($totalAfterUpload > $maxBytes) {
+                    $availableMB = round(($maxBytes - $currentUsedBytes) / (1024 ** 2), 2);
+                    $neededMB = round(($totalAfterUpload - $maxBytes) / (1024 ** 2), 2);
+
+                    // Mostrar error y salir
+                    $this->addError('files', "No tienes suficiente espacio disponible. Te quedan {$availableMB} MB y necesitas {$neededMB} MB adicionales.");
+                    $this->isUploading = false;
+                    return; // Importante: detener la ejecución
+                }
+
+                // Guardar los archivos
+                foreach ($this->files as $file) {
+                    $fileSize = $file->getSize();
+                    $originalName = $file->getClientOriginalName();
+                    $extension = $file->getClientOriginalExtension();
+
+                    // Generar nombre único
+                    $hashName = md5(time() . uniqid() . $originalName) . '.' . $extension;
+
+                    // Asegurar que el directorio existe
+                    $directory = "projects/{$this->project->id}";
+
+                    // Guardar en storage privado
+                    $path = $file->storeAs($directory, $hashName, 'local'); // Especificar el disco
+
+                    if ($path) {
+                        Document::create([
+                            'name' => $originalName,
+                            'path' => $path,
+                            'type' => $file->getMimeType(),
+                            'size' => $fileSize,
+                            'project_id' => $this->project->id,
+                            'user_id' => Auth::id(),
+                        ]);
                     }
-
-                    // Guardar archivo
-                    $filename = $this->generateFileName($file);
-                    $path = $file->storeAs('uploads', $filename, 'public');
-
-                    $this->uploadedFiles[] = [
-                        'name' => $file->getClientOriginalName(),
-                        'size' => $this->formatBytes($file->getSize()),
-                        'type' => $file->getMimeType(),
-                        'path' => $path,
-                        'url' => Storage::url($path),
-                        'source' => 'local'
-                    ];
-
-                    $this->uploadProgress[$key] = 100;
                 }
             }
 
-            // Procesar enlace externo
-            if (!empty($this->externalLink)) {
-                $this->uploadedFiles[] = [
-                    'name' => $this->getFileNameFromUrl($this->externalLink),
-                    'size' => 'Enlace externo',
-                    'type' => 'link',
-                    'url' => $this->externalLink,
-                    'source' => 'link'
-                ];
-            }
+            $this->dispatch('document-saved')->to(ProjectDocumenteView::class);
 
-            // Emitir evento con los archivos subidos
-            $this->dispatch('files-uploaded', files: $this->uploadedFiles);
+            $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Documento(s) registrado(s) correctamente',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
 
-            // Mostrar mensaje de éxito
-            session()->flash('message', 'Archivos procesados correctamente');
-
-            // Resetear formulario
+            $this->closeModal();
             $this->resetForm();
 
-        } catch (\Exception $e) {
-            $this->addError('general', 'Error al subir los archivos: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            \Log::error('Error al guardar documentos: ' . $e->getMessage());
+            $this->addError('general', 'Error al guardar: ' . $e->getMessage());
         } finally {
             $this->isUploading = false;
         }
     }
 
-    // Eliminar archivo de la lista antes de subir
-    public function removeFile($index)
+    private function extractNameFromUrl(string $url): string
     {
-        unset($this->files[$index]);
-        $this->files = array_values($this->files);
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $filename = basename($path);
 
-        if (isset($this->uploadProgress[$index])) {
-            unset($this->uploadProgress[$index]);
-        }
+        return (!empty($filename) && pathinfo($filename, PATHINFO_EXTENSION))
+            ? $filename
+            : 'enlace_externo_' . now()->format('Y-m-d_H-i-s');
     }
 
-    // Eliminar archivo ya subido
-    public function removeUploadedFile($index)
+    private function closeModal(): void
     {
-        if (isset($this->uploadedFiles[$index]['path'])) {
-            Storage::disk('public')->delete($this->uploadedFiles[$index]['path']);
-        }
-        unset($this->uploadedFiles[$index]);
-        $this->uploadedFiles = array_values($this->uploadedFiles);
-
-        $this->dispatch('files-updated', files: $this->uploadedFiles);
+        $this->js("$('#$this->modal_name').modal('hide')");
     }
 
-    // Resetear formulario
-    public function resetForm()
+    public function resetForm(): void
     {
         $this->files = [];
         $this->externalLink = '';
-        $this->uploadProgress = [];
         $this->showLinkInput = false;
         $this->resetErrorBag();
     }
 
-    // Generar nombre único para el archivo
-    private function generateFileName($file)
+    private function resetErrors(): void
     {
-        $extension = $file->getClientOriginalExtension();
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $slug = Str::slug($originalName);
-
-        return date('Y-m-d_H-i-s') . '_' . $slug . '_' . Str::random(8) . '.' . $extension;
+        $this->resetErrorBag(['files', 'externalLink', 'general']);
     }
 
-    // Obtener nombre de archivo desde URL
-    private function getFileNameFromUrl($url)
-    {
-        $path = parse_url($url, PHP_URL_PATH);
-        $filename = basename($path);
-
-        if (empty($filename) || !pathinfo($filename, PATHINFO_EXTENSION)) {
-            $filename = 'enlace_externo_' . date('Y-m-d_H-i-s');
-        }
-
-        return $filename;
-    }
-    public function resetFiles()
-    {
-        $this->files = [];
-        $this->uploadProgress = [];
-        $this->resetErrorBag();
-    }
-    // Formatear bytes
-    private function formatBytes($bytes, $decimals = 2)
-    {
-        $size = ['B', 'KB', 'MB', 'GB'];
-        $factor = floor((strlen($bytes) - 1) / 3);
-
-        return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . $size[$factor];
-    }
     public function render()
     {
         return view('livewire.app.project-document-form');

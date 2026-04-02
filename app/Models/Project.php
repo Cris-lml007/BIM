@@ -12,6 +12,11 @@ class Project extends Model
         'user_id'
     ];
 
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

@@ -48,6 +48,9 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
         Route::get('/documents', [DocumentsController::class, 'show'])->name('app.project.documents');
 
     });
+
+    Route::get('/documents/{document}/view', [DocumentsController::class, 'view'])
+        ->name('documents.view');
 });
 
 Route::get('/invitation/{token}', [InvitationController::class, 'accept'])
