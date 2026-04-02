@@ -250,11 +250,35 @@ class ProjectMemberForm extends Component
                 $this->dispatch('close-modal');
                 $this->js("$('#modal-member').modal('hide');");
 
+                $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Invitacion enviada',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
+
                 $this->dispatch('member-invited')->to('app.project-members-view');
 
             }
         } catch (\Exception $e) {
-            dd('Error al enviar invitación externa: ' . $e->getMessage());
+            //dd('Error al enviar invitación externa: ' . $e->getMessage());
+            $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Error al enviar la invitacion',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                ");
+
         }
     }
 
