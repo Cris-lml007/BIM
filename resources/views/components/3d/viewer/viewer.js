@@ -5,6 +5,13 @@ let renderer, scene, camera, controls;
 let currentModel = null;
 
 const container = document.getElementById('viewer');
+const loading = document.getElementById('loading');
+const leftSidebar = document.getElementById('leftSidebar');
+const rightSidebar = document.getElementById('rightSidebar');
+
+const leftTab = document.getElementById('leftTab');
+const rightTab = document.getElementById('rightTab');
+const splash = document.getElementById('app-splash');
 
 let components, world;
 let fragments;
@@ -26,18 +33,10 @@ async function initViewer(container) {
     // renderer.setSize(container.clientWidth, container.clientHeight);
     world.camera = new OBC.SimpleCamera(components);
     components.init();
-    // components.get(OBC.Grids).create(world);
+    components.get(OBC.Grids).create(world);
     world.scene.setup();
     const scene = world.scene.three;
     scene.background = new THREE.Color(0x1a1d25);
-    const ifcLoader = components.get(OBC.IfcLoader);
-    await ifcLoader.setup({
-        autoSetWasm: false,
-        wasm: {
-            path: "https://unpkg.com/web-ifc@0.0.75/",
-            absolute: true,
-        },
-    });
     const githubUrl =
         "https://thatopen.github.io/engine_fragment/resources/worker.mjs";
     const fetchedUrl = await fetch(githubUrl);
@@ -85,26 +84,12 @@ async function ifcLoader(url){
         fragPaths.map(async (path) => {
             const modelId = path.split("/").pop()?.split(".").shift();
             if (!modelId) return null;
-            // console.log("aqui");
             const file = await fetch(path);
             const buffer = await file.arrayBuffer();
-            // this is the main function to load the fragments
             return fragments.core.load(buffer, { modelId });
         }),
     );
 
-    // const loadIfc = async (path) => {
-    //     const file = await fetch(path);
-    //     const data = await file.arrayBuffer();
-    //     const buffer = new Uint8Array(data);
-    //     await ifcLoader.load(buffer, false, "example", {
-    //         processData: {
-    //             progressCallback: (progress) => console.log(progress),
-    //         },
-    //     });
-    // };
-    //
-    // await loadIfc(url)
     await processModel();
 
     // const classifier = components.get(OBC.Classifier);
@@ -153,7 +138,6 @@ async function loadGLB(file) {
             world.camera.controls.setLookAt(size, size, size, 0, 0, 0);
             currentModel = obj;
             world.scene.three.add(obj);
-            // console.log("GLB cargado 🚀");
             URL.revokeObjectURL(url);
 
             obj.traverse((child) => {
@@ -178,7 +162,6 @@ async function loadGLB(file) {
     await processModel();
 }
 
-const loading = document.getElementById('loading');
 
 function showLoading() {
     loading.style.display = 'flex';
@@ -207,30 +190,6 @@ async function loadFromUrl(url) {
     }
     hideLoading();
 }
-
-document.querySelectorAll('#viewer-controls button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const action = btn.dataset.view;
-        const cam = world.camera.controls;
-        switch (action) {
-            case 'front':
-                cam.setLookAt(0, 0, 10, 0, 0, 0);
-                break;
-            case 'top':
-                cam.setLookAt(0, 10, 0, 0, 0, 0);
-                break;
-            case 'left':
-                cam.setLookAt(10, 0, 0, 0, 0, 0);
-                break;
-            case 'iso':
-                cam.setLookAt(10, 10, 10, 0, 0, 0);
-                break;
-        }
-        if (btn.dataset.action === 'fit') {
-            fitModel();
-        }
-    });
-});
 
 async function processModel() {
 
@@ -283,76 +242,63 @@ function buildUI({ categories }) {
     for (const groupName in categories) {
 
         const group = document.createElement('div');
-        group.className = 'tree-group';
+        group.className = 'tree-group card mb-2 shadow-sm';
 
         const header = document.createElement('div');
-        header.className = 'tree-header';
+        header.className = 'tree-header d-flex align-items-center justify-content-between p-2';
 
-        header.innerHTML = `
-            <input type="checkbox" checked class="group-checkbox">
-            <span class="tree-toggle">▾</span>
-            <strong>${groupName}</strong>
-        `;
+header.innerHTML = `
+    <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
 
-        const groupCheckbox = header.querySelector('.group-checkbox');
+        <!-- 👁️ VISIBILIDAD -->
+        <input type="checkbox" checked class="form-check-input visibility-toggle m-0">
 
-        groupCheckbox.addEventListener('change', async (e) => {
-            const visible = e.target.checked;
+        <!-- 🎯 AISLAR -->
+        <input type="radio" name="isolate-group" class="form-check-input isolate-toggle m-0">
 
-            await toggleCategory(groupName, visible);
+        <!-- TEXTO -->
+        <span class="fw-semibold text-truncate flex-grow-1" title="${groupName}">
+            ${groupName}
+        </span>
+    </div>
 
-            const childCheckboxes = childrenContainer.querySelectorAll('input');
+    <!-- BADGE -->
+    <span class="badge bg-primary border ms-2 flex-shrink-0">
+        ${categories[groupName].length || ''}
+    </span>
+`;
 
-            childCheckboxes.forEach(cb => {
-                cb.checked = visible;
-            });
+        const visibility = header.querySelector('.visibility-toggle');
+        const isolate = header.querySelector('.isolate-toggle');
+
+        // 👁️ Mostrar / ocultar
+        visibility.addEventListener('change', async (e) => {
+            await toggleCategory(groupName, e.target.checked, '');
         });
 
-        const childrenContainer = document.createElement('div');
-        childrenContainer.className = 'tree-children';
+        // 🎯 Aislar
+        isolate.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                await toggleCategory(groupName, true, 'isolate');
+            }
+        });
 
-        const categories1 = categories[groupName];
+        group.style.background = '#1f222a';
+        // hover UX
+        group.addEventListener('mouseenter', () => {
+            group.style.background = '#0D6EFD';
+        });
 
-        for (const type in categories1) {
-
-            const count = categories1[type].length;
-
-            const item = document.createElement('div');
-            item.className = 'tree-item';
-
-            item.innerHTML = `
-                <span class="tree-label" title="${type}">
-                    <i class="bi bi-box"></i>
-                    ${type} (${count})
-                </span>
-                <input type="checkbox" checked>
-            `;
-
-            const checkbox = item.querySelector('input');
-
-            checkbox.addEventListener('change', (e) => {
-                toggleItem(categories1[type], e.target.checked);
-            });
-
-            childrenContainer.appendChild(item);
-        }
-
-        group.classList.toggle('collapsed');
-        // Toggle expand/collapse
-        header.addEventListener('click', (e) => {
-            if (e.target.tagName === 'INPUT') return;
-
-            group.classList.toggle('collapsed');
+        group.addEventListener('mouseleave', () => {
+            group.style.background = '#1f222a';
         });
 
         group.appendChild(header);
-        group.appendChild(childrenContainer);
-
         container.appendChild(group);
     }
 }
 
-async function toggleCategory(category, visible) {
+async function toggleCategory(category, visible,type) {
     // console.log("es la: ",category)
     const modelIdMap = {};
     for (const [, model] of fragments.list) {
@@ -362,7 +308,10 @@ async function toggleCategory(category, visible) {
         const ids = Object.values(items).flat();
         modelIdMap[model.modelId] = new Set(ids);
     }
-    if(visible)
+    if(type == 'isolate'){
+        document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = false);
+        await hider.isolate(modelIdMap);
+    }else if(visible)
         await hider.set(true,modelIdMap);
     else
         await hider.set(false,modelIdMap);
@@ -377,26 +326,6 @@ async function toggleItem(id, visible) {
     else
         await hider.set(false,modelIdMap);
 }
-
-function fitModel() {
-    const obj = model?.object || currentModel;
-    if (!obj) return;
-    const box = new THREE.Box3().setFromObject(obj);
-    const size = box.getSize(new THREE.Vector3()).length();
-    world.camera.controls.setLookAt(size, size, size, 0, 0, 0);
-}
-
-const splash = document.getElementById('app-splash');
-
-setTimeout(() => {
-    splash.classList.add('hidden');
-}, 2000);
-
-const leftSidebar = document.getElementById('leftSidebar');
-const rightSidebar = document.getElementById('rightSidebar');
-
-const leftTab = document.getElementById('leftTab');
-const rightTab = document.getElementById('rightTab');
 
 // abrir desde pestaña
 leftTab.addEventListener('click', () => {
@@ -416,8 +345,18 @@ rightSidebar.addEventListener('dblclick', () => {
     rightSidebar.classList.add('collapsed');
 });
 
+document.getElementById('btn-reset-isolate').addEventListener('click', async ()=>{
+    document.querySelectorAll('input[name="isolate-group"]').forEach(radio => radio.checked = false);
+    document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
+    await hider.set(true);
+});
+
 const url = container.dataset.url;
 initViewer(container);
 if (url) {
     loadFromUrl(url);
 }
+
+setTimeout(() => {
+    splash.classList.add('hidden');
+}, 2000);

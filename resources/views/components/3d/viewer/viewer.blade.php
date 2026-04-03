@@ -25,7 +25,8 @@
             <!-- Sidebar -->
             <div class="sidebar left p-3" id="leftSidebar">
                 <div class="panel-title">Capas</div>
-                <input type="text" class="form-control form-control-sm mb-3" placeholder="Buscar...">
+                <input type="text" class="form-control form-control-sm mb-1" placeholder="Buscar...">
+                <button class="btn btn-dark w-100 panel-title mb-3" type="button" id="btn-reset-isolate">Reiniciar</button>
                 <div id="layers-container"></div>
             </div>
             <div class="sidebar-tab left-tab" id="leftTab">

@@ -347,6 +347,58 @@
             text-align: center;
             color: #e6e6e6;
         }
+        .tree-group {
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .tree-group:hover {
+            transform: translateY(-1px);
+        }
+
+        .tree-header {
+            font-size: 14px;
+        }
+
+        .tree-header input {
+            cursor: pointer;
+        }
+
+        .tree-header .badge {
+            font-size: 11px;
+        }
+
+        .visibility-toggle {
+            accent-color: #0d6efd; /* bootstrap primary */
+        }
+
+        .isolate-toggle {
+            accent-color: #dc3545; /* rojo para aislar */
+        }
+        .tree-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .tree-header > div {
+            min-width: 0; /* 🔥 CLAVE para que funcione ellipsis */
+        }
+
+        .text-truncate {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .form-check-input {
+            margin: 0;
+            vertical-align: middle;
+        }
+
+
     </style>
 </head>
 <body>
