@@ -1,4 +1,3 @@
-const gltfLoader = new GLTFLoader();
 const rgbeLoader = new RGBELoader();
 
 let renderer, scene, camera, controls;
@@ -44,9 +43,6 @@ async function initViewer(container) {
     scene.add(ambient);
     world.camera.controls.setLookAt(10, 10, 10, 0, 0, 0);
     fragments = new FRAGS.FragmentsModels();
-    world.camera.controls.addEventListener("control", () => {
-        fragments.update();
-    });
 }
 
 
@@ -62,7 +58,6 @@ async function ifcLoader(file){
         },
     });
 
-    // 🔥 worker
     const githubUrl =
         "https://thatopen.github.io/engine_fragment/resources/worker.mjs";
 
@@ -75,6 +70,7 @@ async function ifcLoader(file){
     fragments = components.get(OBC.FragmentsManager);
     fragments.init(workerUrl);
 
+    world.scene.three.clear();
     world.camera.controls.addEventListener("update", () => {
         fragments.core.update();
     });
@@ -94,20 +90,25 @@ async function ifcLoader(file){
         }
     });
 
-    // 🔥 AQUÍ ESTÁ EL CAMBIO
     const buffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(buffer);
 
     await ifcLoader.load(uint8, false, file.name, {
         processData: {
-            progressCallback: (progress) => console.log(progress),
+            progressCallback: (progress) => {
+                const percent = Math.round(progress * 100);
+                showViewerLoader(`Procesando IFC... ${percent}%`);
+            },
         },
     });
 
+    showViewerLoader(`Generando Vista...`);
     console.log("IFC cargado desde FILE 🚀");
 
-    setTimeout(() => generateThumbnail(), 1000);
-    // 👉 generar FRAG automáticamente
+    setTimeout(() => {
+        hideViewerLoader();
+        generateThumbnail();
+    }, 1000);
     await generateFragmentsFile();
 }
 
@@ -132,12 +133,6 @@ async function generateFragmentsFile() {
 
     console.log("FRAG generado y guardado en input 💾");
 }
-
-
-
-
-
-
 
 async function loadIFC(file) {
 
@@ -242,6 +237,22 @@ document.addEventListener('change', async (e) => {
     }
 });
 
+function showViewerLoader(text = "Procesando modelo...") {
+    const loader = document.getElementById('viewer-loader');
+    const label = document.getElementById('viewer-progress');
+
+    if (label) label.innerText = text;
+    loader.style.display = 'flex';
+}
+
+function hideViewerLoader() {
+    const loader = document.getElementById('viewer-loader');
+    loader.style.display = 'none';
+}
+
+
+
+
 
 document.addEventListener('shown.bs.modal', async (event) => {
     if (event.target.id !== 'modal-3d') return;
@@ -253,4 +264,14 @@ document.addEventListener('shown.bs.modal', async (event) => {
 
 document.getElementById('btn-generate').addEventListener('click',()=>{
     generateThumbnail();
+});
+
+
+document.addEventListener('livewire-upload-progress', event => {
+    const progress = event.detail.progress;
+    const bar = document.getElementById('upload-progress');
+
+    if (bar) {
+        bar.style.width = progress + '%';
+    }
 });

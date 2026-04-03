@@ -57,7 +57,7 @@
 
                     <div class="bottom-bar">
                         <span>XYZ: (0,0,0)</span>
-                        <span>FPS: 60</span>
+                        <!-- <span>FPS: 60</span> -->
                     </div>
 
                 </div>

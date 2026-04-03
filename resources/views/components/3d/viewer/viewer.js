@@ -1,5 +1,5 @@
 const gltfLoader = new GLTFLoader();
-const rgbeLoader = new RGBELoader();
+// const rgbeLoader = new RGBELoader();
 
 let renderer, scene, camera, controls;
 let currentModel = null;
@@ -22,83 +22,14 @@ async function initViewer(container) {
     world.scene = new OBC.SimpleScene(components);
     world.renderer = new OBC.SimpleRenderer(components, container);
     renderer = world.renderer.three;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // renderer.setSize(container.clientWidth, container.clientHeight);
     world.camera = new OBC.SimpleCamera(components);
     components.init();
+    // components.get(OBC.Grids).create(world);
     world.scene.setup();
-    // const pmremGenerator = new THREE.PMREMGenerator(world.renderer.three);
-    // pmremGenerator.compileEquirectangularShader();
-    // new RGBELoader()
-    //     .load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/venice_sunset_1k.hdr', function(texture) {
-    //         const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-    //         world.scene.three.environment = envMap;
-    //         texture.dispose();
-    //         pmremGenerator.dispose();
-    //     });
     const scene = world.scene.three;
     scene.background = new THREE.Color(0x1a1d25);
-    // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    // hemiLight.position.set(0, 50, 0);
-    // scene.add(hemiLight);
-    // const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    // dirLight.position.set(10, 20, 10);
-    // scene.add(dirLight);
-    // const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-    // scene.add(ambient);
-    // world.camera.controls.setLookAt(10, 10, 10, 0, 0, 0);
-    // fragments = new FRAGS.FragmentsModels();
-    // world.camera.controls.addEventListener("control", () => {
-    //     fragments.update();
-    // });
-
-    const stats = new Stats();
-    stats.showPanel(2);
-    stats.dom.style.position = 'absolute';
-    stats.dom.style.top = '10px';
-    stats.dom.style.left = '10px';
-    stats.dom.style.zIndex = '20';
-    container.append(stats.dom);
-    world.renderer.onBeforeUpdate.add(() => stats.begin());
-    world.renderer.onAfterUpdate.add(() => stats.end());
-}
-
-async function loadIFC(file) {
-
-    if (model) {
-        model.dispose();
-    }
-
-    const buffer = await file.arrayBuffer();
-    const typedArray = new Uint8Array(buffer);
-    const serializer = new FRAGS.IfcImporter();
-
-    serializer.wasm = {
-        absolute: true,
-        path: "https://unpkg.com/web-ifc@0.0.75/",
-    };
-
-    const bytes = await serializer.process({
-        bytes: typedArray,
-        raw: true
-    });
-
-    model = await fragments.load(bytes, {
-        modelId: Date.now().toString(),
-        camera: world.camera.three,
-        raw: true,
-    });
-
-    // world.scene.three.clear();
-    world.scene.three.add(model.object);
-    await fragments.update(true);
-    console.log("IFC cargado correctamente 🚀");
-
-}
-
-
-async function ifcLoader(url){
     const ifcLoader = components.get(OBC.IfcLoader);
     await ifcLoader.setup({
         autoSetWasm: false,
@@ -134,30 +65,33 @@ async function ifcLoader(url){
         }
     });
 
-    const loadFragments = async () => {
-        // you can provide as many files as you need
-        const fragPaths = [
-            url+'?type=frag'
-        ];
+    const stats = new Stats();
+    stats.showPanel(2);
+    stats.dom.style.position = 'absolute';
+    stats.dom.style.top = '10px';
+    stats.dom.style.left = '10px';
+    stats.dom.style.zIndex = '20';
+    container.append(stats.dom);
+    world.renderer.onBeforeUpdate.add(() => stats.begin());
+    world.renderer.onAfterUpdate.add(() => stats.end());
+}
 
-        // Promise.all loads models concurrently for faster execution.
-        await Promise.all(
-            fragPaths.map(async (path) => {
-                const modelId = path.split("/").pop()?.split(".").shift();
-                if (!modelId) return null;
-                console.log("aqui");
-                const file = await fetch(path);
-                const buffer = await file.arrayBuffer();
-                // this is the main function to load the fragments
-                return fragments.core.load(buffer, { modelId });
-            }),
-        );
-    };
+async function ifcLoader(url){
+    const fragPaths = [
+        url+'?type=frag'
+    ];
 
-    await loadFragments();
-
-
-
+    await Promise.all(
+        fragPaths.map(async (path) => {
+            const modelId = path.split("/").pop()?.split(".").shift();
+            if (!modelId) return null;
+            // console.log("aqui");
+            const file = await fetch(path);
+            const buffer = await file.arrayBuffer();
+            // this is the main function to load the fragments
+            return fragments.core.load(buffer, { modelId });
+        }),
+    );
 
     // const loadIfc = async (path) => {
     //     const file = await fetch(path);
@@ -199,8 +133,8 @@ async function ifcLoader(url){
     // classifier.addGroupItems(classificationName, groupName, slabsModelIdMap);
 }
 
-function loadGLB(file) {
-    return new Promise((resolve, reject) => {
+async function loadGLB(file) {
+    new Promise((resolve, reject) => {
         if (model) {
             world.scene.three.remove(model.object);
             model = null;
@@ -219,11 +153,29 @@ function loadGLB(file) {
             world.camera.controls.setLookAt(size, size, size, 0, 0, 0);
             currentModel = obj;
             world.scene.three.add(obj);
-            console.log("GLB cargado 🚀");
+            // console.log("GLB cargado 🚀");
             URL.revokeObjectURL(url);
+
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.side = THREE.DoubleSide;
+                    console.log(child.name);
+                    console.log("material: "+child.material.name);
+                    // if (Array.isArray(child.material)) {
+                    //     child.material.forEach(mat => registerMaterial(mat, child));
+                    // } else {
+                    //     registerMaterial(child.material, child);
+                    // }
+                }
+            });
+
+
+
+
             resolve();
         }, undefined, reject);
     });
+    await processModel();
 }
 
 const loading = document.getElementById('loading');
@@ -244,7 +196,6 @@ async function loadFromUrl(url) {
         const blob = await response.blob();
         const file = new File([blob], 'model.' + ext);
         if (ext === 'ifc') {
-            // await loadIFC(file);
             await ifcLoader(url)
         } else if (ext === 'glb' || ext === 'gltf') {
             await loadGLB(file);
@@ -285,24 +236,24 @@ async function processModel() {
 
     for (const [modelId, model] of fragments.list) {
 
-        console.log("Procesando modelo:", modelId);
+        // console.log("Procesando modelo:", modelId);
 
         // 🔹 1. CLASES (IFCWALL, IFCWINDOW, etc)
         const categories = await model.getItemsOfCategories([/IFC/]);
 
-        console.log("Clases:", categories);
+        // console.log("Clases:", categories);
 
 
         // 🔹 2. NIVELES (STOREYS)
         const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
 
-        console.log("Niveles:", storeys);
+        // console.log("Niveles:", storeys);
 
 
         // 🔹 3. GEOMETRÍA POR CATEGORÍA
         const geomCategories = await model.getItemsWithGeometryCategories();
 
-        console.log("Geom categorías:", geomCategories);
+        // console.log("Geom categorías:", geomCategories);
 
 
         // 🔹 4. DATOS (propiedades BIM reales)
@@ -310,7 +261,7 @@ async function processModel() {
 
         const data = await model.getItemsData(allIds);
 
-        console.log("Propiedades:", data);
+        // console.log("Propiedades:", data);
 
 
         // 👉 AQUÍ construyes tus tablas UI
@@ -348,10 +299,8 @@ function buildUI({ categories }) {
         groupCheckbox.addEventListener('change', async (e) => {
             const visible = e.target.checked;
 
-            // 🔥 toggle de TODA la categoría
             await toggleCategory(groupName, visible);
 
-            // 🔁 sincronizar hijos
             const childCheckboxes = childrenContainer.querySelectorAll('input');
 
             childCheckboxes.forEach(cb => {
@@ -404,7 +353,7 @@ function buildUI({ categories }) {
 }
 
 async function toggleCategory(category, visible) {
-    console.log("es la: ",category)
+    // console.log("es la: ",category)
     const modelIdMap = {};
     for (const [, model] of fragments.list) {
         const items = await model.getItemsOfCategories([
@@ -429,8 +378,6 @@ async function toggleItem(id, visible) {
         await hider.set(false,modelIdMap);
 }
 
-
-
 function fitModel() {
     const obj = model?.object || currentModel;
     if (!obj) return;
@@ -439,18 +386,11 @@ function fitModel() {
     world.camera.controls.setLookAt(size, size, size, 0, 0, 0);
 }
 
-
-
-
 const splash = document.getElementById('app-splash');
 
-// window.addEventListener('load', () => {
-// Simulación opcional de inicialización
 setTimeout(() => {
     splash.classList.add('hidden');
-}, 2000); // puedes ajustar o eliminar delay
-// });
-
+}, 2000);
 
 const leftSidebar = document.getElementById('leftSidebar');
 const rightSidebar = document.getElementById('rightSidebar');
@@ -475,10 +415,6 @@ leftSidebar.addEventListener('dblclick', () => {
 rightSidebar.addEventListener('dblclick', () => {
     rightSidebar.classList.add('collapsed');
 });
-
-
-
-
 
 const url = container.dataset.url;
 initViewer(container);

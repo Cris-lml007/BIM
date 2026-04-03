@@ -35,11 +35,21 @@
                     <livewire:3d.simple-view></livewire:3d.simple-view>
                 @endisland
             </div>
+            <div wire:loading wire:target="file" class="mt-2">
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%" id="upload-progress">
+                    </div>
+                </div>
+            </div>
 
         </div>
         <div class="modal-footer">
             <button type="submit" class="btn btn-primary">Guargar</button>
             <button data-bs-dismiss="modal" type="reset" class="btn btn-secondary">Cancelar</button>
+            <span wire:loading wire:target="save">
+                <span class="spinner-border spinner-border-sm"></span>
+                Subiendo...
+            </span>
         </div>
     </form>
 </div>
