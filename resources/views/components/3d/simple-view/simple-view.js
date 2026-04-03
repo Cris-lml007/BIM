@@ -1,4 +1,5 @@
 const rgbeLoader = new RGBELoader();
+const gltfLoader = new GLTFLoader();
 
 let renderer, scene, camera, controls;
 let currentModel = null;
@@ -15,6 +16,7 @@ async function initViewer(container) {
     world = worlds.create();
     world.scene = new OBC.SimpleScene(components);
     world.renderer = new OBC.SimpleRenderer(components, container);
+    world.renderer.isConfigurable({antialias: true, preserveDrawingBuffer: true})
     renderer = world.renderer.three;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
@@ -193,6 +195,8 @@ function generateThumbnail() {
 }
 
 async function loadGLB(file) {
+    showViewerLoader('cargando modelo');
+    world.scene.three.clear();
     if (model) {
         world.scene.three.remove(model.object);
         model = null;
@@ -214,7 +218,10 @@ async function loadGLB(file) {
         currentModel = obj;
         world.scene.three.add(obj);
         console.log("GLB cargado 🚀");
-        setTimeout(() => generateThumbnail(), 1000);
+        setTimeout(() => {
+            hideViewerLoader();
+            generateThumbnail();
+        }, 1000);
     });
     URL.revokeObjectURL(url);
 }
