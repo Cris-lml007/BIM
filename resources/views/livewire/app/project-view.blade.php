@@ -85,14 +85,15 @@
                                         class="list-group-item px-0 py-3 d-flex align-items-center bg-transparent border-0">
                                         <div class="flex-shrink-0">
                                             <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-semibold
-                                                    {{ $member->type === 'pending' ? 'bg-secondary' : 'bg-primary' }}"
+                                                            {{ $member->type === 'pending' ? 'bg-secondary' : 'bg-primary' }}"
                                                 style="width: 40px; height: 40px;">
                                                 {{ $member->initials }}
                                             </div>
                                         </div>
                                         <div class="flex-grow-1 ms-3">
                                             <p class="mb-0 fw-semibold text-truncate" style="max-width: 150px;">
-                                                {{ $member->name }}</p>
+                                                {{ $member->name }}
+                                            </p>
                                             <small class="text-muted d-block text-truncate"
                                                 style="max-width: 150px;">{{ $member->email }}</small>
                                         </div>
@@ -126,7 +127,7 @@
                                         <div class="flex-shrink-0">
                                             <div
                                                 class="rounded-circle bg-opacity-10 p-2
-                                                    {{ str_contains($activity->type, 'image') || str_contains($activity->type, 'pdf') ? 'bg-primary' : 'bg-warning' }}">
+                                                            {{ str_contains($activity->type, 'image') || str_contains($activity->type, 'pdf') ? 'bg-primary' : 'bg-warning' }}">
                                                 <i
                                                     class="fas fa-file-upload {{ str_contains($activity->type, 'image') || str_contains($activity->type, 'pdf') ? 'text-primary' : 'text-warning' }}"></i>
                                             </div>
@@ -157,28 +158,28 @@
                         <h6 class="fw-semibold mb-3 text-muted">Acciones rápidas</h6>
                         <div class="row g-3">
                             <div class="col-6 col-sm-3">
-                                <a href="{{ route('app.project.documents', $project) }}" wire:navigate
+                                <a href="{{ route('app.project.documents', $project) }}"
                                     class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="nf nf-md-floor_plan text-primary me-2"></i>
                                     <span class="fw-semibold">Subir Plano</span>
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
-                                <a href="{{ route('app.project.view', $project) }}" wire:navigate
+                                <a href="{{ route('app.project.view', $project) }}"
                                     class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-cube text-purple me-2"></i>
                                     <span class="fw-semibold">Modelo 3D</span>
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
-                                <a href="{{ route('app.project.documents', $project) }}" wire:navigate
+                                <a href="{{ route('app.project.documents', $project) }}"
                                     class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-file-alt text-warning me-2"></i>
                                     <span class="fw-semibold">Documento</span>
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
-                                <a href="{{ route('app.project.members', $project) }}" wire:navigate
+                                <a href="{{ route('app.project.members', $project) }}"
                                     class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-user-plus text-success me-2"></i>
                                     <span class="fw-semibold">Invitar</span>
