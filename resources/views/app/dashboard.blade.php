@@ -56,13 +56,34 @@
     @endcan
 @endsection
 
-@section('css')
-    {{-- Add here extra stylesheets --}}
-    {{-- <link rel="stylesheet" href="/css/admin_custom.css"> --}}
+@section('preloader')
+    <div id="app-splash" class="app-splash">
+        <div class="splash-content">
+            <div class="spinner-border text-light"></div>
+            <h5 class="mt-3 text-light"><span class="text-primary"><b>BIM</b>NOVA</span> AR</h5>
+            <p class="text-light">Cambiando Pestaña...</p>
+        </div>
+    </div>
 @endsection
 
-@section('js')
-    <script>
-        console.log("Hi, I'm using the Laravel-AdminLTE package!");
-    </script>
+@section('css')
+    <style>
+        .app-splash {
+            /* position: fixed; */
+            width: 100%;
+            height: 100vh;
+            inset: 0;
+            background: radial-gradient(circle, #0f1117, #05070c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .splash-content {
+            text-align: center;
+            color: #e6e6e6;
+        }
+    </style>
 @endsection
