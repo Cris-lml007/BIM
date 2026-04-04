@@ -69,3 +69,84 @@
     color: var(--color-acento) !important;
 }
 
+/* LOGIN */
+body.login-page,
+body.register-page {
+    background-color: var(--color-fondo-widgets) !important;
+}
+
+.login-logo a,
+.register-logo a {
+    color: var(--color-acento-dorado) !important;
+    font-weight: 500 !important;
+}
+
+.login-page .card,
+.register-page .card {
+    background-color: var(--color-fondo-principal);
+    border: 1px solid var(--color-bordes);
+}
+
+.login-card-body, .card-header,
+.register-card-body {
+    border-color: var(--color-bordes);
+    background-color: var(--color-acento-dorado-hover);
+    color: white;
+}
+
+.login-page .login-box-msg,
+.register-page .register-box-msg {
+    color: var(--color-texto-principal);
+}
+
+.login-page .input-group .form-control,
+.register-page .input-group .form-control {
+    background-color: var(--color-fondo-widgets);
+    border-color: var(--color-bordes);
+    color: var(--color-texto-principal);
+}
+
+
+.login-page .input-group .form-control::placeholder,
+.register-page .input-group .form-control::placeholder {
+    color: var(--color-texto-principal);
+}
+
+
+.login-page .input-group .form-control:focus,
+.register-page .input-group .form-control:focus {
+    border-color: var(--color-acento-dorado);
+    box-shadow: none;
+}
+
+.login-page .input-group .input-group-text,
+.register-page .input-group .input-group-text {
+    background-color: var(--color-bordes);
+    border-color: var(--color-bordes);
+    color: var(--color-texto-secundario);
+}
+
+.login-page .btn-primary,
+.register-page .btn-primary {
+    /* background-color: var(--color-acento-dorado) !important; */
+    /* border-color: var(--color-acento-dorado) !important; */
+    border-radius: 5px;
+    color: white !important;
+    font-weight: bold;
+}
+
+.login-page .btn-primary:hover,
+.register-page .btn-primary:hover {
+    background-color: var(--color-acento-dorado-hover) !important;
+    border-color: var(--color-acento-dorado-hover) !important;
+}
+
+.login-page p a,
+.register-page p a {
+    color: white;
+}
+
+.login-page p a:hover,
+.register-page p a:hover {
+    color: var(--color-texto-principal);
+}
