@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enum\RoleSaas;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
@@ -54,7 +55,10 @@ class AppServiceProvider extends ServiceProvider
 
 
         Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
-            $projects = Project::where('user_id', Auth::user()->id)->get();
+            $projects = Project::where('user_id', Auth::user()->id)
+                ->orWhereHas('members',function(Builder $builder){
+                    $builder->where('user_id',Auth::user()->id);
+                })->get();
             $menu = [];
             foreach ($projects as $project) {
                 $menu[] = [

@@ -319,7 +319,7 @@ return [
         ],
         [
             'text' => 'Gestion de accesos',
-            'url' => 'admin/access',
+            'route' => 'administration.access',
             'icon' => 'far fa-fw fa-file',
             'can' => 'isAdministration'
         ],

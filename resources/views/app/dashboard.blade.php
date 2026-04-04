@@ -49,6 +49,9 @@
                 </div>
             </div>
         </div>
+        <div class="container">
+            <h2>Mis Proyectos</h2>
+        </div>
         <livewire:app.projects-view></livewire:app.projects-view>
     @endcan
 @endsection
