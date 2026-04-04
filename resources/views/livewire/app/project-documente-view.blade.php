@@ -1,4 +1,11 @@
-<div>
+<div class="row g-3 mb-3">
+
+    @if(!$project->ownerAccess())
+        <small class="alert alert-warning m-0">
+            Usted no cuenta con acceso para esta sección, comuníquese con
+            <b>BIMNova</b>, para solicitar un acceso.
+        </small>
+    @endif
     <div class="card mb-4 shadow-sm rounded-4">
         <div class="card-header border-0 bg-white pt-3 pb-0">
             <div class="d-flex justify-content-between align-items-center">
@@ -122,7 +129,8 @@
                                         @if($doc->isLink())
                                             <small class="text-muted d-block text-truncate" style="max-width: 280px;">
                                                 <i class="fas fa-external-link-alt me-1"></i>
-                                                <a href="{{ $doc->view_url }}" target="_blank" class="text-decoration-none text-muted">
+                                                <a href="{{ $doc->view_url }}" target="_blank"
+                                                    class="text-decoration-none text-muted">
                                                     {{ $doc->path }}
                                                 </a>
                                             </small>

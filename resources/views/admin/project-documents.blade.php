@@ -11,9 +11,10 @@
                 </small>
                 <h3 class="mb-0">Documentos</h3>
             </div>
-            <button data-bs-toggle="modal" data-bs-target="#modal-document" class="btn btn-primary">
-                <i class="fas fa-cloud-upload-alt me-2 "></i>
 
+            <button data-bs-toggle="modal" data-bs-target="#modal-document" class="btn btn-primary"
+                @if(empty($project->ownerAccess())) disabled @endif>
+                <i class="fas fa-cloud-upload-alt me-2 "></i>
                 Subir
             </button>
         </div>

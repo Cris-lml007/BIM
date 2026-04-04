@@ -61,42 +61,43 @@ class ProjectDocumenteView extends Component
 
     public function render()
     {
-        $query = Document::where('project_id', $this->project->id);
+        $ownerAccess = $this->project->ownerAccess();
 
-        // Búsqueda
-        if ($this->search) {
-            $query->where('name', 'like', '%' . $this->search . '%');
+        if (empty($ownerAccess)) {
+            return $this->emptyResponse();
         }
 
-        // Filtro por tipo
-        if ($this->filterType) {
-            match ($this->filterType) {
-                'link' => $query->where('type', 'link'),
-                'image' => $query->where('type', 'like', '%image%'),
-                'pdf' => $query->where('type', 'like', '%pdf%'),
-                'word' => $query->where('type', 'like', '%word%'),
-                'excel' => $query->where('type', 'like', '%excel%'),
-                default => null,
-            };
-        }
+        return $this->authorizedResponse($ownerAccess);
+    }
+    protected function emptyResponse()
+    {
+        return view('livewire.app.project-documente-view', [
+            'documents' => collect(),
+            'usedMB' => 0,
+            'availableMB' => 0,
+            'percentage' => 0,
+            'totalDocs' => 0,
+            'totalLinks' => 0,
+            'totalSizeBytes' => 0,
+        ]);
+    }
+    protected function authorizedResponse($ownerAccess)
+    {
+        $baseQuery = $this->baseQuery();
 
-        $documents = $query->orderBy($this->sortField, $this->sortDirection)->get();
+        $documents = $this->getDocuments($baseQuery);
 
-        // Estadísticas de almacenamiento
-        $totalSizeBytes = Document::where('project_id', $this->project->id)
-            ->where('type', '!=', 'link')
-            ->sum('size');
+        [
+            $totalSizeBytes,
+            $totalDocs,
+            $totalLinks
+        ] = $this->getStats($baseQuery);
 
-        $maxMB = $this->project->ownerAccess()->max_storage;
-
-        $totalSizeMB = $totalSizeBytes / (1024 ** 2);
-
-        $usedMB = round($totalSizeMB, 2);
-        $availableMB = round($maxMB - $totalSizeMB, 2);
-        $percentage = min(100, round(($totalSizeMB / $maxMB) * 100, 1));
-
-        $totalDocs = Document::where('project_id', $this->project->id)->count();
-        $totalLinks = Document::where('project_id', $this->project->id)->where('type', 'link')->count();
+        [
+            $usedMB,
+            $availableMB,
+            $percentage
+        ] = $this->getStorageData($totalSizeBytes, $ownerAccess);
 
         return view('livewire.app.project-documente-view', compact(
             'documents',
@@ -107,5 +108,61 @@ class ProjectDocumenteView extends Component
             'totalLinks',
             'totalSizeBytes'
         ));
+    }
+    protected function baseQuery()
+    {
+        return Document::where('project_id', $this->project->id);
+    }
+    protected function getDocuments($baseQuery)
+    {
+        $query = clone $baseQuery;
+
+        if (!empty($this->search)) {
+            $query->where('name', 'like', "%{$this->search}%");
+        }
+
+        if (!empty($this->filterType)) {
+            match ($this->filterType) {
+                'link' => $query->where('type', 'link'),
+                'image' => $query->where('type', 'like', '%image%'),
+                'pdf' => $query->where('type', 'like', '%pdf%'),
+                'word' => $query->where('type', 'like', '%word%'),
+                'excel' => $query->where('type', 'like', '%excel%'),
+                default => null,
+            };
+        }
+
+        return $query
+            ->orderBy($this->sortField ?? 'id', $this->sortDirection ?? 'desc')
+            ->get();
+    }
+    protected function getStats($baseQuery)
+    {
+        $totalSizeBytes = (clone $baseQuery)
+            ->where('type', '!=', 'link')
+            ->sum('size');
+
+        $totalDocs = (clone $baseQuery)->count();
+
+        $totalLinks = (clone $baseQuery)
+            ->where('type', 'link')
+            ->count();
+
+        return [$totalSizeBytes, $totalDocs, $totalLinks];
+    }
+    protected function getStorageData($totalSizeBytes, $ownerAccess)
+    {
+        $maxMB = $ownerAccess->max_storage ?? 0;
+
+        $totalSizeMB = $totalSizeBytes / (1024 ** 2);
+
+        $usedMB = round($totalSizeMB, 2);
+        $availableMB = max(0, round($maxMB - $totalSizeMB, 2));
+
+        $percentage = $maxMB > 0
+            ? min(100, round(($totalSizeMB / $maxMB) * 100, 1))
+            : 0;
+
+        return [$usedMB, $availableMB, $percentage];
     }
 }
