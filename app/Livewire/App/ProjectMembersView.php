@@ -333,55 +333,140 @@ class ProjectMembersView extends Component
         $this->dispatch('getUser', $id)->to(\App\Livewire\Admin\UsersForm::class);
         $this->js("new bootstrap.Modal(document.getElementById('modal-info')).show();");
     }
+    /*
+        public function render()
+        {
+            //dd($this->project->ownerAccess());
 
+            if ($this->project->ownerAccess()) {
+
+                dd('ingresa');
+                if (Auth::user()->id !== $this->project->user_id)
+                    $search = $this->actions['search'];
+                $query = $this->project->members();
+
+                if ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('users.name', 'like', '%' . $search . '%')
+                            ->orWhere('users.email', 'like', '%' . $search . '%');
+                    });
+                }
+
+                $sortField = $this->actions['sortField'];
+                $sortColumn = match ($sortField) {
+                    'pivot_role' => 'project_user.role',
+                    'created_at' => 'project_user.created_at',
+                    'id' => 'users.id',
+                    'name' => 'users.name',
+                    'email' => 'users.email',
+                    default => $sortField
+                };
+
+                $members = $query->orderBy($sortColumn, $this->actions['sortDirection'])->get();
+
+                // Search list for the modal - only show users not already in project
+                $usersSearchList = collect();
+                if (!empty($this->userSearch) && strlen($this->userSearch) > 2) {
+                    $usersSearchList = User::where('id', '!=', $this->project->user_id)
+                        ->where(function ($q) {
+                            $q->where('name', 'like', '%' . $this->userSearch . '%')
+                                ->orWhere('email', 'like', '%' . $this->userSearch . '%');
+                        })
+                        ->whereNotIn('id', $this->project->members()->pluck('users.id'))
+                        ->limit(10)
+                        ->get();
+                }
+
+                // Include owner in the list
+                $owner = $this->project->owner;
+
+                // Statistics
+                $total_members = $this->project->members()->count();
+                $total = $this->project->ownerAccess()->max_users;
+
+                $invites = $this->project->invitations()->get();
+
+
+            } else {
+                $owner = $total_members = $total = $invites = $usersSearchList = $members = null;
+            }
+            return view('livewire.app.project-members-view', compact('members', 'owner', 'total_members', 'total', 'invites', 'usersSearchList'));
+        }
+    */
     public function render()
     {
-        $search = $this->actions['search'];
+        if (!$this->project->ownerAccess()) {
+            return $this->emptyResponse();
+        }
+
+        return $this->authorizedResponse();
+    }
+    protected function emptyResponse()
+    {
+        return view('livewire.app.project-members-view', [
+            'members' => collect(),
+            'owner' => null,
+            'total_members' => 0,
+            'total' => 0,
+            'invites' => collect(),
+            'usersSearchList' => collect(),
+        ]);
+    }
+    protected function authorizedResponse()
+    {
+        $search = $this->actions['search'] ?? null;
+        $sortField = $this->actions['sortField'] ?? 'id';
+        $sortDirection = $this->actions['sortDirection'] ?? 'asc';
+
         $query = $this->project->members();
 
-        if ($search) {
+        if (!empty($search) && Auth::id() !== $this->project->user_id) {
             $query->where(function ($q) use ($search) {
-                $q->where('users.name', 'like', '%' . $search . '%')
-                    ->orWhere('users.email', 'like', '%' . $search . '%');
+                $q->where('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%");
             });
         }
 
-        $sortField = $this->actions['sortField'];
         $sortColumn = match ($sortField) {
             'pivot_role' => 'project_user.role',
             'created_at' => 'project_user.created_at',
             'id' => 'users.id',
             'name' => 'users.name',
             'email' => 'users.email',
-            default => $sortField
+            default => 'users.id'
         };
 
-        $members = $query->orderBy($sortColumn, $this->actions['sortDirection'])->get();
+        $members = $query->orderBy($sortColumn, $sortDirection)->get();
 
-        // Search list for the modal - only show users not already in project
-        $usersSearchList = collect();
-        if (!empty($this->userSearch) && strlen($this->userSearch) > 2) {
-            $usersSearchList = User::where('id', '!=', $this->project->user_id)
-                ->where(function ($q) {
-                    $q->where('name', 'like', '%' . $this->userSearch . '%')
-                        ->orWhere('email', 'like', '%' . $this->userSearch . '%');
-                })
-                ->whereNotIn('id', $this->project->members()->pluck('users.id'))
-                ->limit(10)
-                ->get();
-        }
+        $usersSearchList = $this->getUsersSearchList();
 
-        // Include owner in the list
         $owner = $this->project->owner;
-
-        // Statistics
         $total_members = $this->project->members()->count();
-        $total = $this->project->ownerAccess()->max_users;
-
+        $total = optional($this->project->ownerAccess())->max_users ?? 0;
         $invites = $this->project->invitations()->get();
 
-
-        return view('livewire.app.project-members-view', compact('members', 'owner', 'total_members', 'total', 'invites', 'usersSearchList'));
+        return view('livewire.app.project-members-view', compact(
+            'members',
+            'owner',
+            'total_members',
+            'total',
+            'invites',
+            'usersSearchList'
+        ));
     }
+    protected function getUsersSearchList()
+    {
+        if (empty($this->userSearch) || strlen($this->userSearch) <= 2) {
+            return collect();
+        }
 
+        return User::where('id', '!=', $this->project->user_id)
+            ->where(function ($q) {
+                $q->where('name', 'like', "%{$this->userSearch}%")
+                    ->orWhere('email', 'like', "%{$this->userSearch}%");
+            })
+            ->whereNotIn('id', $this->project->members()->pluck('users.id'))
+            ->limit(10)
+            ->get();
+    }
 }
