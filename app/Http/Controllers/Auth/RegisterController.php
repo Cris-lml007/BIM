@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-
+use App\Models\ProjectInvitation;
 class RegisterController extends Controller
 {
     /*
@@ -51,8 +51,8 @@ class RegisterController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'phone' => ['required','string','min:8'],
-            'organization' => ['required','string']
+            'phone' => ['required', 'string', 'min:8'],
+            'organization' => ['required', 'string']
         ]);
     }
 
@@ -63,12 +63,34 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        return User::create([
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'phone' => $data['phone'],
             'organization' => $data['organization']
         ]);
+
+
+        if (session('invitation_token')) {
+            $invitation = ProjectInvitation::where('token', session('invitation_token'))
+                ->where('email', $user->email) // seguridad: email debe coincidir
+                ->first();
+
+            if ($invitation && !$invitation->isExpired()) {
+                $invitation->project->members()->syncWithoutDetaching([
+                    $user->id => ['role' => $invitation->role]
+                ]);
+
+                $invitation->delete();
+                session()->forget('invitation_token');
+
+                //falta redirigir bien 
+                $this->redirectTo = route('app.project', $invitation->project_id);
+            } else {
+                session()->flash('error', 'Invitación expirada');
+            }
+        }
+        return $user;
     }
 }

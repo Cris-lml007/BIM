@@ -1,5 +1,9 @@
-@extends('adminlte::page')
+@extends('layouts.main')
 
-@section('content')
+@section('header')
+    {{ $header ?? '' }}
+@endsection
+
+@section('content_body')
 {{ $slot }}
 @endsection
