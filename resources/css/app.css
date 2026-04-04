@@ -1,11 +1,71 @@
-@import 'tailwindcss';
+/* ===============================
+   1. VARIABLES DE COLOR (BIM UI)
+=================================*/
+:root {
+    --color-fondo-principal: #0b0f1a;
+    --color-fondo-widgets: #111827;
+    --color-fondo-hover: #1a2333;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+    --color-bordes: #1f2a3a;
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-texto-principal: #e5e7eb;
+    --color-texto-secundario: #9ca3af;
+
+    --color-acento: #3b82f6;
+    --color-acento-hover: #2563eb;
+    --color-acento-soft: rgba(59, 130, 246, 0.15);
 }
+
+/* ===============================
+   4. SIDEBAR
+=================================*/
+.main-sidebar {
+    background-color: var(--color-fondo-widgets);
+    border-right: 1px solid var(--color-bordes);
+}
+
+.brand-link {
+    background-color: var(--color-fondo-widgets) !important;
+    border-bottom: 1px solid var(--color-bordes);
+    text-decoration: none !important;
+}
+
+.brand-link .font-weight-light {
+    font-weight: 500 !important;
+}
+
+.brand-link .brand-text {
+    color: var(--color-acento) !important;
+    font-weight: bold;
+}
+
+.nav-header {
+    color: var(--color-acento) !important;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.nav-sidebar .nav-link {
+    color: var(--color-texto-principal) !important;
+}
+
+.nav-sidebar .nav-link:hover {
+    background-color: var(--color-fondo-hover);
+    border-radius: 6px;
+}
+
+.nav-sidebar .nav-link:hover i.nav-icon {
+    color: var(--color-acento) !important;
+}
+
+.nav-sidebar .nav-item > .nav-link.active {
+    background-color: var(--color-acento-soft) !important;
+    color: var(--color-acento) !important;
+    font-weight: bold;
+}
+
+.nav-sidebar .nav-link.active i.nav-icon {
+    color: var(--color-acento) !important;
+}
+
