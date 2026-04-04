@@ -22,28 +22,28 @@
             <div class="row g-3 mb-3">
                 <div class="col-md">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">2024-04-15</h3>
-                        <h6 class="mb-1 text-secondary">Licencia Valida</h6>
+                        <h3 class="fw-bold">{{ $licence?->available_end ? (Carbon\Carbon::parse($licence?->available_end)->isoformat('DD-MM-YY')) : '-' }}</h3>
+                        <h6 class="mb-1 text-secondary">{{ $licence?->isValid() ? 'Licencia Valida' : 'Licencia Vencida' }}</h6>
                     </div>
                 </div>
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">{{ $projects_active }}/5</h3>
+                        <h3 class="fw-bold">{{ $projects_active }}/{{$licence->max_projects ?? 0}}</h3>
                         <h6 class="mb-1 text-secondary">Proyectos Activos</h6>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">{{ $projects_blocked }}/5</h3>
+                        <h3 class="fw-bold">{{ $projects_blocked }}/{{ $licence->max_projects ?? 0 }}</h3>
                         <h6 class="mb-1 text-secondary">Proyectos Bloquados</h6>
                     </div>
                 </div>
 
                 <div class="col-md-4">
                     <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                        <h3 class="fw-bold">{{ $number_projects }}/5</h3>
+                        <h3 class="fw-bold">{{ $number_projects }}</h3>
                         <h6 class="mb-1 text-secondary">Total Compartidos</h6>
                     </div>
                 </div>

@@ -29,9 +29,10 @@ class HomeController extends Controller
 
     public function dashboard(){
         $user = Auth::user();
+        $licence = $user->access()->orderBy('available','desc')->first();
         $number_projects = $user->projects()->where('is_active',1)->count();
         $projects_active = $user->projects()->where('is_active',1)->count();
         $projects_blocked = $user->projects()->where('is_active',0)->count();
-        return view('app.dashboard',compact(['number_projects','projects_active','projects_blocked']));
+        return view('app.dashboard',compact(['number_projects','projects_active','projects_blocked','licence']));
     }
 }
