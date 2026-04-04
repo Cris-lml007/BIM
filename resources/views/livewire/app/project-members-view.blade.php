@@ -1,5 +1,11 @@
 <div>
     <div class="row g-3 mb-3">
+        @if(!$project->ownerAccess())
+            <small class="alert alert-warning m-0">
+                Usted no cuenta con acceso para esta sección, comuníquese con
+                <b>BIMNova</b>, para solicitar un acceso.
+            </small>
+        @endif
         <div class="col-md-6">
             <div class="card text-center bg-light shadow-sm rounded-4 py-3">
                 <h3 class="fw-bold">{{ $total_members }}</h3>
@@ -10,7 +16,6 @@
             <div class="card text-center bg-light shadow-sm rounded-4 py-3">
                 <h3 class="fw-bold">{{ $total_members . ' / ' . $total}}</h3>
                 <h6 class="mb-1 text-secondary">Miembros/Limite</h6>
-
             </div>
         </div>
 
