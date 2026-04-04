@@ -72,7 +72,6 @@ class RegisterController extends Controller
         ]);
 
 
-        //crecion de cuenta por invitacion
         if (session('invitation_token')) {
             $invitation = ProjectInvitation::where('token', session('invitation_token'))
                 ->where('email', $user->email) // seguridad: email debe coincidir
@@ -89,17 +88,7 @@ class RegisterController extends Controller
                 //falta redirigir bien 
                 $this->redirectTo = route('app.project', $invitation->project_id);
             } else {
-                $this->js("
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'error',
-                        title: 'Invitacion expirada',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        timerProgressBar: true
-                    });
-                ");
+                session()->flash('error', 'Invitación expirada');
             }
         }
         return $user;
