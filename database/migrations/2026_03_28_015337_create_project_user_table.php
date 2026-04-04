@@ -10,16 +10,16 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('accesses', function (Blueprint $table) {
+        Schema::create('project_user', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->integer('max_projects');
-            $table->integer('max_users');
-            $table->integer('max_storage'); //mb
-            $table->boolean('is_active')->default(true);
-            $table->date('available');
-            $table->date('available_end');
+            $table->integer('role');
+            $table->tinyInteger('status')->default(1); //1 incluido 2 aun no se crea cuenta;
+
             $table->timestamps();
+
+            $table->unique(['project_id', 'user_id']); // Ensure a user is only added once per project
         });
     }
 
@@ -28,6 +28,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('accesses');
+        Schema::dropIfExists('project_user');
     }
 };

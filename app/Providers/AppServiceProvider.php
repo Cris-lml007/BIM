@@ -35,35 +35,35 @@ class AppServiceProvider extends ServiceProvider
 
         Paginator::useBootstrap();
 
-        Gate::define('isAdmin',function(User $user){
+        Gate::define('isAdmin', function (User $user) {
             return $user->role == RoleSaas::ADMIN;
         });
 
-        Gate::define('isPreviligied',function(User $user){
+        Gate::define('isPreviligied', function (User $user) {
             return $user->role == RoleSaas::PRIVILIGIED;
         });
 
-        Gate::define('isAdministration',function(User $user){
+        Gate::define('isAdministration', function (User $user) {
             return $user->role == RoleSaas::PRIVILIGIED || $user->role == RoleSaas::ADMIN;
         });
 
-        Gate::define('isUser',function(User $user){
+        Gate::define('isUser', function (User $user) {
             return $user->role == RoleSaas::USER;
         });
 
 
 
         Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
-            $projects = Project::where('user_id',Auth::user()->id)->get();
+            $projects = Project::where('user_id', Auth::user()->id)->get();
             $menu = [];
             foreach ($projects as $project) {
-                $menu [] =[
+                $menu[] = [
                     'text' => $project->name,
-                    'url' => $project->id ? route('app.project',['project' => $project->id]) : '#',
+                    'url' => $project->id ? route('app.project', ['project' => $project->id]) : '#',
                     'submenu' => [
                         [
                             'text' => 'Principal',
-                            'url' => $project->id ? route('app.project',['project' => $project->id]) : '#',
+                            'url' => $project->id ? route('app.project', ['project' => $project->id]) : '#',
                             'icon' => 'fas fa-home',
                         ],
                         [
@@ -80,20 +80,21 @@ class AppServiceProvider extends ServiceProvider
                             'text' => 'Incidencias',
                             'url' => 'menu/child2',
                             'icon' => 'nf nf-cod-issue_reopened',
-                        ],[
+                        ],
+                        [
                             'text' => 'Anclajes Virtuales',
                             'url' => 'menu/child2',
                             'icon' => 'nf nf-fa-anchor',
                         ],
                         [
                             'text' => 'Documentos',
-                            'url' => 'menu/child2',
+                            'url' => route('app.project.documents', ['project' => $project->id]),
                             'icon' => 'nf nf-fa-folder',
                         ],
                         [
-                            'text' => 'Compartido',
-                            'url' => 'menu/child2',
-                            'icon' => 'nf nf-fa-share',
+                            'text' => 'Miembros del proyecto',
+                            'url' => route('app.project.members', ['project' => $project->id]),
+                            'icon' => 'nf nf-fa-users',
                         ],
                     ],
                 ];
