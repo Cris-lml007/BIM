@@ -36,6 +36,7 @@
                     <div class="card text-center shadow-sm rounded-4 py-3">
                         <h3 class="fw-bold text-danger"> {{  $access['expired']  }}</h3>
                         <small class="text-muted">Vencidas</small>
+
                     </div>
                 </div>
             </div>
@@ -53,6 +54,7 @@
                         <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3">
                             <i class="fas fa-users fa-lg"></i>
                         </div>
+
                     </div>
                 </div>
 
@@ -67,6 +69,7 @@
                         <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
                             <i class="fas fa-folder-open fa-lg"></i>
                         </div>
+
                     </div>
                 </div>
 
@@ -362,7 +365,6 @@
 
 
         </div>
-
         <livewire:app.projects-view></livewire:app.projects-view>
     @endcan
 @endsection

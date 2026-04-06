@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
@@ -39,41 +40,6 @@ class HomeController extends Controller
             return view('app.dashboard', compact('access', 'user'));
         }
     }
-    /*
-    public function dataDashboardAdmin()
-    {
-        $today = Carbon::now();
-        $limitDays = 7;
-
-        $access = [
-            'total' => Access::count(),
-            'active' => Access::where('is_active', 1)
-                ->whereDate('available_end', '>=', $today)
-                ->count(),
-            'expiring' => Access::where('is_active', 1)
-                ->whereBetween('available_end', [$today, $today->copy()->addDays($limitDays)])
-                ->count(),
-            'expired' => Access::whereDate('available_end', '<', $today)
-                ->count(),
-        ];
-        $userTotal = User::count();
-        $projects = Project::count();
-        $storage = Access::sum('max_storage');
-        $storageGB = round($storage / 1024, 2);
-
-        $usersThisMonth = User::whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
-            ->count();
-        $projectsThisMonth = Project::whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
-            ->count();
-
-        return $data = [
-            'access'
-        ];
-    }
-
-    */
     public function dashboardAdmin()
     {
         $today = Carbon::now();
@@ -181,6 +147,5 @@ class HomeController extends Controller
         ];
 
         return $data;
-
     }
 }

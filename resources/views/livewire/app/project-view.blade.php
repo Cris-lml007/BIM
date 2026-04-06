@@ -7,7 +7,6 @@
     <x-card>
         <div class="container-fluid py-4">
             <div class="row g-4">
-
                 <div class="col-12 col-sm-6 col-xl-3">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body p-4">
@@ -165,7 +164,7 @@
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
-                                <a href="{{ route('app.project.view', $project) }}"
+                                <a href="{{ route('app.project.model3d', $project) }}"
                                     class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-cube text-purple me-2"></i>
                                     <span class="fw-semibold">Modelo 3D</span>

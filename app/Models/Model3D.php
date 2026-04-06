@@ -12,4 +12,12 @@ class Model3D extends Model
         'project_id',
         'user_id'
     ];
+
+    public function model(){
+        return $this->morphOne(Attachment::class,'fileable');
+    }
+
+    public function user(){
+        return $this->belongsTo(User::class,'user_id','id');
+    }
 }

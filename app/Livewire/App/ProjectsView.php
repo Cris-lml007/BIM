@@ -10,6 +10,10 @@ use Livewire\Component;
 
 class ProjectsView extends Component
 {
+
+    public $is_avaliable = false;
+
+
     public $list = [
         'search' => '',
         'sortField' => 'name',
@@ -29,21 +33,28 @@ class ProjectsView extends Component
         ];
         $search = $this->list['search'];
         if($search != ''){
-            $data = Project::where('user_id',Auth::user()->id)
-                ->where(function(Builder $builder){
-                    $builder->where('name','like','%'.$this->list['search'].'%')
-                            ->orWhere('created_at','like','%'.$this->list['search'].'%')
-                            ->orWhereHas('owner',function (Builder $b){
-                                $b->where('created_at','like','%'.$this->list['search'].'%');
-                            });
-                })->orderBy($this->list['sortField'],$this->list['sortDirection'])
-                  ->paginate();
+            $data = Project::where(function(Builder $builder){
+                $builder->where('user_id',Auth::user()->id)
+                        ->orWhereHas('members',function(Builder $builder){
+                            $builder->where('user_id',Auth::user()->id);
+                        });
+            })->where(function(Builder $builder){
+                $builder->where('name','like','%'.$this->list['search'].'%')
+                        ->orWhere('created_at','like','%'.$this->list['search'].'%')
+                        ->orWhereHas('owner',function (Builder $b){
+                            $b->where('email','like','%'.$this->list['search'].'%');
+                        });
+            })->orderBy($this->list['sortField'],$this->list['sortDirection'])
+              ->paginate();
         }else{
             $data = Project::where('user_id',Auth::user()->id)
-                ->orderBy($this->list['sortField'],$this->list['sortDirection'])
-                ->paginate();
+                ->orWhereHas('members',function(Builder $builder){
+                    $builder->where('user_id',Auth::user()->id);
+                })->orderBy($this->list['sortField'],$this->list['sortDirection'])
+                  ->paginate();
         }
 
+        $this->is_avaliable = Auth::user()->canCreateProject();
         return view('livewire.app.projects-view',compact(['heads','data']));
     }
 }

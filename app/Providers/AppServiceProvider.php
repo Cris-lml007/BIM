@@ -5,10 +5,12 @@ namespace App\Providers;
 use App\Enum\RoleSaas;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use JeroenNoten\LaravelAdminLte\Events\BuildingMenu;
 
@@ -27,6 +29,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
+
+
         Paginator::useBootstrap();
 
         Gate::define('isAdmin', function (User $user) {
@@ -48,7 +55,10 @@ class AppServiceProvider extends ServiceProvider
 
 
         Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
-            $projects = Project::where('user_id', Auth::user()->id)->get();
+            $projects = Project::where('user_id', Auth::user()->id)
+                ->orWhereHas('members',function(Builder $builder){
+                    $builder->where('user_id',Auth::user()->id);
+                })->get();
             $menu = [];
             foreach ($projects as $project) {
                 $menu[] = [
@@ -62,7 +72,7 @@ class AppServiceProvider extends ServiceProvider
                         ],
                         [
                             'text' => 'Modelos 3D',
-                            'url' => route('app.project.view', ['project' => $project->id]),
+                            'url' => route('app.project.model3d',['project' => $project->id]),
                             'icon' => 'nf nf-fa-cube',
                         ],
                         [
@@ -94,10 +104,16 @@ class AppServiceProvider extends ServiceProvider
                 ];
             }
 
-            $event->menu->addAfter('dashboard', [
+            $event->menu->addAfter('dashboard',[
+                'key' => 'new-project',
+                'text' => 'Nuevo Projecto',
+                'icon' => 'fas fa-plus',
+                'route' => 'app.projects',
+            ]);
+            $event->menu->addAfter('new-project',[
                 'text' => 'Proyectos',
                 'icon' => 'fas fa-city',
-                'route' => 'app.projects',
+                // 'route' => 'app.projects',
                 'submenu' => $menu
             ]);
         });

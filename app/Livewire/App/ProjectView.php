@@ -8,6 +8,12 @@ use Livewire\Component;
 class ProjectView extends Component
 {
 
+    public $list = [
+        'search' => '',
+        'sortField' => 'id',
+        'sortDirection' => 'asc'
+    ];
+
     public $project;
 
 

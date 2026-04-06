@@ -17,6 +17,10 @@ class Project extends Model
         return $this->hasMany(Document::class);
     }
 
+    public function models(){
+        return $this->hasMany(Model3D::class,'project_id','id');
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

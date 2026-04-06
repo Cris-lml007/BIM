@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'title' => 'AdminLTE 3',
+    'title' => 'BIMNOVA AR',
     'title_prefix' => '',
     'title_postfix' => '',
 
@@ -257,7 +257,7 @@ return [
     */
 
     'use_route_url' => false,
-    'dashboard_url' => 'home',
+    'dashboard_url' => '/',
     'logout_url' => 'logout',
     'login_url' => 'login',
     'register_url' => 'register',
@@ -319,7 +319,7 @@ return [
         ],
         [
             'text' => 'Gestion de accesos',
-            'url' => 'admin/access',
+            'route' => 'administration.access',
             'icon' => 'far fa-fw fa-file',
             'can' => 'isAdministration'
         ],
