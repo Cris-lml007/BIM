@@ -26,7 +26,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::prefix('/dashboard')->middleware('auth')->group(function () {
-    Route::get('/', [App\Http\Controllers\HomeController::class, 'dashboard'])->name('dashboard');
+
+
+
+    Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('dashboard');
 
     Route::can('isAdministration')->group(function(){
         Route::controller(AdministrationController::class)->group(function () {

@@ -1,5 +1,4 @@
 <div wire:loading.class="opacity-50 pointer-events-none" wire:target="save,files">
-    <div wire:loading wire:target="files" class="small text-muted">Cargando archivos...</div>
     @error('general')
         <div class="alert alert-danger alert-dismissible fade show py-2 small rounded-3 mb-3" role="alert">
             <i class="fas fa-exclamation-circle me-2"></i>{{ $message }}

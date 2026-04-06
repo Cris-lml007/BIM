@@ -37,9 +37,16 @@
                     <td>{{ $item->max_projects }}</td>
                     <td>{{ $item->max_users }}</td>
                     <td>
-                        <span class='badge bg-success'>
-                            {{ $item->max_storage . ' MB'}}
-                        </span>
+                        @if ($item->max_storage / 1024 >= 1)
+                            <span class='badge bg-success'>
+                                {{ round($item->max_storage / 1024, 1) . ' GB'}}
+                            </span>
+                        @else
+                            <span class='badge bg-primary'>
+                                {{ $item->max_storage . ' MB'}}
+                            </span>
+
+                        @endif
                     </td>
 
                     <td>
@@ -97,8 +104,7 @@
         </livewire:table>
     </x-card>
 
-    <x-modal id="modal-access" title="Detalles de acceso" class="modal-md">
-
+    <x-modal id="modal-access" title="Detalles de acceso" class="modal-lg">
         <livewire:admin.access-form modal_name="modal-access" />
     </x-modal>
 </div>

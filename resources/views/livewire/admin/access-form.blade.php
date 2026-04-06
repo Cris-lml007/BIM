@@ -46,20 +46,25 @@
                     </label>
                     <div class="input-group">
                         <input type="number" class="form-control" wire:model="max_space" placeholder="1024" min="1">
-                        <span class="input-group-text">MB</span>
+                        <select name="unit" id="" class="form-select" wire:model="unit">
+                            @foreach ($unit_space as $key => $value)
+                                <option value="{{ $key }}">{{ $value }}</option>
+                            @endforeach
+                        </select>
                     </div>
+
                     @error('max_space')
                         <span class="text-danger small">{{ $message }}</span>
                     @enderror
                 </div>
             </div>
 
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label for="available">Fecha Inicio*</label>
-                    <input type="date" class="form-control" wire:model="available">
-                    @error('available') <span class="text-danger">{{ $message }}</span> @enderror
-                </div>
+            <div class="row mb-3">                    <div class="col-md-6">
+                        <label for="available">Fecha Inicio*</label>
+                        <input type="date" class="form-control" wire:model="available">
+                        @error('available') <span class="text-danger">{{ $message }}</span> @enderror
+                    </div>
+
                 <div class="col-md-6">
                     <label for="available_end">Fecha Fin*</label>
                     <input type="date" class="form-control" wire:model="available_end">

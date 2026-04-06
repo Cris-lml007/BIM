@@ -27,12 +27,21 @@ class UpdateProfileInformation extends Component
         $user = Auth::user();
 
         $validated = $this->validate([
-            'phone' => ['nullable', 'string', 'max:255'],
+            'phone' => ['required', 'numeric', 'digits:8'],
         ]);
-
         $user->forceFill($validated)->save();
 
-        session()->flash('status', 'profile-information-updated');
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Actualizado',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
     }
 
     public function render()
