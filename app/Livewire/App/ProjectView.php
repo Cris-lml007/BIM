@@ -17,7 +17,8 @@ class ProjectView extends Component
     public $project;
 
 
-    public function mount(Project $project){
+    public function mount(Project $project)
+    {
         $this->project = $project;
     }
 
@@ -37,7 +38,7 @@ class ProjectView extends Component
         $membersList = collect();
 
         // 1. Dueño
-        $membersList->push((object)[
+        $membersList->push((object) [
             'name' => $this->project->owner->name,
             'email' => $this->project->owner->email,
             'role' => 'Dueño',
@@ -47,7 +48,7 @@ class ProjectView extends Component
 
         // 2. Miembros aceptados
         foreach ($this->project->members as $member) {
-            $membersList->push((object)[
+            $membersList->push((object) [
                 'name' => $member->name,
                 'email' => $member->email,
                 'role' => $member->pivot->role ?? 'Colaborador',
@@ -58,7 +59,7 @@ class ProjectView extends Component
 
         // 3. Invitaciones pendientes
         foreach ($this->project->pendingInvitations as $invitation) {
-            $membersList->push((object)[
+            $membersList->push((object) [
                 'name' => $invitation->email,
                 'email' => $invitation->email,
                 'role' => $invitation->role ?? 'Invitado',

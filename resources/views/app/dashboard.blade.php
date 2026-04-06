@@ -92,7 +92,7 @@
             <div class="row g-3 mb-3">
 
                 <div class="col-md-3">
-                    <a href="{{ route('access.show') }}"
+                    <a href="{{ route('administration.access') }}"
                         class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2">
                         <i class="fas fa-key"></i>
                         <span>Crear Acceso</span>

@@ -3,22 +3,6 @@
 <link rel="stylesheet" href="{{ asset('vendor/icheck-bootstrap/icheck-bootstrap.min.css') }}">
 
 <style>
-    .login-box .card {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-    }
-
-    .logo-bim {
-        color: #0d6efd;
-        letter-spacing: 1px;
-    }
-
-    .logo-nova {
-        color: #000;
-
-    }
-
     .logo-bim,
     .logo-nova {
         font-weight: 900;

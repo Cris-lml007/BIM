@@ -2,7 +2,6 @@
 
 @section('header')
     <div class="container">
-
         <div class="d-flex justify-content-between align-items-center">
 
             <div class="d-flex align-items-center gap-3">
@@ -20,7 +19,7 @@
         </div>
         <hr class="mt-3 mb-4">
     </div>
-    </div>
+
 @endsection
 
 @section('content_body')
