@@ -31,7 +31,7 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
 
 
-    Route::get('/', [App\Http\Controllers\HomeController::class, 'dashboard'])->name('dashboard');
+    Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('dashboard');
 
     Route::controller(AdministrationController::class)->group(function () {
         Route::get('/users', 'users')->name('administration.users');

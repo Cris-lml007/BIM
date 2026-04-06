@@ -128,30 +128,54 @@
                             <h5>Alertas</h5>
 
                             <ul class="list-group">
-                                <li class="list-group-item text-danger">
-                                    ⚠️ Empresa B alcanzó el límite de almacenamiento
-                                </li>
-                                <li class="list-group-item text-warning">
-                                    ⏳ 5 licencias vencen en 7 días
-                                </li>
-                                <li class="list-group-item text-info">
-                                    ℹ️ Nuevo usuario registrado hoy
-                                </li>
+
+                                @forelse($alerts as $alert)
+                                    <li class="list-group-item d-flex align-items-center gap-2">
+
+                                        <i class="{{ $alert['icon'] }} {{ $alert['color'] }}"></i>
+
+                                        <span class="{{ $alert['color'] }}">
+                                            {{ $alert['message'] }}
+                                        </span>
+
+                                    </li>
+                                @empty
+                                    <li class="list-group-item text-success text-center">
+                                        <i class="fas fa-check-circle"></i> Todo en orden
+                                    </li>
+                                @endforelse
+
                             </ul>
                         </div>
                     </div>
 
                 </div>
                 <div class="col-md-6">
-
                     <div class="card shadow-sm rounded-4 mb-3">
                         <div class="card-body">
                             <h5>Actividad Reciente</h5>
-
                             <ul class="list-group">
-                                <li class="list-group-item">Juan creó un proyecto</li>
-                                <li class="list-group-item">Empresa X subió archivos</li>
-                                <li class="list-group-item">Admin bloqueó usuario</li>
+
+                                @forelse($activities as $activity)
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="{{ $activity['icon'] }} {{ $activity['color'] }}"></i>
+                                            <span>{{ $activity['message'] }}</span>
+                                        </div>
+
+                                        <small class="text-muted">
+                                            {{ $activity['date']->diffForHumans() }}
+                                        </small>
+
+                                    </li>
+                                @empty
+                                    <li class="list-group-item text-center text-muted">
+                                        <i class="fas fa-inbox"></i> Sin actividad reciente
+                                    </li>
+                                @endforelse
+
+
                             </ul>
                         </div>
                     </div>
