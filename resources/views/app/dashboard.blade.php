@@ -8,7 +8,7 @@
 
 @section('content')
     @can('isAdministration')
-        <div class="container py-3">
+        <div class="container">
 
             <div class="row g-3 mb-3">
                 <div class="col-md-3">
