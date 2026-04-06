@@ -1,8 +1,25 @@
 <div>
     <x-slot name="header">
-        <h1>Modelos 3D</h1>
-        <button data-bs-toggle="modal" data-bs-target="#modal-3d" class="btn btn-primary"><i class="fa fa-plus"></i> Subir
-            Modelo 3D</button>
+
+
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div class="d-flex align-items-center gap-3">
+                    <small class="text-muted">
+                        <i class="fas fa-folder-open me-1"></i> {{ $project->name }}
+                    </small>
+                    <h3 class="mb-0">Modelo 3D</h3>
+                </div>
+
+                <button data-bs-toggle="modal" data-bs-target="#modal-3d" class="btn btn-primary"><i
+                        class="fa fa-plus"></i>
+                    Subir
+                    Modelo 3D</button>
+            </div>
+            <hr class="mt-3 mb-4">
+        </div>
+
     </x-slot>
 
     <div class="container">
@@ -28,8 +45,7 @@
                             <span>fecha: {{ \Carbon\Carbon::parse($item->created_at)->format('D M Y') }}</span>
                         </div>
                         <a href="{{ route('app.project.model3d.id', ['project' => $this->project->id, 'model' => $item->id]) }}"
-                            class="btn btn-primary"
-                            style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
+                            class="btn btn-primary" style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
                     </div>
                 </div>
             @endforeach

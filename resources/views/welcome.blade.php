@@ -1627,9 +1627,10 @@
                 <div class="col-lg-5 d-none d-lg-block animate__animated animate__fadeInRight animate__delay-1s">
                     <div class="position-relative">
                         <section class="container">
-                            <div class="card shadow-sm p-3">
-                                <div id="building-3d" style="width:100%; height:300px;"></div>
-                                <p>Contendra un modelo 3d de ejemplo</p>
+                            <div class="card shadow-sm ">
+                                <!-- Aquí colocas la imagen -->
+                                <img src="{{ asset('images/portada.png') }}" alt="Modelo 3D" class="img-fluid rounded"
+                                    style="height:100%; width:100%; object-fit:cover;">
                             </div>
                         </section>
                     </div>
@@ -1643,11 +1644,9 @@
             <div class="container py-5">
                 <div class="row align-items-center g-5">
                     <div class="col-lg-6 position-relative" data-aos="fade-right">
-                        <div class="position-absolute top-0 start-0 bg-primary rounded-circle blur-3xl opacity-25"
+                        <div class="position-absolute top-0 start-0 bg-warning rounded-circle blur-3xl opacity-25"
                             style="width: 300px; height: 300px; filter: blur(60px); z-index: 0;"></div>
-                        <img src="https://images.unsplash.com/photo-1541888086225-ee826cd3364f?q=80&w=1000&auto=format&fit=crop"
-                            alt="BIMNova Constructora" class="img-fluid rounded-4 shadow-lg position-relative z-1"
-                            style="object-fit: cover; height: 450px; width: 100%;">
+                        <img src="{{ asset('images/portada.png') }}" alt="Modelo 3D" class="img-fluid rounded">
                         <div class="position-absolute bottom-0 end-0 bg-dark text-white p-4 rounded-4 shadow-lg z-2 me-n4 mb-n4 d-none d-md-block"
                             style="transform: translate(-20px, -20px);">
                             <h4 class="fw-bold mb-0 text-primary">15+</h4>

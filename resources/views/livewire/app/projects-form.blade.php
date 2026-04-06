@@ -10,13 +10,14 @@
             <div class="row">
                 <div class="col">
                     <label for="">Descripción</label>
-                    <textarea cols="30" rows="3" class="form-control" placeholder="Ingrese Descripción del Proyecto" wire:model="description"></textarea>
+                    <textarea cols="30" rows="3" class="form-control" placeholder="Ingrese Descripción del Proyecto"
+                        wire:model="description"></textarea>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Crear</button>
             <button type="reset" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Crear</button>
         </div>
     </form>
 </div>

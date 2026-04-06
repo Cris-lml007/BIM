@@ -20,6 +20,10 @@
                         <td>
                             <a href="{{ route('app.project', $item->id) }}" class="btn btn-primary"><i
                                     class="nf nf-fa-eye"></i></a>
+                            <button wire:click="changeState({{ $item->id }})"
+                                class="btn {{ $item->is_active ? 'btn-success' : 'btn-danger' }}">
+                                <i class="{{ $item->is_active ? 'nf nf-fa-unlock' : 'nf nf-fa-lock' }}"></i>
+                            </button>
                         </td>
                     </tr>
                 @endforeach
@@ -29,7 +33,7 @@
 
 
     @if ($is_avaliable)
-        <x-modal id="modal-project" title="Nuevo Proyecto" class="modal-lg">
+        <x-modal id="modal-project" title="Nuevo Proyecto" class="modal-md">
             <livewire:app.projects-form></livewire:app.projects-form>
         </x-modal>
     @endif
