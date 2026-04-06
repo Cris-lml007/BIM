@@ -113,9 +113,9 @@ return [
         'enabled' => true,
         'mode' => 'fullscreen',
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-            'alt' => 'AdminLTE Preloader Image',
-            'effect' => 'animation__shake',
+            'path' => 'vendor/adminlte/dist/img/BIMNOVA.jpg',
+            'alt' => 'Preloader Image',
+            'effect' => 'animation__rubberBand',
             'width' => 60,
             'height' => 60,
         ],
