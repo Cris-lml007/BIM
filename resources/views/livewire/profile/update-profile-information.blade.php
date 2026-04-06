@@ -38,7 +38,7 @@
 
 
         {{-- Modal para cambiar contraseña --}}
-        <x-modal id="passwordModal" title="Cambiar Contraseña" class="modal-dialog-centered">
+        <x-modal id="passwordModal" title="Cambiar Contraseña" class="modal-md">
             @livewire('profile.update-password')
         </x-modal>
     </div>

@@ -12,6 +12,12 @@ class AccessForm extends Component
     public $user_id;
     public $max_projects;
     public $max_space;
+    public $unit_space = [
+        1 => 'MB',
+        2 => 'GB'
+    ];
+    public $unit = 1;
+    public $typeForm = true; //create
     public $max_users;
     public $is_active = true;
     public $available;
@@ -23,6 +29,7 @@ class AccessForm extends Component
 
     public function mount($modal_name = null, $id = null)
     {
+
         $this->available = now()->format('Y-m-d');
         $this->modal_name = $modal_name;
         if ($id && ($access = Access::find($id))) {
@@ -35,12 +42,11 @@ class AccessForm extends Component
     #[On('getAccess')]
     public function getAccess($id)
     {
-        if ($access = Access::find($id)) {
-            $this->setAccess($access);
-        } else {
-            $this->access = new Access();
-            $this->reset(['user_id', 'max_projects', 'max_users', 'is_active', 'available', 'available_end']);
-        }
+        $this->typeForm = false;//update
+        $access = Access::find($id);
+        $this->setAccess($access);
+
+
     }
 
     private function setAccess(Access $access)
@@ -63,10 +69,15 @@ class AccessForm extends Component
             'max_projects' => 'required|integer|min:1',
             'max_users' => 'required|integer|min:1',
             'max_space' => 'required|integer|min:1',
+            'unit' => 'required|integer',
             'is_active' => 'required|boolean',
-            'available' => 'required|date|after_or_equal:today',
             'available_end' => 'required|date|after_or_equal:available',
         ]);
+
+        $this->validate([
+            'available' => $this->typeForm ? 'required|date|after_or_equal:today' : 'required|date',
+        ]);
+        $this->typeForm = true;
 
         // Validar si el usuario puede tener un nuevo acceso
         if (!$this->canUserHaveAccess()) {
@@ -76,25 +87,23 @@ class AccessForm extends Component
         $this->access->user_id = $this->user_id;
         $this->access->max_projects = $this->max_projects;
         $this->access->max_users = $this->max_users;
-        $this->access->max_storage = $this->max_space;
+
         $this->access->is_active = $this->is_active;
         $this->access->available = $this->available;
         $this->access->available_end = $this->available_end;
 
+        $this->access->max_storage = $this->unit == 1
+            ? round($this->max_space, 1) // MB
+            : round($this->max_space * 1024, 1); // GB → MB
 
         $isNew = !$this->access->exists;
         $this->access->save();
 
-        $text = $isNew ? 'Acceso Creado' : 'Acceso Actualizado';
 
-        if ($isNew) {
-            $this->access = new Access();
-            $this->reset(['user_id', 'max_projects', 'max_users', 'is_active', 'available', 'available_end']);
-            $this->dispatch('createAccess')->to('admin.access-view');
-        } else {
-            $this->dispatch('updateAccess')->to('admin.access-view');
-        }
+        $this->dispatch($isNew ? 'createAccess' : 'updateAccess')->to('admin.access-view');
 
+        //$this->reset(['user_id', 'max_projects', 'max_users', 'is_active', 'available', 'available_end']);
+        $this->resetForm();
         $this->js('closeModal');
 
     }
@@ -127,7 +136,16 @@ class AccessForm extends Component
             ->orWhere('email', 'like', '%' . $this->userSearch . '%')
             ->limit(10)
             ->get();
+
         return view('livewire.admin.access-form', compact('users'));
+    }
+    public function resetForm()
+    {
+        $this->access = new Access();
+        $this->reset(['user_id', 'max_projects', 'max_users', 'max_space', 'unit', 'is_active', 'available', 'available_end']);
+        $this->unit = 1;
+        $this->available = now()->format('Y-m-d');
+        $this->is_active = true;
     }
 
 }

@@ -28,7 +28,20 @@ class UpdatePassword extends Component
 
         $this->reset(['current_password', 'password', 'password_confirmation']);
 
-        session()->flash('status', 'password-updated');
+
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Contraseña actualizada',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+        $this->js("$('#passwordModal').modal('hide');");
+
     }
 
     public function render()

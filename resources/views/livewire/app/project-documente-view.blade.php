@@ -24,12 +24,17 @@
             </div>
             <div class="d-flex justify-content-between mt-2">
                 <small class="text-muted">Usado: {{ $usedMB }} MB ({{ $percentage }}%)</small>
-                <small class="text-muted">Disponible: {{ $availableMB }} MB</small>
+                <small class="text-muted">Disponible:
+                    @if ($availableMB / 2024 >= 1)
+                        {{ round($availableMB / 1024, 1) }} GB</small>
+                    @else
+                    {{ $availableMB  }} MB</small>
+
+                @endif
             </div>
         </div>
     </div>
 
-    {{-- ── Filtros y búsqueda ──────────────────────────────────────────── --}}
     <div class="card shadow-sm rounded-4">
         <div class="card-header border-0 bg-white pt-3">
             <div class="row g-2 align-items-center">
