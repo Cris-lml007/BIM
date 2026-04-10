@@ -368,7 +368,9 @@
         <livewire:app.projects-view></livewire:app.projects-view>
     @endcan
 @endsection
-
+@section('preloader')
+    @include('layouts.main') 
+@endsection
 @section('css')
     {{-- Add here extra stylesheets --}}
     {{--
