@@ -20,8 +20,10 @@
     "dependencies": {
         "@andypf/json-viewer": "^2.3.2",
         "@thatopen/components": "^3.3.3",
+        "@thatopen/components-front": "^3.4.0",
         "@thatopen/fragments": "^3.3.7",
         "@thatopen/ui": "^3.3.7",
+        "@thatopen/ui-obc": "^3.4.0",
         "flatbuffers": "^25.9.23",
         "pako": "^2.1.0",
         "stats": "^1.0.0",

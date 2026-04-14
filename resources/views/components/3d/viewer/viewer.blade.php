@@ -52,8 +52,8 @@
                         <button class="tool-btn active"><i class="bi bi-arrows-move"></i></button>
                         <button class="tool-btn"><i class="bi bi-cursor"></i></button>
                         <button class="tool-btn"><i class="bi bi-zoom-in"></i></button>
-                        <button class="tool-btn"><i class="bi bi-rulers"></i></button>
-                        <button class="tool-btn"><i class="bi bi-scissors"></i></button>
+                        <button id="btn-rulers" class="tool-btn"><i class="bi bi-rulers"></i></button>
+                        <button id="btn-clipper" class="tool-btn"><i class="bi bi-scissors"></i></button>
                     </div>
 
                     <div class="bottom-bar">

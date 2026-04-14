@@ -397,7 +397,13 @@
             margin: 0;
             vertical-align: middle;
         }
-
+bim-panel, .options-menu {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 9999; /* 🔥 importante */
+    width: 300px;
+}
 
     </style>
 </head>

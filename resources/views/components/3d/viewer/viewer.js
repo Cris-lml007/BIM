@@ -20,6 +20,9 @@ let classesMap = {};
 
 let hider;
 
+let clipper_status = false;
+let clipper;
+let measurer;
 
 async function initViewer(container) {
     components = new OBC.Components();
@@ -27,11 +30,12 @@ async function initViewer(container) {
     const worlds = components.get(OBC.Worlds);
     world = worlds.create();
     world.scene = new OBC.SimpleScene(components);
-    world.renderer = new OBC.SimpleRenderer(components, container);
-    renderer = world.renderer.three;
-    // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    // renderer.setSize(container.clientWidth, container.clientHeight);
-    world.camera = new OBC.SimpleCamera(components);
+    world.scene.setup();
+    world.scene.three.background = null;
+
+    world.renderer = new OBF.PostproductionRenderer(components, container);
+    world.camera = new OBC.OrthoPerspectiveCamera(components);
+    // await world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
     components.init();
     components.get(OBC.Grids).create(world);
     world.scene.setup();
@@ -49,6 +53,13 @@ async function initViewer(container) {
     fragments.init(workerUrl);
 
     world.camera.controls.addEventListener("update", () => fragments.core.update());
+
+    world.onCameraChanged.add((camera) => {
+        for (const [, model] of fragments.list) {
+            model.useCamera(camera.three);
+        }
+        fragments.core.update(true);
+    });
 
     fragments.list.onItemSet.add(({ value: model }) => {
         model.useCamera(world.camera.three);
@@ -116,6 +127,78 @@ async function ifcLoader(url){
     // }
     //
     // classifier.addGroupItems(classificationName, groupName, slabsModelIdMap);
+
+
+    const casters = components.get(OBC.Raycasters);
+    casters.get(world);
+
+    clipper = components.get(OBC.Clipper);
+
+    measurer = components.get(OBF.LengthMeasurement);
+    measurer.world = world;
+    measurer.color = new THREE.Color("#494cb6");
+    measurer.snappings = [FRAGS.SnappingClass.POINT];
+
+    const meshes = [];
+
+    for (const [, model] of fragments.list) {
+        const idsWithGeometry = await model.getItemsIdsWithGeometry();
+        const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
+
+        const geometries = new Map();
+
+        for (const itemId in allMeshesData) {
+            const meshData = allMeshesData[itemId];
+            for (const geomData of meshData) {
+                if (
+                    !geomData.positions ||
+                        !geomData.indices ||
+                        !geomData.transform ||
+                        !geomData.representationId
+                ) {
+                    continue;
+                }
+
+                const representationId = geomData.representationId;
+                if (!geometries.has(representationId)) {
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute(
+                        "position",
+                        new THREE.Float32BufferAttribute(geomData.positions, 3),
+                    );
+                    geometry.setIndex(Array.from(geomData.indices));
+                    geometries.set(representationId, geometry);
+                }
+
+                const geometry = geometries.get(representationId);
+
+                const mesh = new THREE.Mesh(geometry);
+                mesh.applyMatrix4(geomData.transform);
+                mesh.applyMatrix4(model.object.matrixWorld);
+                mesh.updateWorldMatrix(true, true);
+                meshes.push(mesh);
+            }
+        }
+    }
+
+    const pastDelay = measurer.delay;
+    const makeSynchronous = async (value) => {
+        if (value) {
+            measurer.pickerMode = OBF.GraphicVertexPickerMode.SYNCHRONOUS;
+            measurer.delay = 0;
+            for (const mesh of meshes) {
+                world.meshes.add(mesh);
+            }
+            return;
+        }
+        measurer.pickerMode = OBF.GraphicVertexPickerMode.DEFAULT;
+        measurer.delay = pastDelay;
+        for (const mesh of meshes) {
+            world.meshes.delete(mesh);
+        }
+    };
+
+    await makeSynchronous(true);
 }
 
 async function loadGLB(file) {
@@ -247,25 +330,25 @@ function buildUI({ categories }) {
         const header = document.createElement('div');
         header.className = 'tree-header d-flex align-items-center justify-content-between p-2';
 
-header.innerHTML = `
-    <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+        header.innerHTML = `
+<div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
 
-        <!-- 👁️ VISIBILIDAD -->
-        <input type="checkbox" checked class="form-check-input visibility-toggle m-0">
+    <!-- 👁️ VISIBILIDAD -->
+    <input type="checkbox" checked class="form-check-input visibility-toggle m-0">
 
-        <!-- 🎯 AISLAR -->
-        <input type="radio" name="isolate-group" class="form-check-input isolate-toggle m-0">
+    <!-- 🎯 AISLAR -->
+    <input type="radio" name="isolate-group" class="form-check-input isolate-toggle m-0">
 
-        <!-- TEXTO -->
-        <span class="fw-semibold text-truncate flex-grow-1" title="${groupName}">
-            ${groupName}
-        </span>
-    </div>
-
-    <!-- BADGE -->
-    <span class="badge bg-primary border ms-2 flex-shrink-0">
-        ${categories[groupName].length || ''}
+    <!-- TEXTO -->
+    <span class="fw-semibold text-truncate flex-grow-1" title="${groupName}">
+        ${groupName}
     </span>
+</div>
+
+<!-- BADGE -->
+<span class="badge bg-primary border ms-2 flex-shrink-0">
+    ${categories[groupName].length || ''}
+</span>
 `;
 
         const visibility = header.querySelector('.visibility-toggle');
@@ -313,7 +396,7 @@ async function toggleCategory(category, visible,type) {
         await hider.isolate(modelIdMap);
     }else if(visible)
         await hider.set(true,modelIdMap);
-    else
+        else
         await hider.set(false,modelIdMap);
 }
 
@@ -323,7 +406,7 @@ async function toggleItem(id, visible) {
     modelIdMap[modelId] = new Set([id]);
     if(visible)
         await hider.set(true,modelIdMap);
-    else
+        else
         await hider.set(false,modelIdMap);
 }
 
@@ -350,6 +433,72 @@ document.getElementById('btn-reset-isolate').addEventListener('click', async ()=
     document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
     await hider.set(true);
 });
+
+let toolState = {
+    clipper: false,
+    ruler: false
+}
+
+let activeTool = null
+
+document.addEventListener('dblclick',() => {
+    if(activeTool == 'clipper' && clipper.enabled){
+        clipper.create(world)
+        return;
+    }else if(activeTool == 'ruler' && measurer.enabled){
+        measurer.create()
+        return;
+    }
+})
+
+function setActiveTool(tool){
+    activeTool = tool;
+
+    clipper.enabled = false
+    measurer.enabled = false
+
+    if( tool === 'clipper' && toolState.clipper){
+        clipper.enabled = true
+        toolState.ruler = false
+    }else if(tool === 'ruler' && toolState.ruler){
+        measurer.enabled = true
+        toolState.clipper = false
+    }
+}
+
+function updateUI() {
+    btnClipper.classList.toggle('active', activeTool === 'clipper');
+    btnRulers.classList.toggle('active', activeTool === 'ruler');
+}
+
+let btnClipper = document.getElementById('btn-clipper');
+btnClipper.addEventListener('click',() => {
+    toolState.clipper = !toolState.clipper
+    if(toolState.clipper){
+        setActiveTool('clipper')
+    }else{
+        clipper.deleteAll()
+        if(activeTool === 'clipper')
+            activeTool = null
+    }
+    updateUI()
+});
+
+
+let btnRulers = document.getElementById('btn-rulers');
+btnRulers.addEventListener('click',() => {
+    toolState.ruler = !toolState.ruler
+
+    if(toolState.ruler){
+        setActiveTool('ruler')
+    }else{
+        measurer.list.clear()
+        if(activeTool == 'ruler'){
+            activeTool = null
+        }
+    }
+    updateUI()
+})
 
 const url = container.dataset.url;
 initViewer(container);
