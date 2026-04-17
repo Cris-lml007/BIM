@@ -23,6 +23,9 @@ let hider;
 let clipper_status = false;
 let clipper;
 let measurer;
+let classifier;
+
+let activeLevels = {};
 
 async function initViewer(container) {
     components = new OBC.Components();
@@ -199,6 +202,11 @@ async function ifcLoader(url){
     };
 
     await makeSynchronous(true);
+
+
+    classifier = components.get(OBC.Classifier);
+    await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
+    buildLevelsUIFromClassifier();
 }
 
 async function loadGLB(file) {
@@ -273,6 +281,145 @@ async function loadFromUrl(url) {
     }
     hideLoading();
 }
+
+function buildLevelsUIFromClassifier() {
+
+    const container = document.getElementById('levels-container');
+    container.innerHTML = '';
+
+    const levelsContainer = document.getElementById('levels-container');
+
+    const classification = classifier.list.get("Levels");
+    if (!classification) return;
+
+    for (const [name, group] of classification) {
+
+        const row = document.createElement('div');
+        row.className = 'card mb-2 shadow-sm';
+
+        row.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between p-2">
+
+                <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+
+                    <!-- 👁️ VISIBILIDAD -->
+                    <input type="checkbox" checked class="form-check-input level-visible m-0">
+
+                    <!-- 🎯 AISLAR -->
+                    <input type="radio" name="isolate-level" class="form-check-input level-isolate m-0">
+
+                    <span class="text-light fw-semibold text-truncate flex-grow-1" title="${name}">
+                        ${name}
+                    </span>
+                </div>
+            </div>
+        `;
+
+        const checkbox = row.querySelector('.level-visible');
+        const radio = row.querySelector('.level-isolate');
+
+        // 🔹 MULTI NIVEL (checkbox)
+        checkbox.addEventListener('change', async (e) => {
+
+            const modelIdMap = await group.get();
+
+            if (e.target.checked) {
+
+                for (const modelId in modelIdMap) {
+                    if (!activeLevels[modelId]) {
+                        activeLevels[modelId] = new Set();
+                    }
+
+                    modelIdMap[modelId].forEach(id => {
+                        activeLevels[modelId].add(id);
+                    });
+                }
+
+            } else {
+
+                for (const modelId in modelIdMap) {
+                    if (!activeLevels[modelId]) continue;
+
+                    modelIdMap[modelId].forEach(id => {
+                        activeLevels[modelId].delete(id);
+                    });
+                }
+            }
+
+            // 🔄 refrescar visibilidad
+            await hider.set(false);
+            await hider.set(true, activeLevels);
+
+
+            document.querySelectorAll('input[name="isolate-group"]').forEach(radio => radio.checked = false);
+            document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
+            // await hider.set(true);
+        });
+
+        // 🔹 AISLAR NIVEL (radio)
+        radio.addEventListener('change', async (e) => {
+
+            if (!e.target.checked) return;
+
+            const modelIdMap = await group.get();
+
+            activeLevels = {};
+
+            for (const modelId in modelIdMap) {
+                activeLevels[modelId] = new Set(modelIdMap[modelId]);
+            }
+
+            // desmarcar todos los checkbox
+            document.querySelectorAll('.level-visible')
+                .forEach(cb => cb.checked = false);
+
+            checkbox.checked = true;
+
+            await hider.isolate(modelIdMap);
+
+            document.querySelectorAll('input[name="isolate-group"]').forEach(radio => radio.checked = false);
+            document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
+        });
+
+        // hover UX
+        row.addEventListener('mouseenter', () => {
+            row.style.background = '#0D6EFD';
+        });
+
+        row.addEventListener('mouseleave', () => {
+            row.style.background = '#1f222a';
+        });
+
+        container.appendChild(row);
+    }
+
+    document.getElementById('btn-reset-levels')?.addEventListener('click', async () => {
+
+        // 🔹 reset UI
+        document.querySelectorAll('input[name="isolate-level"]').forEach(r => r.checked = false);
+        document.querySelectorAll('.level-visible').forEach(cb => cb.checked = true);
+
+        activeLevels = {};
+
+        // 🔹 reconstruir activeLevels con TODO el modelo
+        for (const [, model] of fragments.list) {
+
+            const ids = await model.getItemsIdsWithGeometry();
+
+            activeLevels[model.modelId] = new Set(ids);
+        }
+
+        // 🔹 mostrar todo
+        await hider.set(true);
+
+    });
+
+
+}
+
+
+
+
 
 async function processModel() {
 
@@ -349,11 +496,6 @@ function buildUI({ categories }) {
         ${groupName}
     </span>
 </div>
-
-<!-- BADGE -->
-<span class="badge bg-primary border ms-2 flex-shrink-0">
-    ${categories[groupName].length || ''}
-</span>
 `;
 
         const visibility = header.querySelector('.visibility-toggle');
@@ -386,24 +528,70 @@ function buildUI({ categories }) {
     }
 }
 
-async function toggleCategory(category, visible,type) {
-    // console.log("es la: ",category)
+// async function toggleCategory(category, visible,type) {
+//     // console.log("es la: ",category)
+//     const modelIdMap = {};
+//     for (const [, model] of fragments.list) {
+//         const items = await model.getItemsOfCategories([
+//             new RegExp(`^${category}$`)
+//         ]);
+//         const ids = Object.values(items).flat();
+//         modelIdMap[model.modelId] = new Set(ids);
+//     }
+//     if(type == 'isolate'){
+//         document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = false);
+//         await hider.isolate(modelIdMap);
+//     }else if(visible)
+//         await hider.set(true,modelIdMap);
+//         else
+//         await hider.set(false,modelIdMap);
+// }
+
+async function toggleCategory(category, visible, type) {
+
     const modelIdMap = {};
+
     for (const [, model] of fragments.list) {
-        const items = await model.getItemsOfCategories([
+
+        // 🔹 1. obtener elementos por categoría
+        const categoryItems = await model.getItemsOfCategories([
             new RegExp(`^${category}$`)
         ]);
-        const ids = Object.values(items).flat();
-        modelIdMap[model.modelId] = new Set(ids);
+
+        const categoryIds = new Set(Object.values(categoryItems).flat());
+
+        let finalIds = categoryIds;
+
+        // 🔥 2. intersectar con niveles activos (si existen)
+        if (Object.keys(activeLevels).length && activeLevels[model.modelId]) {
+
+            const levelIds = activeLevels[model.modelId];
+
+            finalIds = new Set(
+                [...categoryIds].filter(id => levelIds.has(id))
+            );
+        }
+
+        modelIdMap[model.modelId] = finalIds;
     }
-    if(type == 'isolate'){
-        document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = false);
+
+    // 🔹 3. aplicar visibilidad
+    if (type === 'isolate') {
+
+        document.querySelectorAll('.visibility-toggle')
+            .forEach(cb => cb.checked = false);
+
         await hider.isolate(modelIdMap);
-    }else if(visible)
-        await hider.set(true,modelIdMap);
-        else
-        await hider.set(false,modelIdMap);
+
+    } else {
+
+        await hider.set(visible, modelIdMap);
+    }
 }
+
+
+
+
 
 async function toggleItem(id, visible) {
     const modelIdMap = {};
@@ -433,10 +621,22 @@ rightSidebar.addEventListener('dblclick', () => {
     rightSidebar.classList.add('collapsed');
 });
 
-document.getElementById('btn-reset-isolate').addEventListener('click', async ()=>{
-    document.querySelectorAll('input[name="isolate-group"]').forEach(radio => radio.checked = false);
-    document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
-    await hider.set(true);
+document.getElementById('btn-reset-isolate').addEventListener('click', async () => {
+
+    // 🔹 reset UI categorías
+    document.querySelectorAll('input[name="isolate-group"]').forEach(r => r.checked = false);
+    document.querySelectorAll('.visibility-toggle').forEach(cb => cb.checked = true);
+
+    // 🔹 caso 1: hay niveles activos → respetarlos
+    if (Object.keys(activeLevels).length) {
+
+        await hider.set(false);              // ocultar todo
+        await hider.set(true, activeLevels); // mostrar SOLO niveles activos
+
+    } else {
+        // 🔹 caso 2: no hay filtro → mostrar todo
+        await hider.set(true);
+    }
 });
 
 let toolState = {
@@ -498,6 +698,7 @@ btnRulers.addEventListener('click',() => {
         setActiveTool('ruler')
     }else{
         measurer.list.clear()
+        measurer.enabled =false
         if(activeTool == 'ruler'){
             activeTool = null
         }

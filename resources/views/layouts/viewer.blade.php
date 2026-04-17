@@ -261,16 +261,16 @@
             /* overflow: hidden; */
         }
 
-        .sidebar::-webkit-scrollbar {
+        *::-webkit-scrollbar {
             width: 6px;
         }
 
-        .sidebar::-webkit-scrollbar-thumb {
+        *::-webkit-scrollbar-thumb {
             background: #2a2d36;
             border-radius: 10px;
         }
 
-        .sidebar::-webkit-scrollbar-thumb:hover {
+        *::-webkit-scrollbar-thumb:hover {
             background: #4f8cff;
         }
 
@@ -347,6 +347,7 @@
             text-align: center;
             color: #e6e6e6;
         }
+
         .tree-group {
             border-radius: 10px;
             transition: all 0.2s ease;
@@ -370,12 +371,15 @@
         }
 
         .visibility-toggle {
-            accent-color: #0d6efd; /* bootstrap primary */
+            accent-color: #0d6efd;
+            /* bootstrap primary */
         }
 
         .isolate-toggle {
-            accent-color: #dc3545; /* rojo para aislar */
+            accent-color: #dc3545;
+            /* rojo para aislar */
         }
+
         .tree-header {
             display: flex;
             align-items: center;
@@ -383,8 +387,9 @@
             gap: 10px;
         }
 
-        .tree-header > div {
-            min-width: 0; /* 🔥 CLAVE para que funcione ellipsis */
+        .tree-header>div {
+            min-width: 0;
+            /* 🔥 CLAVE para que funcione ellipsis */
         }
 
         .text-truncate {
@@ -397,14 +402,44 @@
             margin: 0;
             vertical-align: middle;
         }
-bim-panel, .options-menu {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 9999; /* 🔥 importante */
-    width: 300px;
-}
 
+        bim-panel,
+        .options-menu {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 9999;
+            /* 🔥 importante */
+            width: 300px;
+        }
+
+        .panel-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        #levels-container {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        #levels-container .card {
+            background: #1f222a;
+            border: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        #levels-container .card:hover {
+            background: #0D6EFD;
+        }
+
+        #levels-container input {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>

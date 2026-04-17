@@ -15,7 +15,7 @@
             <button class="btn btn-sm btn-dark">Archivo</button>
             <button class="btn btn-sm btn-dark">Vista</button>
             <button class="btn btn-sm btn-dark">Herramientas</button>
-            <a class="btn btn-sm btn-danger" href="{{ route('app.project.model3d',$project->id) }}">Salir</a>
+            <a class="btn btn-sm btn-danger" href="{{ route('app.project.model3d', $project->id) }}">Salir</a>
         </div>
     </nav>
 
@@ -26,7 +26,8 @@
             <div class="sidebar left p-3" id="leftSidebar">
                 <div class="panel-title">Capas</div>
                 <input type="text" class="form-control form-control-sm mb-1" placeholder="Buscar...">
-                <button class="btn btn-dark w-100 panel-title mb-3" type="button" id="btn-reset-isolate">Reiniciar</button>
+                <button class="btn btn-dark w-100 panel-title mb-3" type="button"
+                    id="btn-reset-isolate">Reiniciar</button>
                 <div id="layers-container"></div>
             </div>
             <div class="sidebar-tab left-tab" id="leftTab">
@@ -69,21 +70,19 @@
                 <i class="bi bi-chevron-left"></i>
             </div>
             <div class="sidebar right p-3" id="rightSidebar">
-                <div class="panel-title">Propiedades</div>
 
-                <div class="property">
-                    <strong>Elemento:</strong><br>Muro_01
+                <!-- 🔹 NIVELES -->
+                <div class="panel-title">Niveles</div>
+                <button class="btn btn-dark w-100 panel-title mb-3" type="button"
+                    id="btn-reset-levels">Reiniciar</button>
+                <div id="levels-container" class="mb-3"></div>
+
+                <!-- 🔹 PROPIEDADES -->
+                <div class="panel-title">Modelos</div>
+
+                <div id="models-container">
                 </div>
 
-                <div class="property">
-                    <strong>Material:</strong><br>Concreto
-                </div>
-
-                <div class="property">
-                    <strong>Altura:</strong><br>2.8m
-                </div>
-
-                <button class="btn btn-primary w-100 mt-2">Enfocar</button>
             </div>
         </div>
     </div>
