@@ -288,8 +288,14 @@ async function processModel() {
 
         // 🔹 2. NIVELES (STOREYS)
         const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
+        const storeyIds = Object.values(storeys).flat();
+        const storeysData = await model.getItemsData(storeyIds);
 
-        // console.log("Niveles:", storeys);
+        storeysData.forEach(storey => {
+            console.log(storey.Name?.value); // nombre del nivel
+        });
+        console.log(Object.values(storeys).flat());
+        console.log("Niveles:", storeys);
 
 
         // 🔹 3. GEOMETRÍA POR CATEGORÍA
@@ -332,7 +338,6 @@ function buildUI({ categories }) {
 
         header.innerHTML = `
 <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
-
     <!-- 👁️ VISIBILIDAD -->
     <input type="checkbox" checked class="form-check-input visibility-toggle m-0">
 
