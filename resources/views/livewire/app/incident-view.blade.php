@@ -3,28 +3,28 @@
 
         <div class="col-md-3">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
-                <h3 class="fw-bold text-danger">2</h3>
+                <h3 class="fw-bold text-danger">{{ $stats['abiertas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Incidencias Abiertas</h6>
             </div>
         </div>
 
         <div class="col-md-3">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
-                <h3 class="fw-bold text-warning">3</h3>
+                <h3 class="fw-bold text-warning">{{ $stats['proceso'] }}</h3>
                 <h6 class="mb-1 text-secondary">En Proceso</h6>
             </div>
         </div>
 
         <div class="col-md-3">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
-                <h3 class="fw-bold text-success">5</h3>
+                <h3 class="fw-bold text-success">{{ $stats['cerradas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Cerradas</h6>
             </div>
         </div>
 
         <div class="col-md-3">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
-                <h3 class="fw-bold text-dark">1</h3>
+                <h3 class="fw-bold text-dark">{{ $stats['criticas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Críticas</h6>
             </div>
         </div>
@@ -53,7 +53,7 @@
                     <span @class([
                         'badge',
                         'bg-success' => $item->status === 1,
-                        'bg-danger' => $item->status === 2,
+                        'bg-danger' => $item->status === 0,
                     ])>
                         {{ $item->status === 1 ? 'Abierta' : 'Cerrada' }}
 
