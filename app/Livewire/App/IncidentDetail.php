@@ -29,6 +29,7 @@ public $project;
     #[On('getIncident')]
     public function getIncident($id){
         $this->incident = Incident::with('comments')->find($id);
+        $this->dispatch('scroll-bottom');
 
     }
     public function statusIncident($id){
@@ -60,5 +61,6 @@ public $project;
         ]);
         $this->comment = '';
         $this->getIncident($id);
+        $this->dispatch('scroll-bottom');
     }
 }

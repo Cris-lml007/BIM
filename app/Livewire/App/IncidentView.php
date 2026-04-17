@@ -11,6 +11,7 @@ class IncidentView extends Component
 {
     public Project $project;
 
+public $stats = [];
 public $actions = [
         'search' => '',
         'sortField' => 'id',
@@ -25,29 +26,49 @@ public $heads = [
           
             'Opciones' => null
         ];
+public function mount()
+{
+    $this->loadStats();
+}
 
     public function render()
     {
-        
-        //$search = $this->actions['search'];
-        $query = incident::where('project_id', $this->project->id)->get();
-        //dd($this->project->id);
-        /*if ($search != '' || $search != null) {
-            $query->whereHas('incident', function ($q) use ($search) {
+        $search = $this->actions['search'];
+        $query = incident::where('project_id', $this->project->id);
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', '%' . $search . '%')
-                    ->orWhere('description', 'like', '%' . $search . '%');
+                ->orWhere('description', 'like', '%' . $search . '%');
             });
-        }*/
-        
-        /*$incidents = $query->orderBy($this->actions['sortField'], $this->actions['sortDirection'])
-            ->paginate();
-            $in
-*/
-$incidents = $query;
+        }
+        $query->orderBy(
+            $this->actions['sortField'],
+            $this->actions['sortDirection']
+        );
+            
+   
+        $incidents = $query->get(); 
 
         return view('livewire.app.incident-view', compact( 'incidents'));
     }
+public function loadStats()
+{
+    $data = incident::where('project_id', $this->project->id)
+        ->selectRaw('
+            COUNT(*) as total,
+            SUM(status = 1) as abiertas,
+            SUM(status = 0) as cerradas,
+            SUM(priority = 3) as criticas
+        ')
+        ->first();
 
+    $this->stats = [
+        'abiertas' => $data->abiertas ?? 0,
+        'proceso' => ($data->total - $data->abiertas - $data->cerradas), // opcional
+        'cerradas' => $data->cerradas ?? 0,
+        'criticas' => $data->criticas ?? 0,
+    ];
+}
     public function getIncident($id){
         $this->dispatch('getIncident', $id)->to(IncidentDetail::class);
         $this->js("$('#modal-incident-detail').modal('show');");
@@ -75,8 +96,7 @@ $incidents = $query;
     }
     #[On('incidentAdded')]
     public function incidentAdded(){
-//        $this->render();
-$this->js("
+        $this->js("
             Swal.fire({
                 toast: true,
                 position: 'top-end',
