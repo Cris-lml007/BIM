@@ -500,9 +500,76 @@
         .marker.issue {
             color: #dc3545;
         }
-    </style>
-</head>
-<body>
-    {{ $slot }}
-</body>
+
+        .model-card {
+            background: #1f222a;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .model-card:hover {
+            background: #2a2e38;
+            border-color: #0d6efd;
+            transform: translateY(-3px);
+        }
+
+        .model-icon {
+            font-size: 40px;
+            color: #0d6efd;
+            transition: 0.2s;
+        }
+
+        .model-card:hover .model-icon {
+            transform: scale(1.1);
+        }
+
+        .model-card button {
+            opacity: 0.9;
+        }
+
+        .model-card:hover button {
+            opacity: 1;
+        }
+
+        .view-card {
+            background: #1f222a;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        .view-card div {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        .view-card:hover {
+            background: #2a2e38;
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+        }
+
+        .view-card.fit {
+            font-size: 14px;
+            padding: 10px;
+            background: #0d6efd;
+        }
+
+        .view-card.fit:hover {
+            background: #0b5ed7;
+        }
+
+
+        </style>
+    </head>
+    <body>
+        {{ $slot }}
+    </body>
 </html>

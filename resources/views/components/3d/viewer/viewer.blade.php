@@ -14,7 +14,7 @@
         <div class="d-flex gap-2">
             <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#modal-models">Cargar
                 Modelos</button>
-            <button class="btn btn-sm btn-dark">Vista</button>
+            <button data-bs-toggle="modal" data-bs-target="#modal-views" class="btn btn-sm btn-dark">Vista</button>
             <button class="btn btn-sm btn-dark">Herramientas</button>
             <a class="btn btn-sm btn-danger" href="{{ route('app.project.model3d', $project->id) }}">Salir</a>
         </div>
@@ -53,7 +53,7 @@
                     <div class="toolbar">
                         <button id="btn-anchor" class="tool-btn"><i class="nf nf-fa-anchor"></i></button>
                         <button id="btn-issue" class="tool-btn"><i class="nf nf-oct-issue_opened"></i></button>
-                        <button class="tool-btn"><i class="bi bi-zoom-in"></i></button>
+                        <button id="btn-fit" class="tool-btn"><i class="nf nf-md-fit_to_screen"></i></button>
                         <button id="btn-rulers" class="tool-btn"><i class="bi bi-rulers"></i></button>
                         <button id="btn-clipper" class="tool-btn"><i class="bi bi-scissors"></i></button>
                     </div>
@@ -117,20 +117,139 @@
         </div>
     </div>
 
-    <div class="modal" tabindex="-1" id="modal-models" data-bs-theme="dark">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Cargar Modelos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+    <div class="modal fade" tabindex="-1" id="modal-views" data-bs-theme="dark">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+
+                <!-- HEADER -->
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-semibold">
+                        <i class="bi bi-camera text-primary me-2"></i>
+                        Vistas
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
+
+                <!-- BODY -->
                 <div class="modal-body">
-                    @foreach ($models as $item)
-                        <button data-bs-dismiss="modal" class="btn btn-dark w-100" name="loadIfc"
-                            data-name="{{ $item->name }}" data-url="{{ route('app.Attachment', $item->id) }}"><i
-                                class="text-primary nf nf-fa-cube"></i> {{ $item->name }}</button>
-                    @endforeach
+
+                    <div class="row g-3 text-center">
+
+                        <!-- TOP -->
+                        <div class="col-4">
+                            <div class="view-card" data-view="top" data-bs-dismiss="modal">
+                                ⬆️
+                                <div>Top</div>
+                            </div>
+                        </div>
+
+                        <!-- FRONT -->
+                        <div class="col-4">
+                            <div class="view-card" data-view="front" data-bs-dismiss="modal">
+                                ⬛
+                                <div>Front</div>
+                            </div>
+                        </div>
+
+                        <!-- LEFT -->
+                        <div class="col-4">
+                            <div class="view-card" data-view="left" data-bs-dismiss="modal">
+                                ⬅️
+                                <div>Left</div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT -->
+                        <div class="col-4">
+                            <div class="view-card" data-view="right" data-bs-dismiss="modal">
+                                ➡️
+                                <div>Right</div>
+                            </div>
+                        </div>
+
+                        <!-- BACK -->
+                        <div class="col-4">
+                            <div class="view-card" data-view="back" data-bs-dismiss="modal">
+                                🔲
+                                <div>Back</div>
+                            </div>
+                        </div>
+
+                        <!-- ISO -->
+                        <div class="col-4">
+                            <div class="view-card" data-view="iso" data-bs-dismiss="modal">
+                                🔳
+                                <div>3D</div>
+                            </div>
+                        </div>
+
+                        <!-- FIT -->
+                        <div class="col-12 mt-2">
+                            <div class="view-card fit" data-view="fit" data-bs-dismiss="modal">
+                                🔍 Ajustar vista
+                            </div>
+                        </div>
+
+                    </div>
+
                 </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="modal fade" tabindex="-1" id="modal-models" data-bs-theme="dark">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+
+                <!-- HEADER -->
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-semibold">
+                        <i class="nf nf-fa-cube text-primary me-2"></i>
+                        Cargar Modelos
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <!-- BODY -->
+                <div class="modal-body">
+
+                    <div class="row g-3">
+
+                        @foreach ($models as $item)
+                            <div class="col-md-6 col-lg-4">
+
+                                <div class="model-card p-3 h-100 d-flex flex-column justify-content-between"
+                                    data-url="{{ route('app.Attachment', $item->id) }}"
+                                    data-name="{{ $item->name }}" name="loadIfc" data-bs-dismiss="modal">
+
+                                    <!-- ICON -->
+                                    <div class="text-center mb-2">
+                                        <i class="nf nf-fa-cube model-icon"></i>
+                                    </div>
+
+                                    <!-- NAME -->
+                                    <div class="text-center small fw-semibold text-truncate"
+                                        title="{{ $item->name }}">
+                                        {{ $item->name }}
+                                    </div>
+
+                                    <!-- ACTION -->
+                                    <button class="btn btn-sm btn-primary w-100 mt-3">
+                                        Cargar
+                                    </button>
+
+                                </div>
+
+                            </div>
+                        @endforeach
+
+                    </div>
+
+                </div>
+
             </div>
         </div>
     </div>

@@ -40,20 +40,13 @@ async function initViewer(container) {
 
     world.renderer = new OBF.PostproductionRenderer(components, container);
     world.camera = new OBC.OrthoPerspectiveCamera(components);
-    // await world.camera.controls.setLookAt(68, 23, -8.5, 21.5, -5.5, 23);
+    await world.camera.controls.setLookAt(68, 23, -8.5, 0, 0, 0);
     components.init();
     components.get(OBC.Grids).create(world);
     world.scene.setup();
     const scene = world.scene.three;
     scene.background = new THREE.Color(0x1a1d25);
-    const githubUrl =
-        "https://thatopen.github.io/engine_fragment/resources/worker.mjs";
-    const fetchedUrl = await fetch(githubUrl);
-    const workerBlob = await fetchedUrl.blob();
-    const workerFile = new File([workerBlob], "worker.mjs", {
-        type: "text/javascript",
-    });
-    const workerUrl = URL.createObjectURL(workerFile);
+    const workerUrl = "/engine/worker.mjs";
     fragments = components.get(OBC.FragmentsManager);
     fragments.init(workerUrl);
 
@@ -98,7 +91,7 @@ async function ifcLoader(url,id){
 
     await Promise.all(
         fragPaths.map(async (path) => {
-            const modelId = id// path.split("/").pop()?.split(".").shift();
+            const modelId = id;
             if (!modelId) return null;
             const file = await fetch(path);
             const buffer = await file.arrayBuffer();
@@ -108,32 +101,6 @@ async function ifcLoader(url,id){
 
     renderModelsList();
     await processModel();
-
-    // const classifier = components.get(OBC.Classifier);
-    // const classificationName = "Custom Classification";
-    // const groupName = "My Group";
-    // let localIds,data
-    // classifier.getGroupData("Custom Classification", "My Group");
-    // const slabsModelIdMap = {};
-    // for (const [modelId, model] of fragments.list) {
-    //     const items = await model.getItemsOfCategories([/IFC/]);
-    //     const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
-    //     localIds = Object.values(storeys).flat();
-    //     data = await model.getItemsData(localIds);
-    //     console.log(data)
-    //
-    //     const categories = await model.getItemsWithGeometryCategories()
-    //     for (const category of categories) {
-    //         if (!category) continue;
-    //         // modelCategories.add(category);
-    //         console.log("categoria: ",category);
-    //     }
-    //
-    //
-    // }
-    //
-    // classifier.addGroupItems(classificationName, groupName, slabsModelIdMap);
-
 
     const casters = components.get(OBC.Raycasters);
     casters.get(world);
@@ -463,8 +430,8 @@ async function loadGLB(file) {
             obj.traverse((child) => {
                 if (child.isMesh) {
                     child.material.side = THREE.DoubleSide;
-                    console.log(child.name);
-                    console.log("material: "+child.material.name);
+                    // console.log(child.name);
+                    // console.log("material: "+child.material.name);
                     // if (Array.isArray(child.material)) {
                     //     child.material.forEach(mat => registerMaterial(mat, child));
                     // } else {
@@ -613,16 +580,15 @@ async function removeModel(modelId) {
     // quitar de escena
     world.scene.three.remove(model.object);
 
-    console.log(fragments.list)
+    // console.log(fragments.list)
     // eliminar del manager
     fragments.list.delete(modelId);
     fragments.core.disposeModel(modelId);
 
-    console.log(fragments.list)
+    // console.log(fragments.list)
 
     // refrescar UI
     renderModelsList();
-    // classifier = components.get(OBC.Classifier);
     classifier.dispose()
     await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
     buildLevelsUIFromClassifier()
@@ -705,6 +671,7 @@ function buildLevelsUIFromClassifier() {
             document.querySelectorAll('input[name="isolate-group"]').forEach(radio => radio.checked = false);
             document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
             // await hider.set(true);
+            fragments.core.update()
         });
 
         // 🔹 AISLAR NIVEL (radio)
@@ -730,6 +697,7 @@ function buildLevelsUIFromClassifier() {
 
             document.querySelectorAll('input[name="isolate-group"]').forEach(radio => radio.checked = false);
             document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = true);
+            fragments.core.update()
         });
 
         // hover UX
@@ -768,47 +736,33 @@ function buildLevelsUIFromClassifier() {
 
 }
 
-
-
-
-
 async function processModel() {
 
     for (const [modelId, model] of fragments.list) {
 
-        // console.log("Procesando modelo:", modelId);
 
         // 🔹 1. CLASES (IFCWALL, IFCWINDOW, etc)
         const categories = await model.getItemsOfCategories([/IFC/]);
-
-        // console.log("Clases:", categories);
-
 
         // 🔹 2. NIVELES (STOREYS)
         const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
         const storeyIds = Object.values(storeys).flat();
         const storeysData = await model.getItemsData(storeyIds);
 
-        storeysData.forEach(storey => {
-            console.log(storey.Name?.value); // nombre del nivel
-        });
-        console.log(Object.values(storeys).flat());
-        console.log("Niveles:", storeys);
+        // storeysData.forEach(storey => {
+        //     console.log(storey.Name?.value); // nombre del nivel
+        // });
+        // console.log(Object.values(storeys).flat());
+        // console.log("Niveles:", storeys);
 
 
         // 🔹 3. GEOMETRÍA POR CATEGORÍA
         const geomCategories = await model.getItemsWithGeometryCategories();
 
-        // console.log("Geom categorías:", geomCategories);
-
-
         // 🔹 4. DATOS (propiedades BIM reales)
         const allIds = Object.values(categories).flat();
 
         const data = await model.getItemsData(allIds);
-
-        // console.log("Propiedades:", data);
-
 
         // 👉 AQUÍ construyes tus tablas UI
         buildUI({
@@ -878,25 +832,6 @@ function buildUI({ categories }) {
         container.appendChild(group);
     }
 }
-
-// async function toggleCategory(category, visible,type) {
-//     // console.log("es la: ",category)
-//     const modelIdMap = {};
-//     for (const [, model] of fragments.list) {
-//         const items = await model.getItemsOfCategories([
-//             new RegExp(`^${category}$`)
-//         ]);
-//         const ids = Object.values(items).flat();
-//         modelIdMap[model.modelId] = new Set(ids);
-//     }
-//     if(type == 'isolate'){
-//         document.querySelectorAll('.visibility-toggle').forEach(radio => radio.checked = false);
-//         await hider.isolate(modelIdMap);
-//     }else if(visible)
-//         await hider.set(true,modelIdMap);
-//         else
-//         await hider.set(false,modelIdMap);
-// }
 
 async function toggleCategory(category, visible, type) {
 
@@ -1108,6 +1043,108 @@ document.getElementsByName('loadIfc').forEach((e) => {
         hideLoading()
     })
 })
+
+document.getElementById('btn-fit').addEventListener('click',async() =>{
+    await world.camera.controls.setLookAt(68, 23, -8.5, 0, 0, 0);
+})
+
+function setView(direction) {
+
+    const box = new THREE.Box3();
+
+    for (const [, model] of fragments.list) {
+        box.expandByObject(model.object);
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3()).length();
+
+    const distance = size * 1.5;
+
+    let pos = new THREE.Vector3();
+
+    switch (direction) {
+        case 'top':
+            pos.set(center.x, center.y + distance, center.z);
+            break;
+
+        case 'bottom':
+            pos.set(center.x, center.y - distance, center.z);
+            break;
+
+        case 'front':
+            pos.set(center.x, center.y, center.z + distance);
+            break;
+
+        case 'back':
+            pos.set(center.x, center.y, center.z - distance);
+            break;
+
+        case 'left':
+            pos.set(center.x - distance, center.y, center.z);
+            break;
+
+        case 'right':
+            pos.set(center.x + distance, center.y, center.z);
+            break;
+
+        case 'iso':
+        default:
+            pos.set(center.x + distance, center.y + distance, center.z + distance);
+            break;
+    }
+
+    world.camera.controls.setLookAt(
+        pos.x, pos.y, pos.z,
+        center.x, center.y, center.z,
+        true
+    );
+}
+
+function fitView() {
+
+    const box = new THREE.Box3();
+
+    for (const [, model] of fragments.list) {
+        box.expandByObject(model.object);
+    }
+
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3()).length();
+
+    world.camera.controls.fitToBox(box, true);
+
+    // opcional: asegurar que mira al centro
+    world.camera.controls.setLookAt(
+        center.x + size,
+        center.y + size,
+        center.z + size,
+        center.x,
+        center.y,
+        center.z,
+        true
+    );
+}
+
+document.querySelectorAll('.view-card').forEach(card => {
+    card.addEventListener('click', () => {
+
+        const view = card.dataset.view;
+
+        if (view === 'fit') {
+            fitView();
+        } else {
+            setView(view);
+        }
+
+        // opcional: controlar rotación
+        if (view === 'top' || view === 'front' || view === 'left' || view === 'right' || view === 'back') {
+            world.camera.controls.enableRotate = false;
+        } else {
+            world.camera.controls.enableRotate = true;
+        }
+    });
+});
 
 
 
