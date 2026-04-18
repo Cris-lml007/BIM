@@ -40,7 +40,7 @@
             <div class="row g-2 align-items-center">
                 <div class="col-md-6">
                     <h6 class="fw-bold mb-0">
-                        <i class="fas fa-folder-open me-2 text-primary"></i>Mis Archivos
+                        <i class="fas fa-folder-open me-2 text-primary"></i>Mis Archivos 
                     </h6>
                 </div>
                 <div class="col-md-4">

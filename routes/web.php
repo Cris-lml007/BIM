@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdministrationController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\DocumentsController;
+use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\InvitationController;
 use App\Livewire\Admin\UsersForm;
@@ -52,6 +53,8 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
         Route::livewire('/model3d/{model}','3d.viewer')->name('app.project.model3d.id');
         Route::get('/members', [MembersController::class, 'show'])->name('app.project.members');
         Route::get('/documents', [DocumentsController::class, 'show'])->name('app.project.documents');
+
+        Route::get('/incidents', [IncidentController::class, 'show'])->name('app.project.incidents');
     });
 
     Route::get('/documents/{document}/view', [DocumentsController::class, 'view'])

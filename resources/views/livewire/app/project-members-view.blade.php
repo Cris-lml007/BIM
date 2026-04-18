@@ -1,6 +1,6 @@
 <div>
     <div class="row g-3 mb-3">
-        @if(!$project->ownerAccess())
+        @if (!$project->ownerAccess())
             <small class="alert alert-warning m-0">
                 Usted no cuenta con acceso para esta sección, comuníquese con
                 <b>BIMNova</b>, para solicitar un acceso.
@@ -14,7 +14,7 @@
         </div>
         <div class="col-md-6">
             <div class="card text-center bg-light shadow-sm rounded-4 py-3">
-                <h3 class="fw-bold">{{ $total_members . ' / ' . $total}}</h3>
+                <h3 class="fw-bold">{{ $total_members . ' / ' . $total }}</h3>
                 <h6 class="mb-1 text-secondary">Miembros/Limite</h6>
             </div>
         </div>
@@ -43,137 +43,137 @@
         </div>
 
         <div x-show="activeTab === 'members'">
-            <x-card>
-                <livewire:table :heads="$heads" wire:key="members-table" :list="$actions">
 
-                    <x-slot name="footer">
-                        <tr>
-                            <td colspan="{{ count($heads) }}" class="text-muted">
-                                Mostrando {{ $members->count() }} de {{ $total_members }} miembros
-                            </td>
-                        </tr>
-                    </x-slot>
+            <livewire:table :heads="$heads" wire:key="members-table" :list="$actions"
+                icon="fas fa-users me-2 text-primary" title="Miembros del proyecto" footer="Mostrando {{ $members->count() }} de {{ $total_members }} miembros">
 
-                    @forelse($members as $member)
-                        <tr wire:key="{{ $member->id }}">
-                            <td>{{ $member->id }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-circle me-2"
-                                        style="width: 32px; height: 32px; background-color: #{{ substr(md5($member->name), 0, 6) }}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                        {{ strtoupper(substr($member->name, 0, 2)) }}
-                                    </div>
-                                    <div>
-                                        <strong>{{ $member->name }}</strong>
-                                        @if ($member->id === $owner->id)
-                                            <span class="badge bg-warning ms-1">Dueño</span>
-                                        @endif
-                                    </div>
+                <x-slot name="footer">
+                    <tr>
+                        <td colspan="{{ count($heads) }}" class="text-muted">
+                            Mostrando {{ $members->count() }} de {{ $total_members }} miembros
+                        </td>
+                    </tr>
+                </x-slot>
+
+                @forelse($members as $member)
+                    <tr wire:key="{{ $member->id }}">
+                        <td>{{ $member->id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2"
+                                    style="width: 32px; height: 32px; background-color: #{{ substr(md5($member->name), 0, 6) }}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                    {{ strtoupper(substr($member->name, 0, 2)) }}
                                 </div>
-                            </td>
-                            <td>{{ $member->email }}</td>
-                            <td>
-                                @if ($member->id === $owner->id)
-                                    <span class="badge bg-warning">Propietario</span>
-                                @else
-                                    @php
-                                        $role = App\Enum\RoleProject::tryFrom($member->pivot->role);
-                                    @endphp
-
-                                    <span class="badge bg-{{ $role?->badgeColor() ?? 'secondary' }}">
-                                        <i class="fa {{ $role?->icon() ?? 'fa-user' }} me-1"></i>
-                                        {{ $role?->label() ?? 'Desconocido' }}
-                                    </span>
-                                @endif
-                            </td>
-
-                            <td>
-                                {{ $member->pivot->created_at ? \Carbon\Carbon::parse($member->pivot->created_at)->translatedFormat('d M Y - H:i') : '-' }}
-                            </td>
-                            <td>
-                                @if ($member->id !== $owner->id)
-                                    <button wire:click="removeMember({{ $member->id }})" class="btn btn-sm btn-danger">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
-                                @else
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ count($heads) }}" class="text-center text-muted py-4">
-                                <i class="fa fa-users fa-2x mb-2 d-block"></i>
-                                No hay miembros en este proyecto
-                            </td>
-                        </tr>
-                    @endforelse
-                    </livewire:livewire-table>
-
-
-            </x-card>
-        </div>
-
-        <div x-show="activeTab === 'invitations'">
-            <x-card>
-                <livewire:table :heads="$headsInvitations" wire:key="invites-table" :list="$actions">
-
-                    <x-slot name="footer">
-                        <tr>
-                            <td colspan="{{ count($heads) }}" class="text-muted">
-                            </td>
-                        </tr>
-                    </x-slot>
-
-                    @forelse($invites as $invite)
-                        <tr wire:key="{{ $invite->id }}">
-                            <td>{{ $invite->id }}</td>
-
-                            <td>{{ $invite->email }}</td>
-                            <td>
+                                <div>
+                                    <strong>{{ $member->name }}</strong>
+                                    @if ($member->id === $owner->id)
+                                        <span class="badge bg-warning ms-1">Dueño</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ $member->email }}</td>
+                        <td>
+                            @if ($member->id === $owner->id)
+                                <span class="badge bg-warning">Propietario</span>
+                            @else
                                 @php
-                                    $role = App\Enum\RoleProject::tryFrom($invite->role);
+                                    $role = App\Enum\RoleProject::tryFrom($member->pivot->role);
                                 @endphp
 
                                 <span class="badge bg-{{ $role?->badgeColor() ?? 'secondary' }}">
                                     <i class="fa {{ $role?->icon() ?? 'fa-user' }} me-1"></i>
                                     {{ $role?->label() ?? 'Desconocido' }}
                                 </span>
-                            </td>
+                            @endif
+                        </td>
 
-                            <td>
-
-                                <span class="badge bg-secondary">
-                                    Pendiente
-                                </span>
-
-                            </td>
-                            <td>
-                                {{ \Carbon\Carbon::parse($invite->expired_at)->translatedFormat('d M Y - H:i')  }}
-
-                            </td>
-                            <td>
-                                @if ($invite->id !== $owner->id)
-                                    <button wire:click="removeInvited({{ $invite->id }})" class="btn btn-sm btn-danger">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
-                                @else
-                                    <span class="text-muted">-</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="{{ count($heads) }}" class="text-center text-muted py-4">
-                                <i class="fa fa-users fa-2x mb-2 d-block"></i>
-                                No hay invitaciones en este proyecto
-                            </td>
-                        </tr>
-                    @endforelse
-                    </livewire:livewire-table>
+                        <td>
+                            {{ $member->pivot->created_at ? \Carbon\Carbon::parse($member->pivot->created_at)->translatedFormat('d M Y - H:i') : '-' }}
+                        </td>
+                        <td>
+                            @if ($member->id !== $owner->id)
+                                <button wire:click="removeMember({{ $member->id }})" class="btn btn-sm btn-danger">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ count($heads) }}" class="text-center text-muted py-4">
+                            <i class="fa fa-users fa-2x mb-2 d-block"></i>
+                            No hay miembros en este proyecto
+                        </td>
+                    </tr>
+                @endforelse
+                </livewire:livewire-table>
 
 
-            </x-card>
+        </div>
+
+        <div x-show="activeTab === 'invitations'">
+            <livewire:table :heads="$headsInvitations" wire:key="invites-table" :list="$actions"
+                icon="fas fa-envelope me-2 text-primary" title="Invitaciones pendientes"
+                footer="Mostrando {{ $invites->count() }} de {{ $invites->count() }} invitaciones pendientes">
+
+                <x-slot name="footer">
+                    <tr>
+                        <td colspan="{{ count($heads) }}" class="text-muted">
+                        </td>
+                    </tr>
+                </x-slot>
+
+                @forelse($invites as $invite)
+                    <tr wire:key="{{ $invite->id }}">
+                        <td>{{ $invite->id }}</td>
+
+                        <td>{{ $invite->email }}</td>
+                        <td>
+                            @php
+                                $role = App\Enum\RoleProject::tryFrom($invite->role);
+                            @endphp
+
+                            <span class="badge bg-{{ $role?->badgeColor() ?? 'secondary' }}">
+                                <i class="fa {{ $role?->icon() ?? 'fa-user' }} me-1"></i>
+                                {{ $role?->label() ?? 'Desconocido' }}
+                            </span>
+                        </td>
+
+                        <td>
+
+                            <span class="badge bg-secondary">
+                                Pendiente
+                            </span>
+
+                        </td>
+                        <td>
+                            {{ \Carbon\Carbon::parse($invite->expired_at)->translatedFormat('d M Y - H:i') }}
+
+                        </td>
+                        <td>
+                            @if ($invite->id !== $owner->id)
+                                <button wire:click="removeInvited({{ $invite->id }})" class="btn btn-sm btn-danger">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ count($heads) }}" class="text-center text-muted py-4">
+                            <i class="fa fa-users fa-2x mb-2 d-block"></i>
+                            No hay invitaciones en este proyecto
+                        </td>
+                    </tr>
+                @endforelse
+                </livewire:livewire-table>
+
+
         </div>
     </div>
 

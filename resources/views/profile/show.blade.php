@@ -14,7 +14,9 @@
        
     </div>
 @stop
-
+@section('preloader')
+    @include('layouts.main')
+@endsection
 @section('css')
     @livewireStyles
 @stop

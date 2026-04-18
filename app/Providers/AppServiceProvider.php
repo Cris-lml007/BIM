@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
                         ],
                         [
                             'text' => 'Incidencias',
-                            'url' => 'menu/child2',
+                            'url' => route('app.project.incidents', ['project' => $project->id]),
                             'icon' => 'nf nf-cod-issue_reopened',
                         ],
                         [
