@@ -26,6 +26,8 @@ let measurer;
 let classifier;
 
 let activeLevels = {};
+let anchors = [];
+let marker;
 
 async function initViewer(container) {
     components = new OBC.Components();
@@ -89,14 +91,14 @@ async function initViewer(container) {
     world.renderer.onAfterUpdate.add(() => stats.end());
 }
 
-async function ifcLoader(url){
+async function ifcLoader(url,id){
     const fragPaths = [
         url+'?type=frag'
     ];
 
     await Promise.all(
         fragPaths.map(async (path) => {
-            const modelId = path.split("/").pop()?.split(".").shift();
+            const modelId = id// path.split("/").pop()?.split(".").shift();
             if (!modelId) return null;
             const file = await fetch(path);
             const buffer = await file.arrayBuffer();
@@ -104,6 +106,7 @@ async function ifcLoader(url){
         }),
     );
 
+    renderModelsList();
     await processModel();
 
     // const classifier = components.get(OBC.Classifier);
@@ -207,7 +210,233 @@ async function ifcLoader(url){
     classifier = components.get(OBC.Classifier);
     await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
     buildLevelsUIFromClassifier();
+
+    const raycasted = async (data) => {
+        const results = [];
+        for (const [_, model] of fragments.list) {
+            const result = await model.raycast(data);
+            if (result) {
+                results.push(result);
+            }
+        }
+        await Promise.all(results);
+        if (results.length === 0) return null;
+
+        // Find result with smallest distance
+        let closestResult = results[0];
+        let minDistance = closestResult.distance;
+
+        for (let i = 1; i < results.length; i++) {
+            if (results[i].distance < minDistance) {
+                minDistance = results[i].distance;
+                closestResult = results[i];
+            }
+        }
+
+        return closestResult;
+    };
+
+    const mouse = new THREE.Vector2();
+
+    let onRaycastHoverResult = (_result) => {};
+    container.addEventListener("pointermove", async (event) => {
+        mouse.x = event.clientX;
+        mouse.y = event.clientY;
+        const result = await raycasted({
+            camera: world.camera.three,
+            mouse,
+            dom: world.renderer.three.domElement,
+        });
+        function format3(n) {
+            return Number.isFinite(n) ? n.toFixed(3) : '0.000';
+        }
+        if(result){
+            document.getElementById('xyz').innerHTML =
+                `XYZ: (${format3(result.point.x)}, ${format3(result.point.y)}, ${format3(result.point.z)})`;
+        }
+        if(activeTool == 'anchor' || activeTool == 'issue'){
+            onRaycastHoverResult(result);
+        }
+    });
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, 2),
+    ]);
+
+    const lineMaterial = new THREE.LineBasicMaterial({ color: "#6528d7" });
+    const line = new THREE.Line(lineGeometry, lineMaterial);
+    world.scene.three.add(line);
+    marker = components.get(OBF.Marker);
+    marker.threshold = 10;
+
+    onRaycastHoverResult = (result) => {
+        line.visible = !!result;
+        if (!result) return;
+        // console.log(result);
+        const { point, normal } = result;
+        if (!normal) return;
+        line.position.copy(point);
+        const look = point.clone().add(normal);
+        line.lookAt(look);
+    };
+    container.addEventListener("click", async (event) => {
+        if(activeTool == 'anchor' || activeTool == 'issue'){
+            mouse.x = event.clientX;
+            mouse.y = event.clientY;
+            const result = await raycasted({
+                camera: world.camera.three,
+                mouse,
+                dom: world.renderer.three.domElement,
+            });
+
+            onRaycastClickResult(result);
+        }
+    });
 }
+
+
+async function onRaycastClickResult(result) {
+
+    if (!result || !activeTool) return;
+
+    if (activeTool !== 'anchor' && activeTool !== 'issue') return;
+
+    const { point } = result;
+
+    const name = prompt(`Nombre del ${activeTool}:`);
+    if (!name) return;
+
+    const item = {
+        id: Date.now(),
+        name,
+        type: activeTool,
+        x: point.x,
+        y: point.y,
+        z: point.z,
+        status: 'activo'
+    };
+
+    anchors.push(item);
+
+    createMarker(item);
+    addToTable(item);
+}
+
+
+function createMarker(item) {
+
+    const element = BUI.Component.create(() => BUI.html`
+        <div class="marker ${item.type}">
+            ${item.type === 'anchor' ? '⚓' : '⚠️'}
+        </div>
+    `);
+
+    const markerInstance = marker.create(
+        world,
+        element,
+        new THREE.Vector3(item.x, item.y, item.z)
+    );
+
+    // 🔥 guardar referencia
+    item._marker = markerInstance;
+
+    element.addEventListener('click', () => {
+        focusItem(item);
+    });
+}
+
+function focusItem(item) {
+
+    world.camera.controls.setLookAt(
+        item.x + 5, item.y + 5, item.z + 5,
+        item.x, item.y, item.z
+    );
+}
+
+function removeItem(item, tr) {
+
+    // 🔥 quitar de escena
+    if (item._marker) {
+        marker.delete(item._marker);
+    }
+
+    // 🔥 quitar del array
+    anchors = anchors.filter(a => a.id !== item.id);
+
+    // 🔥 quitar de la tabla
+    tr.remove();
+}
+
+function viewItem(item) {
+
+    if (item.type === 'issue') {
+        // 🔥 puedes cambiar esto por modal si quieres
+        window.open(`/incidencias/${item.id}`, '_blank');
+    } else {
+        // 🔹 anclaje → mostrar info simple
+        alert(`
+Anclaje: ${item.name}
+XYZ: (${item.x.toFixed(3)}, ${item.y.toFixed(3)}, ${item.z.toFixed(3)})
+Estado: ${item.status}
+        `);
+    }
+}
+
+function addToTable(item) {
+
+    const tbody = document.getElementById('anchors-table');
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+        <td>${item.name}</td>
+        <td>${item.type}</td>
+        <td>${item.status}</td>
+        <td class="d-flex gap-1">
+            <button class="btn btn-primary btn-sm btn-view">
+                <i class="nf nf-fa-eye"></i>
+            </button>
+            <button class="btn btn-danger btn-sm btn-delete">
+                <i class="nf nf-fa-trash"></i>
+            </button>
+        </td>
+    `;
+
+    // 👁️ SOLO ver detalles
+    tr.querySelector('.btn-view').addEventListener('click', (e) => {
+        e.stopPropagation(); // 🔥 evita que dispare el click de la fila
+        viewItem(item);
+    });
+
+    // 🗑️ eliminar
+    tr.querySelector('.btn-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm('¿Eliminar elemento?')) {
+            removeItem(item, tr);
+        }
+    });
+
+    // 🎯 CLICK EN FILA → ENFOCAR
+    tr.addEventListener('click', () => {
+        focusItem(item);
+    });
+
+    // ✨ hover highlight (opcional pero top)
+    tr.addEventListener('mouseenter', () => {
+        if (item._marker?.element) {
+            item._marker.element.style.transform = 'scale(1.5)';
+        }
+    });
+
+    tr.addEventListener('mouseleave', () => {
+        if (item._marker?.element) {
+            item._marker.element.style.transform = 'scale(1)';
+        }
+    });
+
+    tbody.appendChild(tr);
+}
+
+
 
 async function loadGLB(file) {
     new Promise((resolve, reject) => {
@@ -270,7 +499,7 @@ async function loadFromUrl(url) {
         const blob = await response.blob();
         const file = new File([blob], 'model.' + ext);
         if (ext === 'ifc') {
-            await ifcLoader(url)
+            await ifcLoader(url,'main')
         } else if (ext === 'glb' || ext === 'gltf') {
             await loadGLB(file);
         } else {
@@ -281,6 +510,128 @@ async function loadFromUrl(url) {
     }
     hideLoading();
 }
+
+function renderModelsList() {
+
+    const container = document.getElementById('models-container');
+    container.innerHTML = '';
+
+    const models = [...fragments.list.values()];
+
+    models.forEach((model) => {
+
+        const modelId = model.modelId;
+        const name = model.object?.name || modelId;
+
+        const item = document.createElement('div');
+        item.className = 'card mb-2 p-2 shadow-sm';
+        item.style.background = '#1f222a';
+
+        item.innerHTML = `
+<div class="d-flex align-items-center justify-content-between">
+
+    <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+
+        <!-- 👁️ VISIBILIDAD -->
+        <input type="checkbox" checked class="form-check-input model-visible m-0">
+
+        <!-- 🎯 AISLAR -->
+        <input type="radio" name="isolate-model" class="form-check-input model-isolate m-0">
+
+        <!-- NOMBRE -->
+        <span class="text-truncate text-light flex-grow-1" title="${name}">
+            ${name}
+        </span>
+    </div>
+
+    <!-- ❌ ELIMINAR -->
+    <button class="btn btn-sm btn-danger ms-2 remove-model">
+        ✕
+    </button>
+
+</div>
+`;
+
+        const visible = item.querySelector('.model-visible');
+        const isolate = item.querySelector('.model-isolate');
+        const remove = item.querySelector('.remove-model');
+
+        // 👁️ Mostrar / ocultar modelo
+        visible.addEventListener('change', async (e) => {
+            await toggleModel(modelId, e.target.checked);
+        });
+
+        // 🎯 Aislar modelo
+        isolate.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                await isolateModel(modelId);
+            }
+        });
+
+        // ❌ Eliminar modelo
+        remove.addEventListener('click', async () => {
+            await removeModel(modelId);
+        });
+
+        container.appendChild(item);
+    });
+}
+
+async function toggleModel(modelId, visible) {
+
+    const model = fragments.list.get(modelId);
+    if (!model) return;
+
+    const ids = await model.getItemsIdsWithGeometry();
+
+    const modelIdMap = {
+        [modelId]: new Set(ids)
+    };
+
+    await hider.set(visible, modelIdMap);
+}
+
+async function isolateModel(modelId) {
+
+    const model = fragments.list.get(modelId);
+    if (!model) return;
+
+    const ids = await model.getItemsIdsWithGeometry();
+
+    const modelIdMap = {
+        [modelId]: new Set(ids)
+    };
+
+    await hider.isolate(modelIdMap);
+}
+
+async function removeModel(modelId) {
+
+    const model = fragments.list.get(modelId);
+    if (!model) return;
+
+    // quitar de escena
+    world.scene.three.remove(model.object);
+
+    console.log(fragments.list)
+    // eliminar del manager
+    fragments.list.delete(modelId);
+    fragments.core.disposeModel(modelId);
+
+    console.log(fragments.list)
+
+    // refrescar UI
+    renderModelsList();
+    // classifier = components.get(OBC.Classifier);
+    classifier.dispose()
+    await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
+    buildLevelsUIFromClassifier()
+    const container = document.getElementById('layers-container');
+    container.innerHTML = '';
+    await processModel()
+}
+
+
 
 function buildLevelsUIFromClassifier() {
 
@@ -298,22 +649,22 @@ function buildLevelsUIFromClassifier() {
         row.className = 'card mb-2 shadow-sm';
 
         row.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between p-2">
+<div class="d-flex align-items-center justify-content-between p-2">
 
-                <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+    <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
 
-                    <!-- 👁️ VISIBILIDAD -->
-                    <input type="checkbox" checked class="form-check-input level-visible m-0">
+        <!-- 👁️ VISIBILIDAD -->
+        <input type="checkbox" checked class="form-check-input level-visible m-0">
 
-                    <!-- 🎯 AISLAR -->
-                    <input type="radio" name="isolate-level" class="form-check-input level-isolate m-0">
+        <!-- 🎯 AISLAR -->
+        <input type="radio" name="isolate-level" class="form-check-input level-isolate m-0">
 
-                    <span class="text-light fw-semibold text-truncate flex-grow-1" title="${name}">
-                        ${name}
-                    </span>
-                </div>
-            </div>
-        `;
+        <span class="text-light fw-semibold text-truncate flex-grow-1" title="${name}">
+            ${name}
+        </span>
+    </div>
+</div>
+`;
 
         const checkbox = row.querySelector('.level-visible');
         const radio = row.querySelector('.level-isolate');
@@ -668,12 +1019,18 @@ function setActiveTool(tool){
     }else if(tool === 'ruler' && toolState.ruler){
         measurer.enabled = true
         toolState.clipper = false
+    }else if( tool == 'anchor' ){
+
+    }else if(tool == 'issue'){
+
     }
 }
 
 function updateUI() {
     btnClipper.classList.toggle('active', activeTool === 'clipper');
     btnRulers.classList.toggle('active', activeTool === 'ruler');
+    btnAnchor.classList.toggle('active', activeTool === 'anchor');
+    btnIssue.classList.toggle('active', activeTool === 'issue');
 }
 
 let btnClipper = document.getElementById('btn-clipper');
@@ -705,6 +1062,54 @@ btnRulers.addEventListener('click',() => {
     }
     updateUI()
 })
+
+const btnAnchor = document.getElementById('btn-anchor');
+btnAnchor.addEventListener('click',(ev) =>{
+    if(activeTool == 'anchor')
+        setActiveTool('')
+        else
+        setActiveTool('anchor')
+    updateUI()
+})
+
+const btnIssue = document.getElementById('btn-issue');
+btnIssue.addEventListener('click',(ev) =>{
+    if(activeTool == 'issue')
+        setActiveTool('')
+        else
+        setActiveTool('issue')
+    updateUI()
+})
+
+
+
+
+const bottomBar = document.getElementById('bottomBar');
+const toggle = document.getElementById('bottomToggle');
+
+toggle.addEventListener('click', () => {
+    bottomBar.classList.toggle('collapsed');
+    bottomBar.classList.toggle('expanded');
+});
+
+
+
+document.getElementsByName('loadIfc').forEach((e) => {
+    e.addEventListener('click',async ()=>{
+        showLoading()
+        try {
+            let u = e.dataset.url;
+            let id = e.dataset.name + Math.floor(Math.random() * 100) + 1;
+            await ifcLoader(u, id)
+            fragments.core.update()
+        } catch (error) {
+
+        }
+        hideLoading()
+    })
+})
+
+
 
 const url = container.dataset.url;
 initViewer(container);

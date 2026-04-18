@@ -440,6 +440,66 @@
         #levels-container input {
             cursor: pointer;
         }
+
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            /* 🔥 CLAVE */
+            background: #1a1d25;
+            border-top: 1px solid #333;
+
+            display: flex;
+            /* 🔥 usamos flex */
+            flex-direction: column;
+            /* 🔥 pero en vertical */
+
+            transition: height 0.3s ease;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .bottom-bar.collapsed {
+            height: 40px;
+        }
+
+        .bottom-bar.expanded {
+            height: 250px;
+        }
+
+        .bottom-header {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            cursor: pointer;
+        }
+
+        .bottom-content {
+            padding: 10px;
+            overflow-y: auto;
+            height: calc(100% - 40px);
+        }
+
+        .marker {
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .marker:hover {
+            transform: scale(1.3);
+        }
+
+        .marker.anchor {
+            color: #0d6efd;
+        }
+
+        .marker.issue {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>

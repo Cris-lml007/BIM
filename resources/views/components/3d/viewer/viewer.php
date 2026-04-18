@@ -10,9 +10,11 @@ new #[Layout('layouts.viewer')] class extends Component
 
     public Model3D $model;
     public Project $project;
+    public $models;
 
     public function mount(Project $project, Model3D $model){
         $this->project = $project;
         $this->model = $model;
+        $this->models = $this->project->models;
     }
 };
