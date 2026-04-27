@@ -91,7 +91,7 @@
 
             <div class="row g-3 mb-3">
 
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <a href="{{ route('administration.access') }}"
                         class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2">
                         <i class="fas fa-key"></i>
@@ -99,7 +99,7 @@
                     </a>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <a href="{{ route('administration.users') }}"
                         class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2">
                         <i class="fas fa-user-plus"></i>
@@ -107,19 +107,13 @@
                     </a>
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <a href="#" class="btn btn-warning w-100 d-flex align-items-center justify-content-center gap-2">
                         <i class="fas fa-chart-bar"></i>
                         <span>Ver Reportes</span>
                     </a>
                 </div>
 
-                <div class="col-md-3">
-                    <a href="#" class="btn btn-dark w-100 d-flex align-items-center justify-content-center gap-2">
-                        <i class="fas fa-cog"></i>
-                        <span>Configuración</span>
-                    </a>
-                </div>
 
             </div>
 
