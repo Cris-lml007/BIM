@@ -73,7 +73,7 @@ class AccessForm extends Component
             'is_active' => 'required|boolean',
             'available_end' => 'required|date|after_or_equal:available',
         ]);
-
+    
         $this->validate([
             'available' => $this->typeForm ? 'required|date|after_or_equal:today' : 'required|date',
         ]);

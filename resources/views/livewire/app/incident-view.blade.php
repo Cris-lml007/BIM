@@ -1,28 +1,21 @@
 <div>
     <div class="row g-3 mb-3">
 
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
                 <h3 class="fw-bold text-danger">{{ $stats['abiertas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Incidencias Abiertas</h6>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
-                <h3 class="fw-bold text-warning">{{ $stats['proceso'] }}</h3>
-                <h6 class="mb-1 text-secondary">En Proceso</h6>
-            </div>
-        </div>
-
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
                 <h3 class="fw-bold text-success">{{ $stats['cerradas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Cerradas</h6>
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
                 <h3 class="fw-bold text-dark">{{ $stats['criticas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Críticas</h6>
