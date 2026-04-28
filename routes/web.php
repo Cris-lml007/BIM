@@ -69,3 +69,17 @@ Route::get('/invitation/{token}', [InvitationController::class, 'accept'])
 Route::get('/expired', function () {
     return view('errors.custom.expired');
 })->name('invitations.expired');
+
+Route::get('/attachments/{id}', function ($id) {
+
+    $file = App\Models\Attachment::findOrFail($id);
+
+    $path = storage_path('app/private/' . $file->path);
+
+    if (!file_exists($path)) {
+        abort(404);
+    }
+
+    return response()->file($path);
+
+})->name('attachments.show');
