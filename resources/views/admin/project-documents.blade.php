@@ -21,9 +21,7 @@
     </div>
 
 @endsection
-@section('preloader')
-    @include('layouts.main') 
-@endsection
+
 @section('content_body')
     <div class="container">
         <livewire:app.project-documente-view :project="$project"></livewire:app.project-documente-view>
