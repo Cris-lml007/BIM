@@ -114,6 +114,6 @@
     </livewire:table>
 
     <x-modal id="modal-access" title="Detalles de acceso" class="modal-lg">
-        <livewire:admin.access-form modal_name="modal-access" />
+        <livewire:admin.access-form-update modal_name="modal-access" />
     </x-modal>
 </div>
