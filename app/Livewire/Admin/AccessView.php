@@ -90,7 +90,7 @@ class AccessView extends Component
 
     public function getAccess($id)
     {
-        $this->dispatch('getAccess', $id)->to(AccessForm::class);
+        $this->dispatch('getAccess', $id)->to(AccessFormUpdate::class);
         $this->js("$('#modal-access').modal('show');");
     }
 

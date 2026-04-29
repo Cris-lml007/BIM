@@ -27,6 +27,3 @@
         <livewire:app.project-member-form :project="$project" modal_name="modal-member"></livewire:app.project-member-form>
     </x-modal>
 @endsection
-@section('preloader')
-    @include('layouts.main')
-@endsection

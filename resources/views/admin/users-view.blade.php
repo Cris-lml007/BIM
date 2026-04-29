@@ -18,6 +18,3 @@
         <livewire:admin.users-form modal_name="modal-user"></livewire:admin.users-form>
     </x-modal>
 @endsection
-@section('preloader')
-    @include('layouts.main') 
-@endsection
