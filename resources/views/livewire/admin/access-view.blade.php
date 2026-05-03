@@ -90,7 +90,7 @@
                 </td>
                 <td>
                     <button class="btn btn-sm btn-primary" wire:click="getAccess({{ $item->id }})">
-                        <i class="nf nf-fa-eye"></i>
+                        <i class="fas fa-eye"></i>
                     </button>
                     <button wire:click="changeStatus({{ $item->id }})" @class([
                         'btn btn-sm',

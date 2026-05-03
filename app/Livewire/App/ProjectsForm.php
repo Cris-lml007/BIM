@@ -26,6 +26,8 @@ class ProjectsForm extends Component
     }
 
     public function save(){
+
+        
         $this->validate([
             'name' => 'required',
             'description' => 'required'
@@ -40,6 +42,28 @@ class ProjectsForm extends Component
             ]);
             $message = 'Proyecto Actualizado Satisfactoriamente';
         } else {
+            // Validar límite de proyectos antes de crear
+            $user = Auth::user();
+            $access = $user->access;
+            $currentProjectsCount = Project::where('user_id', $user->id)->count();
+            
+            if (!$access || !$access->canCreateMoreProjects($currentProjectsCount)) {
+                $maxProjects = $access?->max_projects ?? 0;
+                $this->js("
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Límite de proyectos alcanzado',
+                        text: 'Has alcanzado el límite de $maxProjects proyectos permitidos',
+                        showConfirmButton: false,
+                        timer: 4000,
+                        timerProgressBar: true
+                    });
+                ");
+                return;
+            }
+            
             // Crear nuevo proyecto
             Project::create([
                 'name' => $this->name,

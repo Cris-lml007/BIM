@@ -9,7 +9,7 @@
 
 
     <div class="container">
-        <livewire:table :heads="$heads" wire:model.live="list">
+        <livewire:table :heads="$heads" wire:model.live="list"  title="Mis Proyectos" icon="fas fa-folder-open text-primary" message-search="Buscar Proyecto...">
             @foreach ($data as $item)
                 <tr>
                     <td>{{ Str::upper($item->name) }}</td>
@@ -25,7 +25,7 @@
 
                     </td>
                     <td>{{ $item->is_active == 1 ? 'Activo' : 'Bloqueado' }}</td>
-                    <td>
+                    <td class="text-center">
                         <a href="{{ route('app.project', $item->id) }}" class="btn btn-sm btn-primary"><i
                                 class="nf nf-fa-eye"></i></a>
 
