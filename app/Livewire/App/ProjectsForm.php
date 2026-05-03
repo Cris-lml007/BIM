@@ -4,6 +4,7 @@ namespace App\Livewire\App;
 
 use App\Models\Project;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ProjectsForm extends Component
@@ -11,6 +12,18 @@ class ProjectsForm extends Component
 
     public $name;
     public $description;
+    public $project_id = null;
+
+    #[On('editProject')]
+    public function editProject($id)
+    {
+        $project = Project::find($id);
+        if ($project && ($project->user_id === Auth::user()->id || $project->members()->where('user_id', Auth::user()->id)->exists())) {
+            $this->project_id = $id;
+            $this->name = $project->name;
+            $this->description = $project->description;
+        }
+    }
 
     public function save(){
         $this->validate([
@@ -18,14 +31,40 @@ class ProjectsForm extends Component
             'description' => 'required'
         ]);
 
-        Project::create([
-            'name' => $this->name,
-            'description' => $this->description,
-            'user_id' => Auth::user()->id
-        ]);
+        if ($this->project_id) {
+            // Editar proyecto existente
+            $project = Project::find($this->project_id);
+            $project->update([
+                'name' => $this->name,
+                'description' => $this->description
+            ]);
+            $message = 'Proyecto Actualizado Satisfactoriamente';
+        } else {
+            // Crear nuevo proyecto
+            Project::create([
+                'name' => $this->name,
+                'description' => $this->description,
+                'user_id' => Auth::user()->id
+            ]);
+            $message = 'Proyecto Creado Satisfactoriamente';
+        }
 
+        $this->reset(['name', 'description', 'project_id']);
         $this->js("$('#modal-project').modal('hide')");
-        $this->js("Swal.fire({icon: 'success', title: 'Proyecto Creado Satisfactoriamente'})");
+                
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: '$message',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+     
+
 
         $this->dispatch('refresh')->to(ProjectsView::class);
     }
