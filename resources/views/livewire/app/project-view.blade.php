@@ -3,6 +3,10 @@
         <div class="d-flex justify-content-between align-items-center">
             <h1 class="h2 fw-bold text-dark mb-0">{{ strtoupper($project->name) }}</h1>
         </div>
+
+        <small>
+            {{ $project->description ?? 'Sin descripción' }}
+        </small>
     </x-slot>
     <x-card>
         <div class="container-fluid py-4">
@@ -96,12 +100,16 @@
                                             <small class="text-muted d-block text-truncate"
                                                 style="max-width: 150px;">{{ $member->email }}</small>
                                         </div>
+
                                         <div class="ms-auto">
-                                            <span
-                                                class="badge {{ $member->type === 'pending' ? 'bg-warning text-dark' : 'bg-light text-dark' }} rounded-pill small">
-                                                {{ $member->role }}
-                                            </span>
+                                            @if (!is_int($member->role))
+                                                <span class="badge bg-warning text-dark rounded-pill small">
+
+                                                    {{ $member->role }}
+                                                </span>
+                                            @endif
                                         </div>
+
                                     </div>
                                 @empty
                                     <p class="text-muted small py-3">No hay miembros registrados.</p>
@@ -116,8 +124,7 @@
                         <div
                             class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
                             <h5 class="card-title fw-semibold mb-1">Actividad Reciente</h5>
-                            <a href="{{ route('app.project.documents', $project) }}"
-                                class="small text-decoration-none">Ver todo</a>
+
                         </div>
                         <div class="card-body p-0">
                             <div class="list-group list-group-flush">
@@ -132,7 +139,8 @@
                                             </div>
                                         </div>
                                         <div class="flex-grow-1 ms-3">
-                                            <p class="mb-1"><strong>{{ $activity->user->name ?? 'Usuario' }}</strong> subió
+                                            <p class="mb-1"><strong>{{ $activity->user->name ?? 'Usuario' }}</strong>
+                                                subió
                                                 "{{ $activity->name }}"</p>
                                             <small class="text-muted">
                                                 <i
