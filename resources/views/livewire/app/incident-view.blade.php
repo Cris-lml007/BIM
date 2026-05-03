@@ -1,6 +1,6 @@
 <div>
     @if (!$project->is_active)
-        <div class="alert alert-danger">
+        <div class="alert alert-danger m-0">
             <i class="nf nf-fa-lock"></i> El proyecto se encuentra bloqueado, no se pueden registrar nuevas incidencias.
         </div>
     @endif
