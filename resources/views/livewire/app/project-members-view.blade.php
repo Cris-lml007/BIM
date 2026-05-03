@@ -1,4 +1,10 @@
 <div>
+    @if($project->is_active == 0)
+        <div class="alert alert-danger mt-0">
+            <i class="fas fa-lock me-2"></i>
+            Este proyecto se encuentra bloqueado
+        </div>
+    @endif
     <div class="row g-3 mb-3">
         @if (!$project->ownerAccess())
             <small class="alert alert-warning m-0">
