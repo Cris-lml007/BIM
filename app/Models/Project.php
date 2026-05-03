@@ -68,6 +68,7 @@ class Project extends Model
 
         return $membersCount + $pendingInvitationsCount;
     }
+    
 
     /**
      * Verificar si se puede invitar más usuarios al proyecto

@@ -139,12 +139,11 @@ class ProjectDocumentForm extends Component
 
                     // Guardar en storage privado
                     $path = $file->storeAs($directory, $hashName, 'local'); // Especificar el disco
-
                     if ($path) {
                         Document::create([
                             'name' => $originalName,
                             'path' => $path,
-                            'type' => $file->getMimeType(),
+                            'type' => $extension,
                             'size' => $fileSize,
                             'project_id' => $this->project->id,
                             'user_id' => Auth::id(),

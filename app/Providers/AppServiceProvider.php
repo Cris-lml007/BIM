@@ -52,8 +52,6 @@ class AppServiceProvider extends ServiceProvider
             return $user->role == RoleSaas::USER;
         });
 
-
-
         Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
             $projects = Project::where('user_id', Auth::user()->id)
                 ->orWhereHas('members',function(Builder $builder){
@@ -64,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
                 $menu[] = [
                     'text' => $project->name,
                     'url' => $project->id ? route('app.project', ['project' => $project->id]) : '#',
+                    'icon' => 'fas fa-folder-open',
                     'submenu' => [
                         [
                             'text' => 'Principal',

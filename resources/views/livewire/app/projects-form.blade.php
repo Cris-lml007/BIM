@@ -17,7 +17,13 @@
         </div>
         <div class="modal-footer">
             <button type="reset" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Crear</button>
+            <button type="submit" class="btn btn-primary">
+                @if($project_id)
+                    Actualizar
+                @else
+                    Crear
+                @endif
+            </button>
         </div>
     </form>
 </div>

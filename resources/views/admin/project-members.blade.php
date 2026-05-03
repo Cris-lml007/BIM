@@ -10,7 +10,7 @@
                 <h3 class="mb-0">Miembros del proyecto</h3>
             </div>
             <button data-bs-toggle="modal" data-bs-target="#modal-member" class="btn btn-primary"
-                @if(empty($project->ownerAccess())) disabled @endif>
+                @if(empty($project->ownerAccess()) || !$project->is_active) disabled @endif>
                 <i class="fa fa-plus"></i> Invitar
             </button>
         </div>
