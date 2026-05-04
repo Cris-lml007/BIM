@@ -22,9 +22,12 @@
     </div>
 
     <livewire:table :heads="$heads" wire:model.live="actions" icon="fas fa-users text-primary" title="Usuarios">
+        @php
+            $iter = 1;
+        @endphp
         @foreach ($data as $item)
             <tr wire:key="{{ $item->id }}">
-                <td>{{ $item->id }}</td>
+                <td>{{ $iter++ }}</td>
                 <td>{{ $item->name }}</td>
                 <td>{{ $item->organization }}</td>
                 <td>{{ $item->phone }}</td>

@@ -12,7 +12,8 @@ class ProjectsView extends Component
 {
 
     public $is_avaliable = false;
-
+    public $showOptions = true;
+    
 
     public $list = [
         'search' => '',
@@ -29,8 +30,11 @@ class ProjectsView extends Component
             'Descripción' => 'description',
             'Creado' => 'created_at',
             'Estado' => null,
-            'Opciones' => null
         ];
+        
+        if ($this->showOptions) {
+            $heads['Opciones'] = null;
+        }
         $search = $this->list['search'];
         if ($search != '') {
             $data = Project::where(function (Builder $builder) {
@@ -55,6 +59,7 @@ class ProjectsView extends Component
         }
 
         $this->is_avaliable = Auth::user()->canCreateProject();
+        
         return view('livewire.app.projects-view', compact(['heads', 'data']));
     }
 

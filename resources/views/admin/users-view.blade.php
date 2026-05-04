@@ -4,7 +4,7 @@
     <div class="container d-flex justify-content-between">
         <h1>Gestión de Usuarios</h1>
         <button data-bs-toggle="modal" data-bs-target="#modal-user" class="btn btn-primary"><i class="fa fa-plus"></i>
-            Añadir Nuevo Usuario</button>
+             Nuevo Usuario</button>
 
     </div>
 @endsection
