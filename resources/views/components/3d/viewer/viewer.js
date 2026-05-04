@@ -439,6 +439,8 @@ ${item.type === 'anchor' ? '⚓' : '⚠️'}
     element.addEventListener('click', () => {
         focusItem(item);
     });
+
+    $wire.saveMark();
 }
 
 function focusItem(item) {

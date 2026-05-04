@@ -3,6 +3,7 @@
 use App\Models\Model3D;
 use App\Models\Project;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 new #[Layout('layouts.viewer')] class extends Component
@@ -16,5 +17,9 @@ new #[Layout('layouts.viewer')] class extends Component
         $this->project = $project;
         $this->model = $model;
         $this->models = $this->project->models;
+    }
+
+    #[Renderless]
+    public function saveMark(){
     }
 };
