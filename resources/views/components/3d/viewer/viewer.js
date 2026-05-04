@@ -20,8 +20,19 @@ let classesMap = {};
 
 let hider;
 
+let box_world;
+let min,max,center;
+const sectionPlanes = {
+    xMin: null,
+    xMax: null,
+    yMin: null,
+    yMax: null,
+    zMin: null,
+    zMax: null
+};
 let clipper_status = false;
 let clipper;
+
 let measurer;
 let classifier;
 
@@ -259,8 +270,126 @@ async function ifcLoader(url,id){
             onRaycastClickResult(result);
         }
     });
+
+    box_world = new THREE.Box3();
+
+    for (const [, model] of fragments.list) {
+        box_world.expandByObject(model.object);
+    }
+
+    min = box_world.min;
+    max = box_world.max;
+    center = box_world.getCenter(new THREE.Vector3());
+    createSectionPlanes();
 }
 
+async function createSectionPlanes() {
+    const size = box_world.getSize(new THREE.Vector3()).length();
+    const offset = size * 0.5;
+    // limpiar anteriores
+    clipper.deleteAll();
+
+    // X+
+    sectionPlanes.xMax = await clipper.create(world);
+    sectionPlanes.xMax.helper.position.set(max.x+offset, center.y, center.z);
+    sectionPlanes.xMax.normal.set(-1, 0, 0);
+    sectionPlanes.xMax.helper.visible = false;
+    sectionPlanes.xMax.controls._gizmo.visible = false
+    sectionPlanes.xMax.update();
+    // X-
+    sectionPlanes.xMin = await clipper.create(world);
+    sectionPlanes.xMin.helper.position.set(min.x-offset, center.y, center.z);
+    sectionPlanes.xMin.normal.set(1, 0, 0);
+    sectionPlanes.xMin.helper.visible = false;
+    sectionPlanes.xMin.controls._gizmo.visible = false
+    sectionPlanes.xMin.update();
+    //
+    // // Y+
+    sectionPlanes.yMax = await clipper.create(world);
+    sectionPlanes.yMax.helper.position.set(center.x, max.y+offset, center.z);
+    sectionPlanes.yMax.normal.set(0, -1, 0);
+    sectionPlanes.yMax.helper.visible = false;
+    sectionPlanes.yMax.controls._gizmo.visible = false
+    sectionPlanes.yMax.update();
+    //
+    // // Y-
+    sectionPlanes.yMin = await clipper.create(world);
+    sectionPlanes.yMin.helper.position.set(center.x, min.y-offset, center.z);
+    sectionPlanes.yMin.normal.set(0, 1, 0);
+    sectionPlanes.yMin.helper.visible = false;
+    sectionPlanes.yMin.controls._gizmo.visible = false
+    sectionPlanes.yMin.update();
+    //
+    // // Z+
+    sectionPlanes.zMax = await clipper.create(world);
+    sectionPlanes.zMax.helper.position.set(center.x, center.y, max.z+offset);
+    sectionPlanes.zMax.normal.set(0, 0, -1);
+    sectionPlanes.zMax.helper.visible = false;
+    sectionPlanes.zMax.controls._gizmo.visible = false
+    sectionPlanes.zMax.update();
+    //
+    // // Z-
+    sectionPlanes.zMin = await clipper.create(world);
+    sectionPlanes.zMin.helper.position.set(center.x, center.y, min.z-offset);
+    sectionPlanes.zMin.normal.set(0, 0, 1);
+    sectionPlanes.zMin.helper.visible = false;
+    sectionPlanes.zMin.controls._gizmo.visible = false
+    sectionPlanes.zMin.update();
+
+    const axes = ['x', 'y', 'z'];
+
+    axes.forEach(axis => {
+        const minInput = document.getElementById(`${axis}Min`);
+        const maxInput = document.getElementById(`${axis}Max`);
+
+        minInput.min = box_world.min[axis];
+        minInput.max = box_world.max[axis];
+        minInput.value = box_world.min[axis];
+
+        maxInput.min = box_world.min[axis];
+        maxInput.max = box_world.max[axis];
+        maxInput.value = box_world.max[axis];
+    });
+
+    bindSlider('x', sectionPlanes.xMin, sectionPlanes.xMax);
+    bindSlider('y', sectionPlanes.yMin, sectionPlanes.yMax);
+    bindSlider('z', sectionPlanes.zMin, sectionPlanes.zMax);
+}
+
+function bindSlider(axis, planeMin, planeMax) {
+    const minInput = document.getElementById(`${axis}Min`);
+    const maxInput = document.getElementById(`${axis}Max`);
+
+    minInput.addEventListener('input', () => {
+        let minVal = parseFloat(minInput.value);
+        let maxVal = parseFloat(maxInput.value);
+
+        if (minVal > maxVal) {
+            minVal = maxVal;
+            minInput.value = maxVal;
+        }
+
+        planeMin.helper.position[axis] = minVal;
+        planeMin.update();
+
+        fragments.core.update(true);
+    });
+
+    maxInput.addEventListener('input', () => {
+        let minVal = parseFloat(minInput.value);
+        let maxVal = parseFloat(maxInput.value);
+
+        if (maxVal < minVal) {
+            maxVal = minVal;
+            maxInput.value = minVal;
+        }
+
+        planeMax.helper.position[axis] = maxVal;
+        planeMax.update();
+
+        fragments.core.update(true);
+    });
+}
 
 async function onRaycastClickResult(result) {
 
@@ -293,10 +422,10 @@ async function onRaycastClickResult(result) {
 function createMarker(item) {
 
     const element = BUI.Component.create(() => BUI.html`
-        <div class="marker ${item.type}">
-            ${item.type === 'anchor' ? '⚓' : '⚠️'}
-        </div>
-    `);
+<div class="marker ${item.type}">
+${item.type === 'anchor' ? '⚓' : '⚠️'}
+</div>
+`);
 
     const markerInstance = marker.create(
         world,
@@ -345,7 +474,7 @@ function viewItem(item) {
 Anclaje: ${item.name}
 XYZ: (${item.x.toFixed(3)}, ${item.y.toFixed(3)}, ${item.z.toFixed(3)})
 Estado: ${item.status}
-        `);
+`);
     }
 }
 
@@ -355,18 +484,18 @@ function addToTable(item) {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
-        <td>${item.name}</td>
-        <td>${item.type}</td>
-        <td>${item.status}</td>
-        <td class="d-flex gap-1">
-            <button class="btn btn-primary btn-sm btn-view">
-                <i class="nf nf-fa-eye"></i>
-            </button>
-            <button class="btn btn-danger btn-sm btn-delete">
-                <i class="nf nf-fa-trash"></i>
-            </button>
-        </td>
-    `;
+<td>${item.name}</td>
+<td>${item.type}</td>
+<td>${item.status}</td>
+<td class="d-flex gap-1">
+    <button class="btn btn-primary btn-sm btn-view">
+        <i class="nf nf-fa-eye"></i>
+    </button>
+    <button class="btn btn-danger btn-sm btn-delete">
+        <i class="nf nf-fa-trash"></i>
+    </button>
+</td>
+`;
 
     // 👁️ SOLO ver detalles
     tr.querySelector('.btn-view').addEventListener('click', (e) => {
@@ -933,6 +1062,7 @@ let toolState = {
 let activeTool = null
 
 document.addEventListener('dblclick',() => {
+    window.clip = clipper;
     if(activeTool == 'clipper' && clipper.enabled){
         clipper.create(world)
         return;
@@ -970,6 +1100,7 @@ function updateUI() {
 
 let btnClipper = document.getElementById('btn-clipper');
 btnClipper.addEventListener('click',() => {
+    document.getElementById('clipper-panel').classList.toggle('d-none');
     toolState.clipper = !toolState.clipper
     if(toolState.clipper){
         setActiveTool('clipper')

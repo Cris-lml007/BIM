@@ -57,6 +57,28 @@
                         <button id="btn-rulers" class="tool-btn"><i class="bi bi-rulers"></i></button>
                         <button id="btn-clipper" class="tool-btn"><i class="bi bi-scissors"></i></button>
                     </div>
+                    <div id="clipper-panel" class="clipper-panel d-none">
+                        <div class="clipper-title">Secciones de Corte</div>
+
+                        <label>X</label>
+                        <div class="range-group">
+                            <input type="range" id="xMin" step="0.1">
+                            <input type="range" id="xMax" step="0.1">
+                        </div>
+
+                        <label>Y</label>
+                        <div class="range-group">
+                            <input type="range" id="yMin" step="0.1">
+                            <input type="range" id="yMax" step="0.1">
+                        </div>
+
+                        <label>Z</label>
+                        <div class="range-group">
+                            <input type="range" id="zMin" step="0.1">
+                            <input type="range" id="zMax" step="0.1">
+                        </div>
+                    </div>
+
 
                     {{-- <div class="bottom-bar"> --}}
                     {{--     <span id="xyz">XYZ: (0,0,0)</span> --}}

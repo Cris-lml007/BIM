@@ -566,10 +566,42 @@
             background: #0b5ed7;
         }
 
+        .clipper-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 250px;
+            background: #1f222a;
+            border-radius: 12px;
+            padding: 12px;
+            color: #fff;
+            z-index: 50;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
 
-        </style>
-    </head>
-    <body>
-        {{ $slot }}
-    </body>
+        .clipper-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #0D6EFD;
+        }
+
+        .range-group {
+            position: relative;
+            height: 30px;
+        }
+
+        .range-group input[type=range] {
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .range-group input[type=range]::-webkit-slider-thumb {
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    {{ $slot }}
+</body>
 </html>
