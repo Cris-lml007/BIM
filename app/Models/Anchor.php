@@ -17,6 +17,9 @@ class Anchor extends Model
         'title'
     ];
 
+    public function user(){
+        return $this->belongsTo(User::class,'user_id','id');
+    }
 
     public function model(){
         return $this->belongsTo(Model3D::class,'model_id','id');

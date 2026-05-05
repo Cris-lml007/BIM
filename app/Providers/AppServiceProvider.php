@@ -87,7 +87,7 @@ class AppServiceProvider extends ServiceProvider
                         ],
                         [
                             'text' => 'Anclajes Virtuales',
-                            'url' => 'menu/child2',
+                            'url' => route('app.project.anchors', ['project' => $project->id]),
                             'icon' => 'nf nf-fa-anchor',
                         ],
                         [
