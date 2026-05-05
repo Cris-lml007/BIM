@@ -281,6 +281,24 @@ async function ifcLoader(url,id){
     max = box_world.max;
     center = box_world.getCenter(new THREE.Vector3());
     createSectionPlanes();
+    let v = $wire.anchors;
+
+    for(let i = 0;i < v.length;i++){
+        let item = {
+            id: v[i].id,
+            name: v[i].title,
+            model: v[i].mode_id,
+            type: 'anchor',
+            x:  parseFloat(v[i].x),
+            y: parseFloat(v[i].y),
+            z: parseFloat(v[i].z),
+            status: v[i].is_active ? 'activo': 'inhabilitado'
+        };
+        anchors.push(item);
+        createMarker(item);
+        addToTable(item);
+    }
+
 }
 
 async function createSectionPlanes() {
@@ -402,24 +420,32 @@ async function onRaycastClickResult(result) {
     const name = prompt(`Nombre del ${activeTool}:`);
     if (!name) return;
 
+    let model = result.fragments.object.name;
     const item = {
         id: Date.now(),
         name,
+        model,
         type: activeTool,
         x: point.x,
         y: point.y,
         z: point.z,
         status: 'activo'
     };
-
-    anchors.push(item);
-
     createMarker(item);
+
+    let r = await $wire.saveMark(item.name,item.model,item.type,item.x,item.y,item.z)
+    if(r != 'fail'){
+        Swal.fire({icon: 'success',title: 'Creado Correctamente'})
+    }else{
+        Swal.fire({icon: 'error',title: 'Falla al Crear'})
+    }
+    item.id = r;
+    anchors.push(item);
     addToTable(item);
 }
 
 
-function createMarker(item) {
+async function createMarker(item) {
 
     const element = BUI.Component.create(() => BUI.html`
 <div class="marker ${item.type}">
@@ -439,8 +465,6 @@ ${item.type === 'anchor' ? '⚓' : '⚠️'}
     element.addEventListener('click', () => {
         focusItem(item);
     });
-
-    $wire.saveMark();
 }
 
 function focusItem(item) {
@@ -458,6 +482,7 @@ function removeItem(item, tr) {
         marker.delete(item._marker);
     }
 
+    $wire.removeMark(item.id,item.type)
     // 🔥 quitar del array
     anchors = anchors.filter(a => a.id !== item.id);
 
@@ -1167,7 +1192,7 @@ document.getElementsByName('loadIfc').forEach((e) => {
         showLoading()
         try {
             let u = e.dataset.url;
-            let id = e.dataset.name + Math.floor(Math.random() * 100) + 1;
+            let id = e.dataset.name //+ Math.floor(Math.random() * 100) + 1;
             await ifcLoader(u, id)
             fragments.core.update()
         } catch (error) {

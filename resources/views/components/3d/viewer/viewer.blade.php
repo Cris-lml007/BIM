@@ -225,6 +225,50 @@
     <div class="modal fade" tabindex="-1" id="modal-models" data-bs-theme="dark">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
+                <!-- HEADER -->
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-semibold">
+                        <i class="nf nf-fa-cube text-primary me-2"></i>
+                        Cargar Modelos
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <!-- BODY -->
+                <div class="modal-body">
+                    <div class="row g-3">
+                        @foreach ($models as $item)
+                            <div class="col-md-6 col-lg-4">
+                                <div class="model-card p-3 h-100 d-flex flex-column justify-content-between"
+                                    data-url="{{ route('app.Attachment', $item->id) }}"
+                                    data-name="{{ $item->name . '|' . $item->id }}" name="loadIfc"
+                                    data-bs-dismiss="modal">
+                                    <!-- ICON -->
+                                    <div class="text-center mb-2">
+                                        <i class="nf nf-fa-cube model-icon"></i>
+                                    </div>
+                                    <!-- NAME -->
+                                    <div class="text-center small fw-semibold text-truncate"
+                                        title="{{ $item->name }}">
+                                        {{ $item->name }}
+                                    </div>
+                                    <!-- ACTION -->
+                                    <button class="btn btn-sm btn-primary w-100 mt-3">
+                                        Cargar
+                                    </button>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="modal fade" tabindex="-1" id="modal-mark" data-bs-theme="dark">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
 
                 <!-- HEADER -->
                 <div class="modal-header border-bottom border-secondary">
@@ -244,8 +288,8 @@
                             <div class="col-md-6 col-lg-4">
 
                                 <div class="model-card p-3 h-100 d-flex flex-column justify-content-between"
-                                    data-url="{{ route('app.Attachment', $item->id) }}"
-                                    data-name="{{ $item->name }}" name="loadIfc" data-bs-dismiss="modal">
+                                    data-url="{{ route('app.Attachment', $item->id) }}" data-name="asa"
+                                    name="loadIfc" data-bs-dismiss="modal">
 
                                     <!-- ICON -->
                                     <div class="text-center mb-2">
