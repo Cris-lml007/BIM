@@ -10,7 +10,7 @@
                 <h3 class="mb-0">Miembros del proyecto</h3>
             </div>
             <button data-bs-toggle="modal" data-bs-target="#modal-member" class="btn btn-primary"
-                @if(empty($project->ownerAccess())) disabled @endif>
+                @if(empty($project->ownerAccess()) || !$project->is_active) disabled @endif>
                 <i class="fa fa-plus"></i> Invitar
             </button>
         </div>
@@ -26,7 +26,4 @@
     <x-modal id="modal-member" title="Invitar" class="modal-md">
         <livewire:app.project-member-form :project="$project" modal_name="modal-member"></livewire:app.project-member-form>
     </x-modal>
-@endsection
-@section('preloader')
-    @include('layouts.main')
 @endsection

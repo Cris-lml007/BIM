@@ -85,6 +85,22 @@
 
                                 </div>
                             </div>
+                            @foreach ($comment->attachments as $attachment)
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div
+                                        class="bg-primary text-white p-2 rounded-3 shadow-sm text-end img-chat position-relative">
+
+                                        <img src="{{ route('attachments.show', $attachment->id) }}" class="img-fluid"
+                                            style="max-width:200px;">
+
+                                        <a href="{{ route('attachments.show', $attachment->id) }}" target="_blank"
+                                            class="expand-icon">
+                                            <i class="fas fa-expand"></i>
+                                        </a>
+
+                                    </div>
+                                </div>
+                            @endforeach
                         @else
                             <div class="d-flex mb-3">
                                 <div class="me-2">
@@ -108,6 +124,22 @@
                                 </div>
 
                             </div>
+                            @foreach ($comment->attachments as $attachment)
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div
+                                        class="bg-primary text-white p-2 rounded-3 shadow-sm text-end img-chat position-relative">
+
+                                        <img src="{{ route('attachments.show', $attachment->id) }}" class="img-fluid"
+                                            style="max-width:200px;">
+
+                                        <a href="{{ route('attachments.show', $attachment->id) }}" target="_blank"
+                                            class="expand-icon">
+                                            <i class="fas fa-expand"></i>
+                                        </a>
+
+                                    </div>
+                                </div>
+                            @endforeach
                         @endif
 
                     @empty
@@ -121,12 +153,32 @@
                 <!-- INPUT -->
                 <div class="m-2">
                     <div class="input-group">
+                        <!-- BOTÓN SUBIR IMAGEN -->
+                        <button class="btn btn-@if ($image) btn-success @else btn-secondary @endif"
+                            @disabled($status === 0) onclick="document.getElementById('fileInput').click()"
+                            wire:loading.attr="disabled" wire:target="image">
+                            <i class="fas fa-image" wire:loading.remove wire:target="image"></i>
+                            <i class="fas fa-spinner fa-spin" wire:loading wire:target="image"></i>
+                        </button>
 
-                        <input class="form-control" wire:model="comment" placeholder="Escribir comentario..."
-                            @disabled($status === 0)>
+                        <!-- BOTÓN RESET (X) -->
+                        @if ($image)
+                            <button class="btn btn-danger ms-1" wire:click="removeImage" wire:loading.attr="disabled"
+                                wire:target="image" title="Quitar imagen">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        @endif <!-- INPUT OCULTO -->
 
+                        <input type="file" id="fileInput" wire:model="image" hidden>
+
+                        <!-- INPUT TEXTO -->
+                        <input class="form-control" id="input_comment" wire:model="comment"
+                            placeholder="Escribir comentario..." @disabled($status === 0)
+                            wire:loading.attr="disabled" wire:target="image">
+
+                        <!-- BOTÓN ENVIAR -->
                         <button wire:click="addComment({{ $incident->id ?? '' }})" class="btn btn-primary"
-                            @disabled($status === 0)>
+                            @disabled($status === 0) wire:loading.attr="disabled" wire:target="image">
                             <i class="fas fa-paper-plane"></i>
                         </button>
 
@@ -154,4 +206,47 @@
             scrollToBottom();
         });
     </script>
+    <style>
+        #input_comment[disabled] {
+            background-color: #e9ecef;
+            margin: 4px;
+        }
+
+        #input_comment:focus {
+            outline: none;
+            box-shadow: none;
+            background-color: #e9ecef;
+        }
+
+        .img-chat:hover {
+            opacity: 0.7;
+            background: rgb(87, 87, 87);
+            cursor: pointer;
+        }
+
+        .img-chat {
+            position: relative;
+            display: inline-block;
+        }
+
+        .expand-icon {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 50%;
+            padding: 6px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s ease;
+        }
+
+        .expand-icon:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+    </style>
 </div>

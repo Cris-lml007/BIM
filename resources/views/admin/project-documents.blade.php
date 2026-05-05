@@ -12,7 +12,7 @@
             </div>
 
             <button data-bs-toggle="modal" data-bs-target="#modal-document" class="btn btn-primary"
-                @if(empty($project->ownerAccess())) disabled @endif>
+                @if(empty($project->ownerAccess()) || !$project->is_active) disabled @endif>
                 <i class="fas fa-cloud-upload-alt me-2 "></i>
                 Subir
             </button>
@@ -21,9 +21,7 @@
     </div>
 
 @endsection
-@section('preloader')
-    @include('layouts.main') 
-@endsection
+
 @section('content_body')
     <div class="container">
         <livewire:app.project-documente-view :project="$project"></livewire:app.project-documente-view>

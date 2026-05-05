@@ -1,10 +1,15 @@
 <div class="row g-3 mb-3">
 
-    @if(!$project->ownerAccess())
+    @if (!$project->ownerAccess())
         <small class="alert alert-warning m-0">
             Usted no cuenta con acceso para esta sección, comuníquese con
             <b>BIMNova</b>, para solicitar un acceso.
         </small>
+    @endif
+    @if ($project->is_active == 0)
+        <div class="alert alert-danger m-0">
+            <i class="fas fa-lock me-2"></i>El proyecto está bloqueado.
+        </div>
     @endif
     <div class="card mb-4 shadow-sm rounded-4">
         <div class="card-header border-0 bg-white pt-3 pb-0">
@@ -26,10 +31,10 @@
                 <small class="text-muted">Usado: {{ $usedMB }} MB ({{ $percentage }}%)</small>
                 <small class="text-muted">Disponible:
                     @if ($availableMB / 2024 >= 1)
-                        {{ round($availableMB / 1024, 1) }} GB</small>
-                    @else
-                    {{ $availableMB  }} MB</small>
-
+                        {{ round($availableMB / 1024, 1) }} GB
+                </small>
+            @else
+                {{ $availableMB }} MB</small>
                 @endif
             </div>
         </div>
@@ -40,7 +45,7 @@
             <div class="row g-2 align-items-center">
                 <div class="col-md-6">
                     <h6 class="fw-bold mb-0">
-                        <i class="fas fa-folder-open me-2 text-primary"></i>Mis Archivos 
+                        <i class="fas fa-folder-open me-2 text-primary"></i>Mis Archivos
                     </h6>
                 </div>
                 <div class="col-md-4">
@@ -66,7 +71,7 @@
         </div>
 
         <div class="card-body p-0">
-            @if($documents->isEmpty())
+            @if ($documents->isEmpty())
                 <div class="text-center py-5 text-muted">
                     <i class="fas fa-folder-open fa-3x mb-3 d-block opacity-50"></i>
                     <p class="mb-0">No hay documentos registrados en este proyecto.</p>
@@ -80,7 +85,7 @@
                                 <th style="width: 40px;"></th>
                                 <th wire:click="sortBy('name')" style="cursor:pointer;" class="user-select-none">
                                     Nombre
-                                    @if($sortField === 'name')
+                                    @if ($sortField === 'name')
                                         <i
                                             class="fas fa-sort-{{ $sortDirection === 'asc' ? 'up' : 'down' }} ms-1 text-primary"></i>
                                     @else
@@ -89,7 +94,7 @@
                                 </th>
                                 <th wire:click="sortBy('type')" style="cursor:pointer;" class="user-select-none">
                                     Tipo
-                                    @if($sortField === 'type')
+                                    @if ($sortField === 'type')
                                         <i
                                             class="fas fa-sort-{{ $sortDirection === 'asc' ? 'up' : 'down' }} ms-1 text-primary"></i>
                                     @else
@@ -98,7 +103,7 @@
                                 </th>
                                 <th wire:click="sortBy('size')" style="cursor:pointer;" class="user-select-none">
                                     Tamaño
-                                    @if($sortField === 'size')
+                                    @if ($sortField === 'size')
                                         <i
                                             class="fas fa-sort-{{ $sortDirection === 'asc' ? 'up' : 'down' }} ms-1 text-primary"></i>
                                     @else
@@ -107,7 +112,7 @@
                                 </th>
                                 <th wire:click="sortBy('created_at')" style="cursor:pointer;" class="user-select-none">
                                     Subido
-                                    @if($sortField === 'created_at')
+                                    @if ($sortField === 'created_at')
                                         <i
                                             class="fas fa-sort-{{ $sortDirection === 'asc' ? 'up' : 'down' }} ms-1 text-primary"></i>
                                     @else
@@ -118,7 +123,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($documents as $doc)
+                            @foreach ($documents as $doc)
                                 <tr wire:key="doc-{{ $doc->id }}">
                                     {{-- Icono --}}
                                     <td class="text-center">
@@ -131,7 +136,7 @@
                                             style="max-width: 280px;">
                                             {{ $doc->name }}
                                         </span>
-                                        @if($doc->isLink())
+                                        @if ($doc->isLink())
                                             <small class="text-muted d-block text-truncate" style="max-width: 280px;">
                                                 <i class="fas fa-external-link-alt me-1"></i>
                                                 <a href="{{ $doc->view_url }}" target="_blank"
@@ -144,7 +149,7 @@
 
                                     {{-- Tipo --}}
                                     <td>
-                                        @if($doc->isLink())
+                                        @if ($doc->isLink())
                                             <span class="badge bg-info text-dark">Enlace</span>
                                         @elseif(str_contains($doc->type, 'image'))
                                             <span class="badge bg-primary">Imagen</span>
@@ -173,14 +178,20 @@
 
                                     {{-- Acciones --}}
                                     <td class="text-end">
-                                        <a href="{{ $doc->view_url }}" target="_blank"
-                                            class="btn btn-sm btn-primary rounded-circle me-1" title="Ver">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <button wire:click="deleteDocument({{ $doc->id }})"
-                                            class="btn btn-sm btn-danger rounded-circle" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        @if (!$project->is_active)
+                                            <i class="nf nf-fa-lock text-danger">
+                                                Proyecto Bloqueado
+                                            </i>
+                                        @else
+                                            <a href="{{ $doc->view_url }}" target="_blank"
+                                                class="btn btn-sm btn-primary rounded-circle me-1" title="Ver">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button wire:click="deleteDocument({{ $doc->id }})"
+                                                class="btn btn-sm btn-danger rounded-circle" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

@@ -12,7 +12,8 @@ class ProjectsView extends Component
 {
 
     public $is_avaliable = false;
-
+    public $showOptions = true;
+    
 
     public $list = [
         'search' => '',
@@ -26,11 +27,14 @@ class ProjectsView extends Component
     {
         $heads = [
             'Nombre' => 'name',
-            'Propietario' => 'email',
+            'Descripción' => 'description',
             'Creado' => 'created_at',
             'Estado' => null,
-            'Opciones' => null
         ];
+        
+        if ($this->showOptions) {
+            $heads['Opciones'] = null;
+        }
         $search = $this->list['search'];
         if ($search != '') {
             $data = Project::where(function (Builder $builder) {
@@ -55,6 +59,7 @@ class ProjectsView extends Component
         }
 
         $this->is_avaliable = Auth::user()->canCreateProject();
+        
         return view('livewire.app.projects-view', compact(['heads', 'data']));
     }
 
@@ -66,5 +71,67 @@ class ProjectsView extends Component
 
         $project->is_active = !$project->is_active;
         $project->save();
+
+        
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'Estado del proyecto actualizado',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+     
+        
     }
+
+    public function edit($id)
+    {
+        $this->dispatch('editProject', id: $id)->to(ProjectsForm::class);
+        $this->js("$('#modal-project').modal('show')");
+    }
+
+    public function confirmDelete($id)
+    {
+        $this->js("
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: 'No podrá recuperar este proyecto!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar!',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Livewire.dispatch('deleteConfirmed', { id: $id });
+                }
+            });
+        ");
+    }
+
+    #[On('deleteConfirmed')]
+    public function deleteConfirmed($id)
+    {
+        Project::destroy($id);
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Proyecto eliminado',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+        $this->dispatch('refresh')->to(ProjectsView::class);
+    }
+
+    public $expanded = [];
+
 }

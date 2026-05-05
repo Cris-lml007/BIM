@@ -1,28 +1,25 @@
 <div>
+    @if (!$project->is_active)
+        <div class="alert alert-danger m-0">
+            <i class="nf nf-fa-lock"></i> El proyecto se encuentra bloqueado, no se pueden registrar nuevas incidencias.
+        </div>
+    @endif
     <div class="row g-3 mb-3">
-
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
                 <h3 class="fw-bold text-danger">{{ $stats['abiertas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Incidencias Abiertas</h6>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
-                <h3 class="fw-bold text-warning">{{ $stats['proceso'] }}</h3>
-                <h6 class="mb-1 text-secondary">En Proceso</h6>
-            </div>
-        </div>
-
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
                 <h3 class="fw-bold text-success">{{ $stats['cerradas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Cerradas</h6>
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card text-center shadow-sm rounded-4 py-3 border-start border-1">
                 <h3 class="fw-bold text-dark">{{ $stats['criticas'] }}</h3>
                 <h6 class="mb-1 text-secondary">Críticas</h6>
@@ -33,9 +30,12 @@
 
     <livewire:table :heads="$heads" wire:model.live="actions" icon="nf nf-cod-issue_reopened text-primary"
         title="Incidentes">
+        @php
+        $i = 1;
+        @endphp
         @foreach ($incidents as $item)
             <tr wire:key="{{ $item->id }}">
-                <td>{{ $item->id }}</td>
+                <td>{{ $i++ }}</td>
                 <td>{{ $item->title }}</td>
 
 
@@ -64,12 +64,18 @@
                 </td>
 
                 <td>
-                    <button class="btn btn-sm btn-primary" wire:click="getIncident({{ $item->id }})">
-                        <i class="nf nf-fa-eye"></i>
-                    </button>
-                    <button wire:click="delete({{ $item->id }})" class="btn btn-sm btn-danger">
-                        <i class='nf nf-fa-trash'></i>
-                    </button>
+                    @if (!$project->is_active)
+                            <i class="nf nf-fa-lock text-danger">
+                                Proyecto Bloqueado
+                            </i>
+                    @else
+                        <button class="btn btn-sm btn-primary" wire:click="getIncident({{ $item->id }})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button wire:click="delete({{ $item->id }})" class="btn btn-sm btn-danger">
+                            <i class='nf nf-fa-trash'></i>
+                        </button>
+                    @endif
                 </td>
             </tr>
         @endforeach
@@ -77,7 +83,7 @@
         </x-slot>
     </livewire:table>
 
-    <x-modal id="modal-incident-detail" title="Detalles de la incidencia" class="modal-lg">
+    <x-modal id="modal-incident-detail" title="Detalles de la incidencia" class="modal-lg" >
         <livewire:app.incident-detail modal_name="modal-incident-detail" :project="$project" />
     </x-modal>
 </div>

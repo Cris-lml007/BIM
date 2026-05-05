@@ -18,7 +18,7 @@ public $actions = [
         'sortDirection' => 'asc'
     ];
 public $heads = [
-            'ID' => 'id',
+            '#' => '#',
             'Incidencia' => 'user_id',
             'Prioridad' => 'max_projects',
             'Estado' => 'max_users',

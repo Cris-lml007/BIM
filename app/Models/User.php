@@ -84,8 +84,12 @@ class User extends Authenticatable
      */
     public function canCreateProject(): bool
     {
-        $maxProjectsAllowed = $this->access?->max_projects ?? 0;
-        $currentProjectsCount = $this->projects()->count();
+        if (!$this->access) {
+            return false;
+        }
+        
+        $maxProjectsAllowed = $this->access->max_projects ?? 0;
+        $currentProjectsCount = $this->projectsOwner()->count();
 
         return $currentProjectsCount < $maxProjectsAllowed;
     }
@@ -104,5 +108,48 @@ class User extends Authenticatable
             'available' => max(0, $maxProjectsAllowed - $currentProjectsCount),
             'can_create' => $currentProjectsCount < $maxProjectsAllowed
         ];
+    }
+
+    /**
+     * Obtener el conteo de usuarios miembros en los proyectos del usuario
+     */
+    public function getMembersCount(): int
+    {
+        return User::distinct()
+            ->join('project_user', 'users.id', '=', 'project_user.user_id')
+            ->join('projects', 'project_user.project_id', '=', 'projects.id')
+            ->where('projects.user_id', $this->id)
+            ->count('users.id');
+    }
+
+    /**
+     * Obtener el conteo de usuarios dentro del acceso (incluyendo al usuario titular)
+     */
+    public function getAccessUsersCount(): int
+    {
+        return $this->getMembersCount() + 1; // +1 para incluir al usuario titular
+    }
+
+    /**
+     * Obtener el almacenamiento usado en MB por los proyectos del usuario
+     */
+    public function getStorageUsedMB(): float
+    {
+        $projects = $this->projectsOwner()->pluck('id');
+        
+        if ($projects->isEmpty()) {
+            return 0;
+        }
+
+        // Sumar el tamaño de todos los documentos en los proyectos del usuario
+        $storageBytes = Document::whereIn('project_id', $projects)
+            ->sum('size') ?? 0;
+
+        // Convertir a MB (el campo 'size' se asume que está en bytes)
+        return round($storageBytes / (1024 * 1024), 2);
+    }
+    public function projectBlockedCount(): int
+    {
+        return $this->projectsOwner()->where('is_active', false)->count();
     }
 }
