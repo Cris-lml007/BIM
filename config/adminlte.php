@@ -319,7 +319,7 @@ return [
             'icon' => 'fa fa-home',
         ],
         [
-            'text' => 'Gestion de accesos',
+            'text' => 'Gestión de accesos',
             'route' => 'administration.access',
             'icon' => 'far fa-fw fa-file',
             'can' => 'isAdministration'

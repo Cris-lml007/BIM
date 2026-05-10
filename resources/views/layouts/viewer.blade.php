@@ -261,16 +261,16 @@
             /* overflow: hidden; */
         }
 
-        .sidebar::-webkit-scrollbar {
+        *::-webkit-scrollbar {
             width: 6px;
         }
 
-        .sidebar::-webkit-scrollbar-thumb {
+        *::-webkit-scrollbar-thumb {
             background: #2a2d36;
             border-radius: 10px;
         }
 
-        .sidebar::-webkit-scrollbar-thumb:hover {
+        *::-webkit-scrollbar-thumb:hover {
             background: #4f8cff;
         }
 
@@ -347,6 +347,7 @@
             text-align: center;
             color: #e6e6e6;
         }
+
         .tree-group {
             border-radius: 10px;
             transition: all 0.2s ease;
@@ -370,12 +371,15 @@
         }
 
         .visibility-toggle {
-            accent-color: #0d6efd; /* bootstrap primary */
+            accent-color: #0d6efd;
+            /* bootstrap primary */
         }
 
         .isolate-toggle {
-            accent-color: #dc3545; /* rojo para aislar */
+            accent-color: #dc3545;
+            /* rojo para aislar */
         }
+
         .tree-header {
             display: flex;
             align-items: center;
@@ -383,8 +387,9 @@
             gap: 10px;
         }
 
-        .tree-header > div {
-            min-width: 0; /* 🔥 CLAVE para que funcione ellipsis */
+        .tree-header>div {
+            min-width: 0;
+            /* 🔥 CLAVE para que funcione ellipsis */
         }
 
         .text-truncate {
@@ -398,7 +403,202 @@
             vertical-align: middle;
         }
 
+        bim-panel,
+        .options-menu {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 9999;
+            /* 🔥 importante */
+            width: 300px;
+        }
 
+        .panel-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+
+        #levels-container {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        #levels-container .card {
+            background: #1f222a;
+            border: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        #levels-container .card:hover {
+            background: #0D6EFD;
+        }
+
+        #levels-container input {
+            cursor: pointer;
+        }
+
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            /* 🔥 CLAVE */
+            background: #1a1d25;
+            border-top: 1px solid #333;
+
+            display: flex;
+            /* 🔥 usamos flex */
+            flex-direction: column;
+            /* 🔥 pero en vertical */
+
+            transition: height 0.3s ease;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .bottom-bar.collapsed {
+            height: 40px;
+        }
+
+        .bottom-bar.expanded {
+            height: 250px;
+        }
+
+        .bottom-header {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            cursor: pointer;
+        }
+
+        .bottom-content {
+            padding: 10px;
+            overflow-y: auto;
+            height: calc(100% - 40px);
+        }
+
+        .marker {
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .marker:hover {
+            transform: scale(1.3);
+        }
+
+        .marker.anchor {
+            color: #0d6efd;
+        }
+
+        .marker.issue {
+            color: #dc3545;
+        }
+
+        .model-card {
+            background: #1f222a;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .model-card:hover {
+            background: #2a2e38;
+            border-color: #0d6efd;
+            transform: translateY(-3px);
+        }
+
+        .model-icon {
+            font-size: 40px;
+            color: #0d6efd;
+            transition: 0.2s;
+        }
+
+        .model-card:hover .model-icon {
+            transform: scale(1.1);
+        }
+
+        .model-card button {
+            opacity: 0.9;
+        }
+
+        .model-card:hover button {
+            opacity: 1;
+        }
+
+        .view-card {
+            background: #1f222a;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        .view-card div {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        .view-card:hover {
+            background: #2a2e38;
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+        }
+
+        .view-card.fit {
+            font-size: 14px;
+            padding: 10px;
+            background: #0d6efd;
+        }
+
+        .view-card.fit:hover {
+            background: #0b5ed7;
+        }
+
+        .clipper-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 250px;
+            background: #1f222a;
+            border-radius: 12px;
+            padding: 12px;
+            color: #fff;
+            z-index: 50;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .clipper-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #0D6EFD;
+        }
+
+        .range-group {
+            position: relative;
+            height: 30px;
+        }
+
+        .range-group input[type=range] {
+            position: absolute;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .range-group input[type=range]::-webkit-slider-thumb {
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>

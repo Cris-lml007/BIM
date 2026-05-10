@@ -20,4 +20,8 @@ class Model3D extends Model
     public function user(){
         return $this->belongsTo(User::class,'user_id','id');
     }
+
+    public function anchors(){
+        return $this->hasMany(Anchor::class,'model_id','id');
+    }
 }

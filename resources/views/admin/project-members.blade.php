@@ -9,10 +9,12 @@
                 </small>
                 <h3 class="mb-0">Miembros del proyecto</h3>
             </div>
-            <button data-bs-toggle="modal" data-bs-target="#modal-member" class="btn btn-primary"
-                @if(empty($project->ownerAccess()) || !$project->is_active) disabled @endif>
-                <i class="fa fa-plus"></i> Invitar
-            </button>
+            @if ($roleMember && $roleMember != \App\Enum\RoleProject::SITE_RESIDENT->value)
+                <button data-bs-toggle="modal" data-bs-target="#modal-member" class="btn btn-primary"
+                    @if (empty($project->ownerAccess()) || !$project->is_active) disabled @endif>
+                    <i class="fa fa-plus"></i> Invitar
+                </button>
+            @endif
         </div>
         <hr class="mt-3 mb-4">
     </div>
@@ -20,7 +22,7 @@
 
 @section('content_body')
     <div class="container">
-        <livewire:app.project-members-view :project="$project"></livewire:app.project-members-view>
+        <livewire:app.project-members-view :project="$project" ></livewire:app.project-members-view>
     </div>
 
     <x-modal id="modal-member" title="Invitar" class="modal-md">

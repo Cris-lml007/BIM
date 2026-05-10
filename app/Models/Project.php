@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enum\MembershipStatus;
+use App\Models\ProjectMembership;
+use DB;
 use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
@@ -28,9 +31,51 @@ class Project extends Model
 
     public function members()
     {
-        return $this->belongsToMany(User::class, 'project_user')
-            ->withPivot('role')
+        return $this->belongsToMany(User::class, 'project_memberships')
+            ->withPivot(['role', 'status', 'started_at', 'ended_at', 'removed_by_user_id', 'reason', 'metadata'])
+            ->wherePivot('status', MembershipStatus::ACTIVE->value)
+            ->whereNull('project_memberships.ended_at')
             ->withTimestamps();
+    }
+
+    public function memberships()
+    {
+        return $this->hasMany(ProjectMembership::class);
+    }
+
+    public function activeMemberships()
+    {
+        return $this->hasMany(ProjectMembership::class)
+            ->where('status', MembershipStatus::ACTIVE->value)
+            ->whereNull('ended_at');
+    }
+
+    public function legacyMembers()
+    {
+        return $this->belongsToMany(User::class, 'project_user')
+            ->withPivot('role', 'status')
+            ->withTimestamps();
+    }
+
+    public static function roleMember($userId)
+    {
+        return DB::table('project_memberships')
+            ->select('project_id', 'role')
+            ->where('user_id', $userId)
+            ->where('status', MembershipStatus::ACTIVE->value)
+            ->whereNull('ended_at')
+            ->first();
+    }
+
+    public static function roleMemberProject($userId, $projectId)
+    {
+        return DB::table('project_memberships')
+            ->select('project_id', 'role')
+            ->where('user_id', $userId)
+            ->where('project_id', $projectId)
+            ->where('status', MembershipStatus::ACTIVE->value)
+            ->whereNull('ended_at')
+            ->first();
     }
 
     /**

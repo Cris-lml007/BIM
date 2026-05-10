@@ -5,14 +5,16 @@ namespace App\Livewire\App;
 use Livewire\Component;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+use App\Enum\MembershipStatus;
+use App\Enum\RoleProject;
 use App\Mail\ProjectInvitationMail;
-use Illuminate\Support\Facades\Mail;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\ProjectMembershipService;
 use Illuminate\Support\Facades\Auth;
-
-
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Mail;
 
 class ProjectMembersView extends Component
 {
@@ -24,6 +26,13 @@ class ProjectMembersView extends Component
     public $selectedUser = null;
     public $externalEmail = '';
     public $isInviting = false;
+    public $membersList = null;
+    public $selectedMember = null;
+    public $selectedMemberMemberships = null;
+    public $selectedMemberForRoleChange = null;
+    public $newRole = '';
+    public $currentMemberRole = null;
+    public $current_modal = null;
 
     public $actions = [
         'search' => '',
@@ -50,7 +59,7 @@ class ProjectMembersView extends Component
     ];
     protected $rules = [
         'email' => 'required|email',
-        'role' => 'required|in:admin,member',
+        'role' => 'required|integer',
     ];
 
 
@@ -115,8 +124,8 @@ class ProjectMembersView extends Component
 
         $sortField = $this->actions['sortField'];
         $sortColumn = match ($sortField) {
-            'pivot_role' => 'project_user.role',
-            'created_at' => 'project_user.created_at',
+            'pivot_role' => 'project_memberships.role',
+            'created_at' => 'project_memberships.started_at',
             'id' => 'users.id',
             'name' => 'users.name',
             'email' => 'users.email',
@@ -130,8 +139,8 @@ class ProjectMembersView extends Component
     public function openInviteModal()
     {
         $this->reset(['userSearch', 'selectedUser', 'role', 'email', 'externalEmail']);
-        $this->dispatch('openModal', 'modal-invite');
-        $this->js("new bootstrap.Modal(document.getElementById('modal-invite')).show();");
+        $this->current_modal = 'modal-invite';
+        $this->js("$('#modal-invite').modal('show');");
     }
 
     public function selectUser($email)
@@ -171,7 +180,7 @@ class ProjectMembersView extends Component
             return true;
         }
 
-        return $this->project->members()->where('user_id', $userId)->exists();
+        return $this->project->activeMemberships()->where('user_id', $userId)->exists();
     }
 
     public function emailExists($email)
@@ -195,24 +204,25 @@ class ProjectMembersView extends Component
         }
 
         // Check if user is already a member
-        if ($this->project->members()->where('user_id', $user->id)->exists()) {
+        if ($this->project->activeMemberships()->where('user_id', $user->id)->exists()) {
             $this->js("Swal.fire({icon:'error', title: 'Error', text: 'Este usuario ya es miembro del proyecto.'})");
             return;
         }
 
         // Add member to project
-        $this->project->members()->attach($user->id, ['role' => $this->role]);
+        $service = new ProjectMembershipService();
+        $service->addMember(
+            $this->project,
+            $user,
+            RoleProject::from((int) $this->role),
+            Auth::user()
+        );
 
         $this->js("Swal.fire({icon:'success', title: 'Éxito', text: 'Usuario añadido al proyecto.'})");
 
         // Reset form and close modal
         $this->reset(['email', 'userSearch', 'role', 'selectedUser']);
-        $this->dispatch('closeModal', 'modal-invite');
-        $this->js("
-            var modalEl = document.getElementById('modal-invite');
-            var modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-        ");
+        $this->js('closeModal');
 
         // Refresh the component
         $this->dispatch('$refresh');
@@ -227,11 +237,11 @@ class ProjectMembersView extends Component
         ]);
 
         // Abrir modal de confirmación
+        $this->current_modal = 'modal-confirm-invite';
         $this->js("
-        var inviteModal = bootstrap.Modal.getInstance(document.getElementById('modal-invite'));
-        if (inviteModal) inviteModal.hide();
+        $('#modal-invite').modal('hide');
         setTimeout(() => {
-            new bootstrap.Modal(document.getElementById('modal-confirm-invite')).show();
+            $('#modal-confirm-invite').modal('show');
         }, 300);
     ");
     }
@@ -266,12 +276,9 @@ class ProjectMembersView extends Component
         );
 
         // Enviar correo
-        Mail::to($this->externalEmail)->send(new \App\Mail\ProjectInvitationMail($invitation));
+        Mail::to($this->externalEmail)->send(new \App\Mail\ProjectInvitationMail($invitation, $this->project, Auth::user()));
 
-        $this->js("
-        var modal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-invite'));
-        if (modal) modal.hide();
-    ");
+        $this->js('closeModal');
 
         $this->js("
         Swal.fire({
@@ -293,12 +300,18 @@ class ProjectMembersView extends Component
             return;
         }
 
-        // Prevent removing yourself if you're not the owner? Actually owner is not in members table
-        $member = $this->project->members()->where('user_id', $userId)->first();
+        $membership = $this->project->activeMemberships()
+            ->where('user_id', $userId)
+            ->first();
 
-        if ($member) {
-            $this->project->members()->detach($userId);
-
+        if ($membership) {
+            $service = new ProjectMembershipService();
+            $service->removeMember(
+                $membership,
+                MembershipStatus::EXPELLED,
+                Auth::user(),
+                'Expulsado del proyecto'
+            );
             $this->js("
             Swal.fire({
                 toast: true,
@@ -311,6 +324,121 @@ class ProjectMembersView extends Component
             });
             ");
         }
+    }
+
+    public function showMemberHistory(int $userId)
+    {
+        $this->selectedMember = User::find($userId);
+
+        if (!$this->selectedMember) {
+            return;
+        }
+
+        $this->selectedMemberMemberships = $this->project->memberships()
+            ->where('user_id', $userId)
+            ->with(['histories.actor'])
+            ->orderBy('started_at')
+            ->get();
+
+        $this->current_modal = 'modal-member-history';
+        $this->js("$('#modal-member-history').modal('show');");
+    }
+
+    public function openChangeRoleModal(int $userId)
+    {
+        // Check if current user is the owner
+        if (Auth::user()->id !== $this->project->user_id) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'Solo el dueño del proyecto puede cambiar roles.'})");
+            return;
+        }
+
+        $this->selectedMemberForRoleChange = User::find($userId);
+
+        if (!$this->selectedMemberForRoleChange) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'Miembro no encontrado.'})");
+            return;
+        }
+
+        // Get current membership and role
+        $membership = $this->project->activeMemberships()
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$membership) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'El usuario no es un miembro activo del proyecto.'})");
+            return;
+        }
+
+        $this->currentMemberRole = $membership->role;
+        $this->newRole = $membership->role->value;
+
+        $this->current_modal = 'modal-change-role';
+        $this->js("$('#modal-change-role').modal('show');");
+    }
+
+    public function changeMemberRole()
+    {
+        // Check if current user is the owner
+        if (Auth::user()->id !== $this->project->user_id) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'Solo el dueño del proyecto puede cambiar roles.'})");
+            return;
+        }
+
+        $this->validate([
+            'newRole' => 'required|integer|in:' . implode(',', array_column(RoleProject::cases(), 'value')),
+        ]);
+
+        if (!$this->selectedMemberForRoleChange) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'Miembro no encontrado.'})");
+            return;
+        }
+
+        // Get current membership
+        $membership = $this->project->activeMemberships()
+            ->where('user_id', $this->selectedMemberForRoleChange->id)
+            ->first();
+
+        if (!$membership) {
+            $this->js("Swal.fire({icon:'error', title: 'Error', text: 'El usuario no es un miembro activo del proyecto.'})");
+            return;
+        }
+
+        // Check if role is actually changing
+        if ($membership->role->value == $this->newRole) {
+            $this->js("Swal.fire({icon:'info', title: 'Sin cambios', text: 'El rol seleccionado es el mismo que el actual.'})");
+            return;
+        }
+
+        // Change role using service
+        $service = new ProjectMembershipService();
+        $service->changeRole(
+            $membership,
+            RoleProject::from((int) $this->newRole),
+            Auth::user()
+        );
+
+        // Close modal
+        $this->js('closeModal');
+        
+
+        // Reset properties
+        $this->reset(['selectedMemberForRoleChange', 'newRole', 'currentMemberRole']);
+
+        // Show success message
+        $this->js("
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Rol actualizado correctamente',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        ");
+
+        // Refresh the component
+        $this->dispatch('$refresh');
     }
 
     public function removeInvited($invitationId)
@@ -368,8 +496,8 @@ class ProjectMembersView extends Component
         }
 
         $sortColumn = match ($sortField) {
-            'pivot_role' => 'project_user.role',
-            'created_at' => 'project_user.created_at',
+            'pivot_role' => 'project_memberships.role',
+            'created_at' => 'project_memberships.started_at',
             'id' => 'users.id',
             'name' => 'users.name',
             'email' => 'users.email',

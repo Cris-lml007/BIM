@@ -1,7 +1,7 @@
 <div>
     {{-- Smile, breathe, and go slowly. - Thich Nhat Hanh --}}
     <x-slot name="header">
-        <h1>Mis Proyectos</h1>
+        <h1>Mis Proyectos x</h1>
         <button data-bs-toggle="modal" data-bs-target="#modal-project" class="btn btn-primary"><i class="fa fa-plus"></i>
             Nuevo Proyecto</button>
     </x-slot>
@@ -25,7 +25,13 @@
                         {{ $item->created_at->translatedFormat('d M Y - H:i') }}</td>
 
                     </td>
-                    <td>{{ $item->is_active == 1 ? 'Activo' : 'Bloqueado' }}</td>
+
+                    <td>
+                        <span class="badge {{ $item->is_active == 1 ? 'bg-success' : 'bg-danger' }} text-white">
+                            {{ $item->is_active == 1 ? 'Activo' : 'Bloqueado' }}
+
+                        </span>
+                    </td>
                     @if ($showOptions)
                         <td class="text-center">
                             <a href="{{ route('app.project', $item->id) }}" class="btn btn-sm btn-primary"><i
