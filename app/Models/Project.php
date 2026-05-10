@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use DB;
 use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
@@ -32,7 +33,13 @@ class Project extends Model
             ->withPivot('role')
             ->withTimestamps();
     }
-
+    public static function roleMember($userId)
+{
+    return DB::table('project_user')
+        ->select('project_id', 'role')
+        ->where('user_id', $userId)
+        ->first();
+}
     /**
      * Relación con las invitaciones pendientes
      */
