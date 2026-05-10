@@ -4,7 +4,9 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Enum\MembershipStatus;
 use App\Enum\RoleSaas;
+use App\Models\ProjectMembership;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -77,6 +79,25 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Project::class, 'project_user')
             ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function projectMemberships()
+    {
+        return $this->hasMany(ProjectMembership::class);
+    }
+
+    public function activeProjectMemberships()
+    {
+        return $this->hasMany(ProjectMembership::class)
+            ->where('status', MembershipStatus::ACTIVE->value)
+            ->whereNull('ended_at');
+    }
+
+    public function membershipProjects()
+    {
+        return $this->belongsToMany(Project::class, 'project_memberships')
+            ->withPivot(['role', 'status', 'started_at', 'ended_at', 'removed_by_user_id', 'reason', 'metadata'])
             ->withTimestamps();
     }
     /**

@@ -2,14 +2,18 @@
 
 namespace App\Livewire\App;
 
+use App\Enum\MembershipStatus;
 use App\Enum\RoleProject;
 use App\Mail\ProjectInvitationMail;
 use App\Models\Project;
 use App\Models\ProjectInvitation;
+use App\Models\ProjectMembership;
 use App\Models\User;
+use App\Services\ProjectMembershipService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -28,7 +32,7 @@ class ProjectMemberForm extends Component
 
     protected $rules = [
         'email' => 'required|email',
-        'role' => 'required|numeric',
+        'role' => 'required|integer',
     ];
 
     protected $messages = [
@@ -132,18 +136,26 @@ class ProjectMemberForm extends Component
 
     public function isUserAlreadyMember($userId)
     {
-        return $this->project->members()->where('user_id', $userId)->exists();
+        return $this->project->activeMemberships()->where('user_id', $userId)->exists();
     }
 
     public function inviteExistingUser()
     {
         $this->validate();
-        // Verificar si el usuario ya es miembro
-        $isAlreadyMember = $this->project->members()
-            ->where('user_id', $this->selectedUser['id'])
-            ->exists();
 
-        if ($isAlreadyMember) {
+        $user = User::find($this->selectedUser['id']);
+
+        if (!$user) {
+            $this->addError('email', 'Usuario no encontrado.');
+            return;
+        }
+
+        if ($user->id === $this->project->user_id) {
+            $this->addError('email', 'El dueño del proyecto ya es parte del proyecto');
+            return;
+        }
+
+        if ($this->isUserAlreadyMember($user->id)) {
             $this->addError('email', 'El usuario ya es miembro de este proyecto');
             return;
         }
@@ -164,9 +176,13 @@ class ProjectMemberForm extends Component
                 ");
 
             } else {
-                $this->project->members()->attach($this->selectedUser['id'], [
-                    'role' => $this->role
-                ]);
+                $service = new ProjectMembershipService();
+                $service->addMember(
+                    $this->project,
+                    $user,
+                    RoleProject::from((int) $this->role),
+                    Auth::user()
+                );
 
                 $this->dispatch('member-created')->to('app.project-members-view');
             }
