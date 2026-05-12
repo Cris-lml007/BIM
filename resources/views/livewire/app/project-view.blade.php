@@ -166,28 +166,28 @@
                         <div class="row g-3">
                             <div class="col-6 col-sm-3">
                                 <a href="{{ route('app.project.documents', $project) }}"
-                                    class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
+                                    class="btn btn-light w-100 py-3 border border-2 hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="nf nf-md-floor_plan text-primary me-2"></i>
                                     <span class="fw-semibold">Subir Plano</span>
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
                                 <a href="{{ route('app.project.model3d', $project) }}"
-                                    class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
+                                    class="btn btn-light w-100 py-3 border border-2 hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-cube text-purple me-2"></i>
                                     <span class="fw-semibold">Modelo 3D</span>
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
                                 <a href="{{ route('app.project.documents', $project) }}"
-                                    class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
+                                    class="btn btn-light w-100 py-3 border border-2 hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-file-alt text-warning me-2"></i>
                                     <span class="fw-semibold">Documento</span>
                                 </a>
                             </div>
                             <div class="col-6 col-sm-3">
                                 <a href="{{ route('app.project.members', $project) }}"
-                                    class="btn btn-light w-100 py-3 border hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
+                                    class="btn btn-light w-100 py-3 border border-2 hover-shadow transition d-flex align-items-center justify-content-center text-decoration-none text-dark">
                                     <i class="fas fa-user-plus text-success me-2"></i>
                                     <span class="fw-semibold">Invitar</span>
                                 </a>
