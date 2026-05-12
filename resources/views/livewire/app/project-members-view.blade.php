@@ -5,7 +5,7 @@
             Este proyecto se encuentra bloqueado
         </div>
     @endif
-    <div class="row g-3 mb-3">
+    <div class="row  mb-3">
         @if (!$project->ownerAccess())
             <small class="alert alert-warning m-0">
                 Usted no cuenta con acceso para esta sección, comuníquese con
@@ -44,6 +44,12 @@
                         <i class="fas fa-envelope me-2"></i>
                         Invitaciones Pendientes
                     </button>
+
+                    <button type="button" wire:click="showGeneralHistory()" class="btn btn-outline-primary">
+                        <i class="fa fa-history me-2"></i>
+
+                        Línea de Tiempo
+                    </button>
                 </div>
             </div>
         </div>
@@ -61,10 +67,12 @@
                         </td>
                     </tr>
                 </x-slot>
-
+                @php
+                    $iter = 1;
+                @endphp
                 @forelse($members as $member)
                     <tr wire:key="{{ $member->id }}">
-                        <td>{{ $member->id }}</td>
+                        <td>{{ $iter++ }}</td>
                         <td>
                             <div class="d-flex align-items-center">
                                 <div class="avatar-circle me-2"
@@ -100,13 +108,13 @@
                         </td>
                         <td>
                             <button wire:click="showMemberHistory({{ $member->id }})"
-                                class="btn btn-sm btn-info me-1" title="Ver historial">
+                                class="btn btn-sm btn-primary me-1" title="Ver historial">
                                 <i class="fa fa-history"></i>
                             </button>
                             @if ($member->id !== $owner->id)
                                 <button wire:click="openChangeRoleModal({{ $member->id }})"
                                     class="btn btn-sm btn-warning me-1" title="Cambiar rol">
-                                    <i class="fa fa-user-edit"></i>
+                                    <i class="fa fa-edit"></i>
                                 </button>
                                 <button wire:click="removeMember({{ $member->id }})" class="btn btn-sm btn-danger"
                                     title="Eliminar miembro">
@@ -139,10 +147,12 @@
                         </td>
                     </tr>
                 </x-slot>
-
+                @php
+                    $iter = 1;
+                @endphp
                 @forelse($invites as $invite)
                     <tr wire:key="{{ $invite->id }}">
-                        <td>{{ $invite->id }}</td>
+                        <td>{{ $iter++ }}</td>
 
                         <td>{{ $invite->email }}</td>
                         <td>
@@ -210,10 +220,9 @@
                             <i class="fas fa-history me-2"></i>
                             Trayectoria de
                             <span class="text-warning">
-                                {{ $selectedMember?->name ?? 'miembro' }}
+                                {{ Str::upper($selectedMember?->name ?? 'miembro') }}
                             </span>
                         </h4>
-
                         <small class="text-light opacity-75">
                             Historial completo de participación
                         </small>
@@ -222,28 +231,20 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Cerrar">
                     </button>
-
                 </div>
 
                 <!-- BODY -->
                 <div class="modal-body bg-light">
-
                     @if ($selectedMemberMemberships?->count())
-
                         <!-- INFO GENERAL -->
-                        <div class="card border-0 shadow-sm mb-4">
-
+                        <div class="card border-1 shadow-sm mb-4">
                             <div class="card-body">
-
                                 <div class="row align-items-center">
-
                                     <div class="col-md-8">
-
                                         <h5 class="fw-bold mb-3">
                                             <i class="fas fa-user-circle me-2 text-primary"></i>
                                             Información del miembro
                                         </h5>
-
                                         <div class="d-flex flex-wrap gap-2">
 
                                             <span class="badge bg-primary px-3 py-2">
@@ -253,7 +254,7 @@
 
                                             <span class="badge bg-dark px-3 py-2">
                                                 <i class="fas fa-diagram-project me-1"></i>
-                                                {{ $project->name }}
+                                                {{ Str::upper($project->name) }}
                                             </span>
 
                                         </div>
@@ -267,7 +268,7 @@
                                         </div>
 
                                         <div class="text-muted">
-                                            registros encontrados
+                                            Registros encontrados
                                         </div>
 
                                     </div>
@@ -280,7 +281,7 @@
 
                         <!-- MEMBERSHIPS -->
                         @foreach ($selectedMemberMemberships as $membership)
-                            <div class="card border-0 shadow-sm mb-4">
+                            <div class="card border-2 shadow-sm mb-4">
 
                                 <!-- CARD HEADER -->
                                 <div class="card-header bg-white border-0 py-3">
@@ -289,10 +290,10 @@
 
                                         <div>
 
-                                            <h5 class="fw-bold mb-1">
+                                            <p class="fw-bold mb-1">
                                                 <i class="fas fa-calendar-alt text-primary me-2"></i>
                                                 Periodo de participación
-                                            </h5>
+                                            </p>
 
                                             <div class="text-muted">
 
@@ -300,30 +301,21 @@
                                                     {{ optional($membership->started_at)->translatedFormat('d M Y - H:i') ?? '—' }}
                                                 </strong>
 
-                                                <span class="mx-2">→</span>
+                                                <span class="mx-2"> <i class="fas fa-arrow-right"></i> </span>
 
                                                 <strong>
                                                     {{ optional($membership->ended_at)->translatedFormat('d M Y - H:i') ?? 'Actual' }}
                                                 </strong>
-
                                             </div>
-
                                         </div>
-
                                         <div>
-
-                                            <span class="badge rounded-pill bg-secondary px-3 py-2 fs-6">
-
+                                            <span class="badge rounded-pill bg-secondary px-3 py-2 fs-7">
                                                 {{ $membership->status instanceof App\Enum\MembershipStatus
                                                     ? $membership->status->label()
                                                     : App\Enum\MembershipStatus::tryFrom($membership->status)?->label() ?? 'Desconocido' }}
-
                                             </span>
-
                                         </div>
-
                                     </div>
-
                                 </div>
 
                                 <!-- BODY -->
@@ -410,7 +402,7 @@
                                         </h5>
 
                                         @if ($membership->histories->count())
-                                            <div class="timeline">
+                                            <div class="">
 
                                                 @foreach ($membership->histories as $history)
                                                     <div
@@ -693,8 +685,8 @@
 
                 </div>
 
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
+                <div class="modal-footer border-0 mt-0">
+                    <button style="width: 100%" type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>
                         Cancelar
                     </button>
@@ -731,6 +723,320 @@
         </div>
     </div>
 
+    <!-- Modal para histórico general de miembros -->
+    <div class="modal fade" id="modal-general-history" tabindex="-1" aria-labelledby="modal-general-history-label"
+        aria-hidden="true" wire:ignore.self>
+
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+            <div class="modal-content border-0 shadow-lg">
+
+                <!-- HEADER -->
+                <div class="modal-header bg-primary text-white">
+
+                    <div>
+                        <h4 class="modal-title fw-bold mb-1" id="modal-general-history-label">
+                            <i class="fa fa-history me-2"></i>
+
+                            Línea de Tiempo del Proyecto
+                        </h4>
+
+                        <small class="text-light opacity-75">
+                            Historial completo de eventos de todos los miembros
+                        </small>
+                    </div>
+
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+                <!-- BODY -->
+                <div class="modal-body bg-light">
+
+                    @if ($generalMembershipHistories?->count())
+
+                        <!-- RESUMEN GENERAL -->
+                        <div class="card border-2 shadow-sm mb-4">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h5 class="fw-bold mb-3">
+                                            <i class="fas fa-chart-bar me-2 text-primary"></i>
+                                            Resumen de actividades
+                                        </h5>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <span class="badge bg-primary px-3 py-2">
+                                                <i class="fas fa-diagram-project me-1"></i>
+                                                {{ Str::upper($project->name) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                        <div class="fs-3 fw-bold text-primary">
+                                            {{ $generalMembershipHistories->count() }}
+                                        </div>
+                                        <div class="text-muted small">
+                                            Movimientos totales
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LÍNEA DE TIEMPO -->
+                        <div class="timeline">
+                            @foreach ($generalMembershipHistories as $history)
+                                <div class="card bg-light border-1 shadow-md mb-3">
+                                    <div class="card-body pb-3">
+                                        <div
+                                            class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+                                            <!-- FECHA Y USUARIO -->
+                                            <div>
+
+                                                <div class="d-flex align-items-center gap-2">
+
+                                                    <div class="avatar-circle"
+                                                        style="width: 40px; height: 40px; background-color: #{{ substr(md5($history->user?->name ?? 'unknown'), 0, 6) }}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">
+                                                        {{ strtoupper(substr($history->user?->name ?? 'U', 0, 1)) }}
+                                                    </div>
+
+                                                    <div>
+
+                                                        <h6 class="fw-bold mb-1">
+                                                            {{ $history->user?->name ?? 'Desconocido' }}
+                                                        </h6>
+
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-envelope me-1"></i>
+                                                            {{ $history->user?->email ?? '—' }}
+                                                        </small>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                            <!-- FECHA -->
+                                            <div class="text-end">
+
+                                                <div class="small text-muted">
+
+                                                    <i class="fas fa-calendar me-1"></i>
+                                                    {{ optional($history->performed_at)->translatedFormat('d M Y') }}
+
+                                                </div>
+
+                                                <div class="small fw-semibold text-primary">
+
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    {{ optional($history->performed_at)->translatedFormat('H:i') }}
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                        <!-- EVENTO -->
+                                        <div class="mb-3">
+
+                                            <span @class([
+                                                'badge fs-6 px-3 py-2',
+                                                'bg-success' => $history->event_type === 'joined',
+                                                'bg-info' => $history->event_type === 'rejoined',
+                                                'bg-danger' => $history->event_type === 'removed',
+                                                'bg-warning' => $history->event_type === 'role_changed',
+                                                'bg-secondary' => !in_array($history->event_type, [
+                                                    'joined',
+                                                    'rejoined',
+                                                    'removed',
+                                                    'role_changed',
+                                                ]),
+                                            ])>
+
+                                                <i @class([
+                                                    'fa me-1',
+                                                    'fas fa-user-plus' => $history->event_type === 'joined',
+                                                    'fas fa-user-check' => $history->event_type === 'rejoined',
+                                                    'fas fa-user-times' => $history->event_type === 'removed',
+                                                    'fas fa-shield-alt' => $history->event_type === 'role_changed',
+                                                    'fas fa-info-circle' => !in_array($history->event_type, [
+                                                        'joined',
+                                                        'rejoined',
+                                                        'removed',
+                                                        'role_changed',
+                                                    ]),
+                                                ])></i>
+
+                                                {{ match ($history->event_type) {
+                                                    'joined' => 'Ingreso al proyecto',
+                                                    'rejoined' => 'Reingreso al proyecto',
+                                                    'removed' => 'Salida/Eliminación',
+                                                    'role_changed' => 'Cambio de rol',
+                                                    default => ucfirst(str_replace('_', ' ', $history->event_type)),
+                                                } }}
+
+                                            </span>
+
+                                        </div>
+
+                                        <!-- DETALLES DE CAMBIOS -->
+                                        @if ($history->old_role || $history->new_role || $history->old_status || $history->new_status)
+                                            <div class="row g-2">
+
+                                                @if ($history->old_role || $history->new_role)
+                                                    <div class="col-md-6">
+
+                                                        <div class="alert alert-light border mb-0 py-2">
+
+                                                            <strong class="d-block small mb-2">
+                                                                <i class="fas fa-shield-alt me-1 text-warning"></i>
+                                                                Rol
+                                                            </strong>
+
+                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+
+                                                                <span class="badge bg-secondary">
+
+                                                                    {{ $history->old_role ? App\Enum\RoleProject::tryFrom($history->old_role)?->label() : '—' }}
+
+                                                                </span>
+
+                                                                <i class="fas fa-arrow-right text-muted"></i>
+
+                                                                <span class="badge bg-primary">
+
+                                                                    {{ $history->new_role ? App\Enum\RoleProject::tryFrom($history->new_role)?->label() : '—' }}
+
+                                                                </span>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                @endif
+
+                                                @if ($history->old_status || $history->new_status)
+                                                    <div class="col-md-6">
+
+                                                        <div class="alert alert-light border mb-0 py-2">
+
+                                                            <strong class="d-block small mb-2">
+                                                                <i class="fas fa-circle-info me-1 text-info"></i>
+                                                                Estado
+                                                            </strong>
+
+                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+
+                                                                <span class="badge bg-secondary">
+
+                                                                    {{ $history->old_status ? App\Enum\MembershipStatus::tryFrom($history->old_status)?->label() : '—' }}
+
+                                                                </span>
+
+                                                                <i class="fas fa-arrow-right text-muted"></i>
+
+                                                                <span class="badge bg-success">
+
+                                                                    {{ $history->new_status ? App\Enum\MembershipStatus::tryFrom($history->new_status)?->label() : '—' }}
+
+                                                                </span>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                @endif
+
+                                            </div>
+                                        @endif
+
+                                        <!-- ACTOR Y MOTIVO -->
+                                        @if ($history->actor || $history->metadata)
+                                            <div class="mt-3 pt-3 border-top">
+
+                                                @if ($history->actor)
+                                                    <div class="mb-2">
+
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-user-circle me-1"></i>
+                                                            <strong>Ejecutado por:</strong>
+                                                            {{ Str::upper($history->actor->name) }}
+                                                        </small>
+
+                                                    </div>
+                                                @endif
+
+                                                @if (isset($history->metadata['reason']))
+                                                    <div class="mb-2">
+
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-comment me-1"></i>
+                                                            <strong>Motivo:</strong>
+                                                            {{ $history->metadata['reason'] }}
+                                                        </small>
+
+                                                    </div>
+                                                @endif
+
+                                                @if (isset($history->metadata['notes']))
+                                                    <div class="mb-2">
+
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-sticky-note me-1"></i>
+                                                            <strong>Notas:</strong>
+                                                            {{ $history->metadata['notes'] }}
+                                                        </small>
+
+                                                    </div>
+                                                @endif
+
+                                            </div>
+                                        @endif
+
+                                    </div>
+
+                                </div>
+                            @endforeach
+
+                        </div>
+                    @else
+                        <div class="alert alert-warning shadow-sm border-0">
+
+                            <i class="fas fa-circle-info me-2"></i>
+
+                            No hay eventos registrados en el historial del proyecto.
+
+                        </div>
+
+                    @endif
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer bg-white border-0">
+
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
+
+                        <i class="fas fa-times me-2"></i>
+                        Cerrar 
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
     <x-modal id="modal-invite" title="Invitar a un nuevo miembro" class="modal-md">
         <livewire:app.project-member-form modal_name="modal-invite" />
     </x-modal>
@@ -738,9 +1044,9 @@
 </div>
 
 @script
-<script>
-    this.$js.closeModal = () => {
-        $("#" + $wire.current_modal).modal('hide');
-    };
-</script>
+    <script>
+        this.$js.closeModal = () => {
+            $("#" + $wire.current_modal).modal('hide');
+        };
+    </script>
 @endscript

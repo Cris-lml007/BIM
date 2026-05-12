@@ -33,6 +33,7 @@ class ProjectMembersView extends Component
     public $newRole = '';
     public $currentMemberRole = null;
     public $current_modal = null;
+    public $generalMembershipHistories = null;
 
     public $actions = [
         'search' => '',
@@ -342,6 +343,18 @@ class ProjectMembersView extends Component
 
         $this->current_modal = 'modal-member-history';
         $this->js("$('#modal-member-history').modal('show');");
+    }
+
+    public function showGeneralHistory()
+    {
+        // Obtener todos los eventos del proyecto ordenados por fecha descendente
+        $this->generalMembershipHistories = \App\Models\ProjectMembershipHistory::where('project_id', $this->project->id)
+            ->with(['user', 'actor', 'membership'])
+            ->orderBy('performed_at', 'desc')
+            ->get();
+
+        $this->current_modal = 'modal-general-history';
+        $this->js("$('#modal-general-history').modal('show');");
     }
 
     public function openChangeRoleModal(int $userId)
