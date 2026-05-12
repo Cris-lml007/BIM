@@ -1,7 +1,7 @@
 <div>
     {{-- Smile, breathe, and go slowly. - Thich Nhat Hanh --}}
     <x-slot name="header">
-        <h1>Mis Proyectos x</h1>
+        <h1>Mis Proyectos</h1>
         <button data-bs-toggle="modal" data-bs-target="#modal-project" class="btn btn-primary"><i class="fa fa-plus"></i>
             Nuevo Proyecto</button>
     </x-slot>

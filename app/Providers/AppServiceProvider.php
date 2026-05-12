@@ -103,7 +103,7 @@ class AppServiceProvider extends ServiceProvider
             $after = 'dashboard';
 
             if(auth()->user()->role != RoleSaas::ADMIN){         
-                if( $this->getRoleByProject() == RoleProject::OWNER->value){ //es propietario
+//                if( $this->getRoleByProject() == RoleProject::OWNER->value){ //es propietario
                     $event->menu->addAfter('dashboard',[
                     'key' => 'new-project',
                     'text' => 'Nuevo Proyecto',
@@ -111,7 +111,7 @@ class AppServiceProvider extends ServiceProvider
                     'route' => 'app.projects',
                     ]);
                     $after = 'new-project';
-                }
+  //              }
                     
                 $event->menu->addAfter($after,[
                         'text' => 'Proyectos',

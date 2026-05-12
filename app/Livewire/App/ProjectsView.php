@@ -3,8 +3,17 @@
 namespace App\Livewire\App;
 
 use App\Models\Project;
+use App\Models\Document;
+use App\Models\Model3D;
+use App\Models\Anchor;
+use App\Models\incident;
+use App\Models\Comment;
+use App\Models\ProjectMembership;
+use App\Models\ProjectMembershipHistory;
+use App\Models\ProjectInvitation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -117,18 +126,73 @@ class ProjectsView extends Component
     #[On('deleteConfirmed')]
     public function deleteConfirmed($id)
     {
-        Project::destroy($id);
+        $project = Project::find($id);
+        
+        if (!$project) {
+            $this->js("
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Proyecto no encontrado',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            ");
+            return;
+        }
+
+        // Usar transacción para asegurar integridad de datos
+        DB::transaction(function () use ($project) {
+            // 1. Eliminar documentos y sus archivos
+            Document::where('project_id', $project->id)->each(function ($document) {
+                // Eliminar el archivo físico si existe
+                if (file_exists(storage_path($document->path))) {
+                    unlink(storage_path($document->path));
+                }
+                $document->delete();
+            });
+
+            // 2. Eliminar anclajes virtuales (a través de modelos 3D)
+            $models = Model3D::where('project_id', $project->id)->get();
+            foreach ($models as $model) {
+                Anchor::where('model_id', $model->id)->delete();
+                $model->delete();
+            }
+
+            // 3. Eliminar comentarios e incidencias
+            $incidents = incident::where('project_id', $project->id)->get();
+            foreach ($incidents as $incident) {
+                Comment::where('incident_id', $incident->id)->delete();
+                $incident->delete();
+            }
+
+            // 4. Eliminar miembros del proyecto
+            ProjectMembership::where('project_id', $project->id)->delete();
+
+            // 5. Eliminar historial de membresías
+            ProjectMembershipHistory::where('project_id', $project->id)->delete();
+
+            // 6. Eliminar invitaciones del proyecto
+            ProjectInvitation::where('project_id', $project->id)->delete();
+
+            // 7. Finalmente, eliminar el proyecto
+            $project->delete();
+        });
+
         $this->js("
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: 'Proyecto eliminado',
+                title: 'Proyecto y todas sus dependencias eliminadas',
                 showConfirmButton: false,
                 timer: 3000,
                 timerProgressBar: true
             });
         ");
+
         $this->dispatch('refresh')->to(ProjectsView::class);
     }
 

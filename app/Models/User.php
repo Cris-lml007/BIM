@@ -58,10 +58,15 @@ class User extends Authenticatable
         return $this->hasMany(Project::class,'user_id','id');
     }
 
+    /**
+     * Relación con los proyectos donde el usuario es miembro (activos)
+     */
     public function projects()
     {
-        return $this->belongsToMany(Project::class, 'project_user')
-            ->withPivot('role')
+        return $this->belongsToMany(Project::class, 'project_memberships')
+            ->withPivot(['role', 'status', 'started_at', 'ended_at', 'removed_by_user_id', 'reason', 'metadata'])
+            ->where('project_memberships.status', MembershipStatus::ACTIVE->value)
+            ->whereNull('project_memberships.ended_at')
             ->withTimestamps();
     }
 
@@ -71,15 +76,6 @@ class User extends Authenticatable
     public function access()
     {
         return $this->hasOne(Access::class);
-    }
-    /**
-     * Relación con los proyectos donde el usuario es miembro
-     */
-    public function memberProjects()
-    {
-        return $this->belongsToMany(Project::class, 'project_user')
-            ->withPivot('role')
-            ->withTimestamps();
     }
 
     public function projectMemberships()
@@ -137,9 +133,11 @@ class User extends Authenticatable
     public function getMembersCount(): int
     {
         return User::distinct()
-            ->join('project_user', 'users.id', '=', 'project_user.user_id')
-            ->join('projects', 'project_user.project_id', '=', 'projects.id')
+            ->join('project_memberships', 'users.id', '=', 'project_memberships.user_id')
+            ->join('projects', 'project_memberships.project_id', '=', 'projects.id')
             ->where('projects.user_id', $this->id)
+            ->where('project_memberships.status', MembershipStatus::ACTIVE->value)
+            ->whereNull('project_memberships.ended_at')
             ->count('users.id');
     }
 

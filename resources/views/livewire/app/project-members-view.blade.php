@@ -178,13 +178,9 @@
 
                         </td>
                         <td>
-                            @if ($invite->id !== $owner->id)
-                                <button wire:click="removeInvited({{ $invite->id }})" class="btn btn-sm btn-danger">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            @else
-                                <span class="text-muted">-</span>
-                            @endif
+                            <button wire:click="removeInvited({{ $invite->id }})" class="btn btn-sm btn-danger">
+                                <i class="fa fa-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 @empty
@@ -686,7 +682,8 @@
                 </div>
 
                 <div class="modal-footer border-0 mt-0">
-                    <button style="width: 100%" type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
+                    <button style="width: 100%" type="button" class="btn btn-secondary px-4"
+                        data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>
                         Cancelar
                     </button>
@@ -1025,7 +1022,7 @@
                     <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
 
                         <i class="fas fa-times me-2"></i>
-                        Cerrar 
+                        Cerrar
 
                     </button>
 

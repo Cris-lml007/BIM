@@ -50,13 +50,6 @@ class Project extends Model
             ->whereNull('ended_at');
     }
 
-    public function legacyMembers()
-    {
-        return $this->belongsToMany(User::class, 'project_user')
-            ->withPivot('role', 'status')
-            ->withTimestamps();
-    }
-
     public static function roleMember($userId)
     {
         return DB::table('project_memberships')
