@@ -1,9 +1,10 @@
 <div>
     <div class="modal-body">
         <div class="row">
-            <div class="col" style="width: 40%;">
+            <div class="col d-flex item-align-center" style="width: 40%;">
                 <div class="d-flex justify-content-end item-align-center">
                     <img src="{{ $qr ?? '' }}" alt="{{ $qr ?? '' }}" class="w-100">
+                    {{-- <button class="btn btn-primary">Descargar Qr</button> --}}
                 </div>
             </div>
             <div class="col">
@@ -25,6 +26,6 @@
     </div>
     <div class="modal-footer">
         <a href="{{ route('app.project.model3d.id', ['project' => $project_id, 'model' => $model_id]) }}" class="btn btn-primary">Ir a modelo</a>
-        <button class="btn btn-secondary">Cerrar</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
     </div>
 </div>
