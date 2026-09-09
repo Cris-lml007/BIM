@@ -929,21 +929,22 @@ function setModelOpacity(opacity) {
 
         materials.forEach((material) => {
 
-            // Guardar propiedades originales
+            // ==========================================
+            // GUARDAR ESTADO ORIGINAL
+            // ==========================================
+
             if (material.userData.originalOpacity === undefined) {
+
                 material.userData.originalOpacity =
                     material.opacity;
-            }
 
-            if (material.userData.originalTransparent === undefined) {
                 material.userData.originalTransparent =
                     material.transparent;
-            }
 
-            if (material.userData.originalDepthWrite === undefined) {
                 material.userData.originalDepthWrite =
                     material.depthWrite;
             }
+
 
             const originalOpacity =
                 material.userData.originalOpacity;
@@ -955,39 +956,45 @@ function setModelOpacity(opacity) {
                 material.userData.originalDepthWrite;
 
 
-            // =========================
-            // MATERIAL ORIGINALMENTE TRANSPARENTE
-            // =========================
+            // ==========================================
+            // RESTAURAR ESTADO ORIGINAL
+            // ==========================================
 
-            if (originalTransparent) {
+            if (opacityValue >= 1) {
 
-                material.opacity =
-                    originalOpacity * opacityValue;
-
-                material.transparent = true;
-
-                material.depthWrite =
-                    opacityValue >= 1
-                        ? originalDepthWrite
-                        : false;
-            }
-
-
-            // =========================
-            // MATERIAL ORIGINALMENTE OPACO
-            // =========================
-
-            else {
-
-                // No modificamos su opacidad
                 material.opacity =
                     originalOpacity;
 
                 material.transparent =
-                    false;
+                    originalTransparent;
 
                 material.depthWrite =
                     originalDepthWrite;
+
+            }
+
+
+            // ==========================================
+            // APLICAR OPACIDAD GLOBAL
+            // ==========================================
+
+            else {
+
+                material.opacity =
+                    originalOpacity * opacityValue;
+
+                /*
+                 * Todos deben ser transparentes mientras
+                 * el slider esté por debajo del 100%.
+                 */
+                material.transparent = true;
+
+                /*
+                 * Evita problemas de profundidad cuando
+                 * estamos haciendo transparente un material
+                 * que originalmente era opaco.
+                 */
+                material.depthWrite = false;
             }
 
             material.needsUpdate = true;
