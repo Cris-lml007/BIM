@@ -30,7 +30,6 @@ Route::middleware('auth')->group(function () {
 
 Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
-Route::livewire('/ar','3d.view-ar');
 
 
     Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('dashboard');
@@ -54,6 +53,9 @@ Route::livewire('/ar','3d.view-ar');
         Route::get('/',ProjectView::class)->name('app.project');
         Route::get('/model3d',Model3dView::class)->name('app.project.model3d');
         Route::livewire('/model3d/{model}','3d.viewer')->name('app.project.model3d.id');
+
+        Route::livewire('/ar/{model}','3d.view-ar');
+
         Route::get('/members', [MembersController::class, 'show'])->name('app.project.members');
         Route::get('/documents', [DocumentsController::class, 'show'])->name('app.project.documents');
 
