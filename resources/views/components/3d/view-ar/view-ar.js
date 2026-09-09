@@ -1,4 +1,14 @@
+
 const container = document.getElementById('viewer');
+
+if (!container) {
+    throw new Error('No se encontró el elemento #viewer');
+}
+
+
+// =====================================================
+// VARIABLES
+// =====================================================
 
 let components;
 let world;
@@ -8,399 +18,283 @@ let renderer;
 let scene;
 let camera;
 
-
-// =====================================================
-// AR
-// =====================================================
-
-let arController = null;
-let arReticle = null;
+let arController;
+let arReticle;
 
 let hitTestSource = null;
 let hitTestSourceRequested = false;
 
-
-// =====================================================
-// MODELO
-// =====================================================
-
 let arModel = null;
+
 let modelLoading = false;
 let modelLoaded = false;
 
+let isAR = false;
+
 
 // =====================================================
-// INICIALIZAR
+// INICIALIZAR VISOR
 // =====================================================
 
 async function initViewer() {
 
-    try {
+    // -------------------------------------------------
+    // THAT OPEN
+    // -------------------------------------------------
 
-        // =================================================
-        // THAT OPEN - COMPONENTS
-        // =================================================
+    components = new OBC.Components();
 
-        components = new OBC.Components();
+    const worlds = components.get(OBC.Worlds);
 
-        const worlds = components.get(
-            OBC.Worlds
+    world = worlds.create();
+
+    world.scene = new OBC.SimpleScene(components);
+    world.scene.setup();
+
+    world.scene.three.background = null;
+
+    scene = world.scene.three;
+
+
+    // -------------------------------------------------
+    // THREE.JS RENDERER
+    // -------------------------------------------------
+
+    renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+    });
+
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    renderer.setSize(
+        container.clientWidth,
+        container.clientHeight
+    );
+
+    renderer.xr.enabled = true;
+
+    container.appendChild(renderer.domElement);
+
+
+    // -------------------------------------------------
+    // CAMERA
+    // -------------------------------------------------
+
+    camera = new THREE.PerspectiveCamera(
+        70,
+        container.clientWidth / container.clientHeight,
+        0.01,
+        1000
+    );
+
+    camera.position.set(
+        10,
+        10,
+        10
+    );
+
+    camera.lookAt(
+        0,
+        0,
+        0
+    );
+
+
+    // -------------------------------------------------
+    // INICIALIZAR COMPONENTS
+    // -------------------------------------------------
+
+    components.init();
+
+
+    // -------------------------------------------------
+    // FRAGMENTS
+    // -------------------------------------------------
+
+    fragments = components.get(OBC.FragmentsManager);
+
+    fragments.init('/engine/worker.mjs');
+
+
+    // -------------------------------------------------
+    // CUANDO SE CARGA EL MODELO
+    // -------------------------------------------------
+
+    fragments.list.onItemSet.add(({ value: model }) => {
+
+        console.log('Modelo Fragments cargado');
+
+        model.useCamera(camera);
+
+        scene.add(model.object);
+
+        arModel = model.object;
+
+        // Modelo pequeño para AR
+        arModel.scale.set(
+            0.1,
+            0.1,
+            0.1
         );
 
-        world = worlds.create();
+        // No mostrarlo inmediatamente
+        arModel.visible = false;
+
+        modelLoaded = true;
+        modelLoading = false;
+
+        // Primera actualización
+        fragments.core.update(true);
+    });
 
 
-        // =================================================
-        // ESCENA
-        // =================================================
+    // =================================================
+    // AR BUTTON
+    // =================================================
 
-        world.scene = new OBC.SimpleScene(
-            components
-        );
+    const arButton = ARButton.createButton(
+        renderer,
+        {
+            requiredFeatures: [
+                'hit-test'
+            ]
+        }
+    );
 
-        world.scene.setup();
-
-        world.scene.three.background = null;
-
-        scene = world.scene.three;
-
-
-        // =================================================
-        // RENDERER THREE.JS
-        // =================================================
-
-        renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true
-        });
-
-        renderer.setPixelRatio(
-            window.devicePixelRatio
-        );
-
-        renderer.setSize(
-            container.clientWidth,
-            container.clientHeight
-        );
-
-        renderer.xr.enabled = true;
+    document.body.appendChild(arButton);
 
 
-        container.appendChild(
-            renderer.domElement
-        );
+    // =================================================
+    // RETICLE
+    // =================================================
+
+    const reticleGeometry = new THREE.RingGeometry(
+        0.08,
+        0.1,
+        32
+    );
+
+    reticleGeometry.rotateX(
+        -Math.PI / 2
+    );
+
+    const reticleMaterial = new THREE.MeshBasicMaterial();
+
+    arReticle = new THREE.Mesh(
+        reticleGeometry,
+        reticleMaterial
+    );
+
+    arReticle.matrixAutoUpdate = false;
+
+    arReticle.visible = false;
+
+    scene.add(arReticle);
 
 
-        // =================================================
-        // CÁMARA THREE.JS
-        // =================================================
+    // =================================================
+    // CONTROLLER
+    // =================================================
 
-        camera = new THREE.PerspectiveCamera(
-            70,
-            container.clientWidth /
-                container.clientHeight,
-            0.01,
-            1000
-        );
+    arController = renderer.xr.getController(0);
 
+    arController.addEventListener(
+        'select',
+        onARSelect
+    );
 
-        camera.position.set(
-            10,
-            10,
-            10
-        );
+    scene.add(arController);
 
 
-        camera.lookAt(
-            0,
-            0,
-            0
-        );
+    // =================================================
+    // INICIO DE AR
+    // =================================================
 
+    renderer.xr.addEventListener(
+        'sessionstart',
+        () => {
 
-        // =================================================
-        // INICIALIZAR COMPONENTS
-        // =================================================
+            console.log('AR iniciado');
 
-        components.init();
+            isAR = true;
 
+            hitTestSource = null;
+            hitTestSourceRequested = false;
 
-        // =================================================
-        // FRAGMENTS
-        // =================================================
-
-        fragments = components.get(
-            OBC.FragmentsManager
-        );
-
-        fragments.init(
-            '/engine/worker.mjs'
-        );
-
-
-        // =================================================
-        // CUANDO SE CARGA UN MODELO
-        // =================================================
-
-        fragments.list.onItemSet.add(
-            ({ value: model }) => {
-
-                console.log(
-                    'Fragments creó el modelo'
-                );
-
-
-                // Decirle a Fragments qué cámara usar
-                model.useCamera(
-                    camera
-                );
-
-
-                // Agregar modelo a Three.js
-                scene.add(
-                    model.object
-                );
-
-
-                arModel = model.object;
-
-
-                // Tamaño pequeño
-                arModel.scale.set(
-                    0.1,
-                    0.1,
-                    0.1
-                );
-
-
-                // Todavía no mostrarlo
-                // hasta que termine la colocación
+            if (arModel) {
                 arModel.visible = false;
-
-
-                modelLoaded = true;
-                modelLoading = false;
-
-
-                fragments.core.update(
-                    true
-                );
-
-
-                console.log(
-                    'Modelo IFC listo'
-                );
-
             }
-        );
+        }
+    );
 
 
-        // =================================================
-        // WEBXR
-        // =================================================
+    // =================================================
+    // FIN DE AR
+    // =================================================
 
-        const arButton =
-            ARButton.createButton(
-                renderer,
-                {
-                    requiredFeatures: [
-                        'hit-test'
-                    ]
-                }
+    renderer.xr.addEventListener(
+        'sessionend',
+        () => {
+
+            console.log('AR finalizado');
+
+            isAR = false;
+
+            hitTestSource = null;
+
+            hitTestSourceRequested = false;
+
+            if (arReticle) {
+                arReticle.visible = false;
+            }
+
+            if (arModel) {
+                arModel.visible = true;
+            }
+        }
+    );
+
+
+    // =================================================
+    // ANIMATION LOOP
+    // =================================================
+
+    renderer.setAnimationLoop(
+        (timestamp, frame) => {
+
+            // Hit-test
+            updateAR(frame);
+
+
+            // -------------------------------------------------
+            // IMPORTANTE:
+            // Fragments NO se actualiza si todavía no existe
+            // el modelo.
+            // -------------------------------------------------
+
+            if (isAR && arModel) {
+                fragments.core.update();
+            }
+
+
+            // Render
+            renderer.render(
+                scene,
+                camera
             );
+        }
+    );
 
 
-        document.body.appendChild(
-            arButton
-        );
+    // =================================================
+    // RESIZE
+    // =================================================
 
-
-        // =================================================
-        // INICIO AR
-        // =================================================
-
-        renderer.xr.addEventListener(
-            'sessionstart',
-            () => {
-
-                console.log(
-                    'Sesión AR iniciada'
-                );
-
-
-                if (arModel) {
-
-                    arModel.visible = false;
-
-                }
-
-            }
-        );
-
-
-        // =================================================
-        // FIN AR
-        // =================================================
-
-        renderer.xr.addEventListener(
-            'sessionend',
-            () => {
-
-                console.log(
-                    'Sesión AR finalizada'
-                );
-
-
-                hitTestSource = null;
-
-                hitTestSourceRequested = false;
-
-
-                if (arReticle) {
-
-                    arReticle.visible = false;
-
-                }
-
-
-                if (arModel) {
-
-                    arModel.visible = true;
-
-                }
-
-            }
-        );
-
-
-        // =================================================
-        // RETÍCULA
-        // =================================================
-
-        const reticleGeometry =
-            new THREE.RingGeometry(
-                0.08,
-                0.1,
-                32
-            );
-
-
-        reticleGeometry.rotateX(
-            -Math.PI / 2
-        );
-
-
-        const reticleMaterial =
-            new THREE.MeshBasicMaterial();
-
-
-        arReticle = new THREE.Mesh(
-            reticleGeometry,
-            reticleMaterial
-        );
-
-
-        arReticle.matrixAutoUpdate =
-            false;
-
-        arReticle.visible = false;
-
-
-        scene.add(
-            arReticle
-        );
-
-
-        // =================================================
-        // CONTROLADOR AR
-        // =================================================
-
-        arController =
-            renderer.xr.getController(0);
-
-
-        arController.addEventListener(
-            'select',
-            onARSelect
-        );
-
-
-        scene.add(
-            arController
-        );
-
-
-        // =================================================
-        // LOOP
-        // =================================================
-
-        renderer.setAnimationLoop(
-            (timestamp, frame) => {
-
-                updateAR(frame);
-
-
-                // Solo actualizar Fragments
-                // cuando existe un modelo
-                if (arModel) {
-
-                    fragments.core.update();
-
-                }
-
-
-                renderer.render(
-                    scene,
-                    camera
-                );
-
-            }
-        );
-
-
-        // =================================================
-        // RESIZE
-        // =================================================
-
-        window.addEventListener(
-            'resize',
-            () => {
-
-                camera.aspect =
-                    container.clientWidth /
-                    container.clientHeight;
-
-                camera.updateProjectionMatrix();
-
-
-                renderer.setSize(
-                    container.clientWidth,
-                    container.clientHeight
-                );
-
-            }
-        );
-
-
-        console.log(
-            'Visor AR inicializado'
-        );
-
-    } catch (error) {
-
-        console.error(
-            'ERROR REAL:',
-            error
-        );
-
-
-        alert(
-            'No se pudo iniciar el visor AR.\n\n' +
-            error.message
-        );
-
-    }
-
+    window.addEventListener(
+        'resize',
+        onResize
+    );
 }
 
 
@@ -408,232 +302,181 @@ async function initViewer() {
 // HIT TEST
 // =====================================================
 
-async function updateAR(frame) {
+function updateAR(frame) {
 
     if (!frame) {
-
         return;
-
     }
 
+    const referenceSpace =
+        renderer.xr.getReferenceSpace();
 
     const session =
         renderer.xr.getSession();
 
 
-    const referenceSpace =
-        renderer.xr.getReferenceSpace();
-
-
-    // =================================================
+    // -------------------------------------------------
     // SOLICITAR HIT TEST SOURCE
-    // =================================================
+    // -------------------------------------------------
 
     if (!hitTestSourceRequested) {
 
         session
-            .requestReferenceSpace(
-                'viewer'
-            )
-            .then(
-                (viewerSpace) => {
+            .requestReferenceSpace('viewer')
+            .then((referenceSpace) => {
 
-                    session
-                        .requestHitTestSource({
-                            space: viewerSpace
-                        })
-                        .then(
-                            (source) => {
+                session
+                    .requestHitTestSource({
+                        space: referenceSpace
+                    })
+                    .then((source) => {
 
-                                hitTestSource =
-                                    source;
+                        hitTestSource = source;
+                    });
+            });
 
-                            }
-                        );
 
+        session.addEventListener(
+            'end',
+            () => {
+
+                hitTestSourceRequested = false;
+
+                hitTestSource = null;
+
+                if (arReticle) {
+                    arReticle.visible = false;
                 }
-            );
-
-
-        hitTestSourceRequested = true;
-
-    }
-
-
-    // =================================================
-    // ESPERAR HIT TEST
-    // =================================================
-
-    if (!hitTestSource) {
-
-        return;
-
-    }
-
-
-    // =================================================
-    // RESULTADOS
-    // =================================================
-
-    const hitTestResults =
-        frame.getHitTestResults(
-            hitTestSource
+            }
         );
 
 
-    if (
-        hitTestResults.length > 0
-    ) {
-
-        const hit =
-            hitTestResults[0];
+        hitTestSourceRequested = true;
+    }
 
 
-        const pose =
-            hit.getPose(
-                referenceSpace
+    // -------------------------------------------------
+    // RESULTADOS DEL HIT TEST
+    // -------------------------------------------------
+
+    if (hitTestSource) {
+
+        const hitTestResults =
+            frame.getHitTestResults(
+                hitTestSource
             );
 
 
-        if (pose) {
+        if (hitTestResults.length) {
+
+            const hit =
+                hitTestResults[0];
+
+            const pose =
+                hit.getPose(
+                    referenceSpace
+                );
+
 
             arReticle.visible = true;
-
 
             arReticle.matrix.fromArray(
                 pose.transform.matrix
             );
 
+        } else {
+
+            arReticle.visible = false;
         }
-
-    } else {
-
-        arReticle.visible = false;
-
     }
-
 }
 
 
 // =====================================================
-// CLICK / TOQUE
+// CLICK / TAP EN AR
 // =====================================================
 
 async function onARSelect() {
 
-    // =================================================
-    // VERIFICAR SUPERFICIE
-    // =================================================
-
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
-
+    // No hay superficie detectada
+    if (!arReticle || !arReticle.visible) {
         return;
-
     }
 
 
-    // =================================================
-    // EVITAR DOBLE CARGA
-    // =================================================
-
-    if (modelLoading) {
-
-        return;
-
-    }
-
-
-    // =================================================
-    // POSICIÓN DEL RETÍCULO
-    // =================================================
+    // -------------------------------------------------
+    // GUARDAR POSICIÓN DEL RETICLE
+    // -------------------------------------------------
 
     const position =
         new THREE.Vector3();
-
 
     position.setFromMatrixPosition(
         arReticle.matrix
     );
 
 
-    console.log(
-        'Superficie seleccionada:',
-        position
-    );
+    // -------------------------------------------------
+    // SI EL MODELO YA ESTÁ CARGADO
+    // -------------------------------------------------
 
-
-    // =================================================
-    // SI YA EXISTE EL MODELO
-    // =================================================
-
-    if (
-        modelLoaded &&
-        arModel
-    ) {
+    if (modelLoaded && arModel) {
 
         arModel.position.copy(
             position
         );
 
-
-        arModel.scale.set(
-            0.1,
-            0.1,
-            0.1
-        );
-
-
         arModel.visible = true;
-
-
-        fragments.core.update(
-            true
-        );
-
 
         console.log(
             'Modelo colocado'
         );
 
-
         return;
-
     }
 
 
-    // =================================================
-    // CARGAR MODELO
-    // =================================================
+    // -------------------------------------------------
+    // EVITAR DOBLE CARGA
+    // -------------------------------------------------
+
+    if (modelLoading) {
+        return;
+    }
 
     modelLoading = true;
 
 
-    console.log(
-        'Cargando IFC...'
-    );
+    // -------------------------------------------------
+    // URL DEL MODELO
+    // -------------------------------------------------
 
+    const url =
+        container.dataset.url;
+
+
+    if (!url) {
+
+        console.error(
+            'No existe data-url en #viewer'
+        );
+
+        modelLoading = false;
+
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // CARGAR FRAGMENT
+    // -------------------------------------------------
 
     try {
 
-        const url =
-            container.dataset.url;
+        console.log(
+            'Cargando modelo...'
+        );
 
-
-        if (!url) {
-
-            throw new Error(
-                'No se encontró la URL del modelo.'
-            );
-
-        }
-
-
-        // =================================================
-        // OBTENER FRAGMENT
-        // =================================================
 
         const response =
             await fetch(
@@ -646,7 +489,6 @@ async function onARSelect() {
             throw new Error(
                 `Error HTTP ${response.status}`
             );
-
         }
 
 
@@ -655,15 +497,9 @@ async function onARSelect() {
 
 
         console.log(
-            'FRAG recibido:',
-            buffer.byteLength,
-            'bytes'
+            'Fragment recibido'
         );
 
-
-        // =================================================
-        // CARGAR EN FRAGMENTS
-        // =================================================
 
         await fragments.core.load(
             buffer,
@@ -673,80 +509,72 @@ async function onARSelect() {
         );
 
 
-        // =================================================
-        // VERIFICAR MODELO
-        // =================================================
+        // -------------------------------------------------
+        // ESPERAR A QUE fragments.list.onItemSet
+        // ASIGNE arModel
+        // -------------------------------------------------
 
-        if (!arModel) {
+        if (arModel) {
 
-            throw new Error(
-                'Fragments no creó el modelo.'
+            arModel.position.copy(
+                position
             );
 
+            arModel.scale.set(
+                0.1,
+                0.1,
+                0.1
+            );
+
+            arModel.visible = true;
+
+            fragments.core.update(true);
+
+            console.log(
+                'Modelo colocado en AR'
+            );
         }
-
-
-        // =================================================
-        // COLOCAR
-        // =================================================
-
-        arModel.position.copy(
-            position
-        );
-
-
-        // Tamaño
-        arModel.scale.set(
-            0.1,
-            0.1,
-            0.1
-        );
-
-
-        arModel.visible = true;
-
-
-        fragments.core.update(
-            true
-        );
-
-
-        console.log(
-            '================================'
-        );
-
-        console.log(
-            'MODELO COLOCADO EN AR'
-        );
-
-        console.log(
-            'Posición:',
-            position
-        );
-
-        console.log(
-            '================================'
-        );
-
 
     } catch (error) {
 
         console.error(
-            'ERROR CARGANDO IFC:',
+            'Error cargando IFC:',
             error
         );
 
-
-        alert(
-            'No se pudo cargar el modelo IFC.\n\n' +
-            error.message
-        );
-
-
         modelLoading = false;
+    }
+}
 
+
+// =====================================================
+// RESIZE
+// =====================================================
+
+function onResize() {
+
+    if (!container || !camera || !renderer) {
+        return;
     }
 
+
+    const width =
+        container.clientWidth;
+
+    const height =
+        container.clientHeight;
+
+
+    camera.aspect =
+        width / height;
+
+    camera.updateProjectionMatrix();
+
+
+    renderer.setSize(
+        width,
+        height
+    );
 }
 
 
@@ -754,4 +582,12 @@ async function onARSelect() {
 // INICIAR
 // =====================================================
 
-initViewer();
+initViewer().catch(
+    (error) => {
+
+        console.error(
+            'No se pudo iniciar el visor:',
+            error
+        );
+    }
+);
