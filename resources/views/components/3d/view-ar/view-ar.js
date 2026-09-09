@@ -904,25 +904,17 @@ function updateOpacityKnob(value) {
 
 function setModelOpacity(opacity) {
 
-    const value = THREE.MathUtils.clamp(
-        opacity,
-        0,
-        1
-    );
+    const value = THREE.MathUtils.clamp(opacity, 0, 1);
 
-    console.log('Opacidad:', value);
+    const text = document.getElementById('opacity-value');
 
-    const text =
-        document.getElementById('opacity-value');
-
-    text.textContent =
-        `${Math.round(value * 100)}%`;
-
+    if (text) {
+        text.textContent = `${Math.round(value * 100)}%`;
+    }
 
     if (!arModel) {
         return;
     }
-
 
     arModel.traverse((object) => {
 
@@ -930,58 +922,33 @@ function setModelOpacity(opacity) {
             return;
         }
 
-
-        const materials =
-            Array.isArray(object.material)
-                ? object.material
-                : [object.material];
-
+        const materials = Array.isArray(object.material)
+            ? object.material
+            : [object.material];
 
         materials.forEach((material) => {
 
-            // ==========================================
-            // GUARDAR ORIGINAL
-            // ==========================================
-
+            // Guardar el estado ORIGINAL solamente una vez
             if (!material.userData.opacityOriginal) {
 
                 material.userData.opacityOriginal = {
-
-                    opacity:
-                        material.opacity,
-
-                    transparent:
-                        material.transparent,
-
-                    depthWrite:
-                        material.depthWrite,
-
-                    depthTest:
-                        material.depthTest,
-
-                    side:
-                        material.side,
-
-                    alphaTest:
-                        material.alphaTest,
-
-                    blending:
-                        material.blending
+                    opacity: material.opacity,
+                    transparent: material.transparent,
+                    depthWrite: material.depthWrite,
+                    depthTest: material.depthTest,
+                    side: material.side,
+                    alphaTest: material.alphaTest,
+                    blending: material.blending
                 };
 
-                console.log(
-                    'Guardando material original:',
-                    material.userData.opacityOriginal
-                );
             }
-
 
             const original =
                 material.userData.opacityOriginal;
 
 
             // ==========================================
-            // 100%
+            // 100% → RESTAURAR COMPLETAMENTE EL ORIGINAL
             // ==========================================
 
             if (value >= 1) {
@@ -1009,34 +976,78 @@ function setModelOpacity(opacity) {
 
             }
 
-
             // ==========================================
-            // < 100%
+            // MENOS DE 100%
             // ==========================================
 
             else {
 
+                // La opacidad siempre se multiplica
+                // por la opacidad original
                 material.opacity =
                     original.opacity * value;
 
-                material.transparent =
-                    true;
 
-                /*
-                 * IMPORTANTE:
-                 * No modificamos depthWrite.
-                 */
+                // ------------------------------------------
+                // MATERIAL QUE YA ERA TRANSPARENTE
+                // ------------------------------------------
+
+                if (original.transparent) {
+
+                    // Conservamos su comportamiento original
+                    material.transparent = true;
+
+                    material.depthWrite =
+                        original.depthWrite;
+
+                    material.depthTest =
+                        original.depthTest;
+
+                    material.side =
+                        original.side;
+
+                    material.alphaTest =
+                        original.alphaTest;
+
+                    material.blending =
+                        original.blending;
+
+                }
+
+                // ------------------------------------------
+                // MATERIAL QUE ERA OPACO
+                // ------------------------------------------
+
+                else {
+
+                    // Lo hacemos temporalmente transparente
+                    material.transparent = true;
+
+                    // Conservamos el resto de propiedades
+                    // originales para evitar problemas de
+                    // profundidad en paredes/ventanas
+                    material.depthWrite =
+                        original.depthWrite;
+
+                    material.depthTest =
+                        original.depthTest;
+
+                    material.side =
+                        original.side;
+
+                    material.alphaTest =
+                        original.alphaTest;
+
+                    material.blending =
+                        original.blending;
+                }
             }
-
 
             material.needsUpdate = true;
         });
     });
 
-
-    /*
-     * Forzar actualización de Fragments
-     */
+    // Actualizar Fragments
     if (fragments) {
         fragments.core.update(true);
     }
