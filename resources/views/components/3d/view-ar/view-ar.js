@@ -713,161 +713,127 @@ function placeModel() {
 // RENDER AR
 // ============================================================
 
-function renderAR(
-    timestamp,
-    frame
-) {
+function renderAR(timestamp, frame) {
 
     try {
 
-        if (frame) {
+        if (!frame) {
+            return;
+        }
 
-            const referenceSpace =
-                arRenderer.xr.getReferenceSpace();
+        const session =
+            arRenderer.xr.getSession();
+
+        const referenceSpace =
+            arRenderer.xr.getReferenceSpace();
+
+        if (!session || !referenceSpace) {
+            return;
+        }
 
 
-            const session =
-                arRenderer.xr.getSession();
+        // ====================================================
+        // CREAR HIT TEST SOURCE
+        // ====================================================
 
+        if (!hitTestSourceRequested) {
 
-            // ------------------------------------------------
-            // SOLICITAR HIT TEST
-            // ------------------------------------------------
+            hitTestSourceRequested = true;
 
-            if (
-                !hitTestSourceRequested
-            ) {
+            session
+                .requestReferenceSpace('viewer')
+                .then((viewerSpace) => {
 
-                session
-                    .requestReferenceSpace(
-                        'viewer'
-                    )
-                    .then(
-                        (viewerSpace) => {
+                    return session.requestHitTestSource({
+                        space: viewerSpace
+                    });
 
-                            return session
-                                .requestHitTestSource({
-                                    space:
-                                        viewerSpace
-                                });
+                })
+                .then((source) => {
 
-                        }
-                    )
-                    .then(
-                        (source) => {
+                    hitTestSource = source;
 
-                            hitTestSource =
-                                source;
-
-                        }
-                    )
-                    .catch(
-                        (error) => {
-
-                            alert(
-                                '[BIM AR] ERROR HIT TEST\n\n' +
-                                error.message
-                            );
-
-                            console.error(
-                                error
-                            );
-
-                        }
+                    alert(
+                        '[BIM AR]\n\n' +
+                        'Hit-test inicializado correctamente.\n\n' +
+                        'Mueve lentamente el teléfono ' +
+                        'para buscar una superficie.'
                     );
 
+                })
+                .catch((error) => {
 
-                // ------------------------------------------------
-                // FIN DE SESIÓN
-                // ------------------------------------------------
+                    alert(
+                        '[BIM AR] ERROR CREANDO HIT-TEST\n\n' +
+                        error.message
+                    );
 
-                session.addEventListener(
-                    'end',
-                    () => {
+                    console.error(error);
 
-                        hitTestSource =
-                            null;
-
-                        hitTestSourceRequested =
-                            false;
-
-                        reticle.visible =
-                            false;
-
-                        arSessionStarted =
-                            false;
+                });
 
 
-                        if (model) {
+            session.addEventListener(
+                'end',
+                () => {
 
-                            model.object.visible =
-                                false;
+                    hitTestSource = null;
 
-                        }
+                    hitTestSourceRequested = false;
 
-                    }
+                    reticle.visible = false;
+
+                }
+            );
+
+        }
+
+
+        // ====================================================
+        // HIT TEST
+        // ====================================================
+
+        if (hitTestSource) {
+
+            const hitTestResults =
+                frame.getHitTestResults(
+                    hitTestSource
                 );
 
 
-                hitTestSourceRequested =
-                    true;
+            if (hitTestResults.length > 0) {
 
-            }
+                const hit =
+                    hitTestResults[0];
 
-
-            // ------------------------------------------------
-            // RESULTADO HIT TEST
-            // ------------------------------------------------
-
-            if (hitTestSource) {
-
-                const results =
-                    frame.getHitTestResults(
-                        hitTestSource
+                const pose =
+                    hit.getPose(
+                        referenceSpace
                     );
 
 
-                if (
-                    results.length > 0
-                ) {
+                if (pose) {
 
-                    const hit =
-                        results[0];
+                    reticle.visible = true;
 
-
-                    const pose =
-                        hit.getPose(
-                            referenceSpace
-                        );
-
-
-                    if (pose) {
-
-                        reticle.visible =
-                            true;
-
-
-                        reticle.matrix.fromArray(
-                            pose.transform.matrix
-                        );
-
-                    }
-
-                } else {
-
-                    reticle.visible =
-                        false;
+                    reticle.matrix.fromArray(
+                        pose.transform.matrix
+                    );
 
                 }
+
+            } else {
+
+                reticle.visible = false;
 
             }
 
         }
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // RENDER
-        // ----------------------------------------------------
+        // ====================================================
 
         arRenderer.render(
             world.scene.three,
@@ -876,11 +842,6 @@ function renderAR(
 
 
     } catch (error) {
-
-        /*
-         * NO usamos alert aquí porque esta función
-         * se ejecuta muchas veces por segundo.
-         */
 
         console.error(
             '[BIM AR] Render error:',
