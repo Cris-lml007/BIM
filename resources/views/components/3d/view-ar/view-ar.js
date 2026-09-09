@@ -1,3 +1,8 @@
+
+// =====================================================
+// CONTENEDOR
+// =====================================================
+
 const container = document.getElementById('viewer');
 
 if (!container) {
@@ -32,11 +37,24 @@ let isAR = false;
 
 
 // =====================================================
-// CONTROL DE OPACIDAD
+// UI AR
 // =====================================================
 
-let opacityControl;
-let opacityValue;
+let arUI = null;
+
+let opacityBar = null;
+let opacityKnob = null;
+
+let opacityValue = 1;
+
+let opacityDragging = false;
+
+
+// =====================================================
+// RAYCASTER PARA LA UI
+// =====================================================
+
+const uiRaycaster = new THREE.Raycaster();
 
 
 // =====================================================
@@ -45,9 +63,9 @@ let opacityValue;
 
 async function initViewer() {
 
-    // -------------------------------------------------
+    // =================================================
     // THAT OPEN
-    // -------------------------------------------------
+    // =================================================
 
     components = new OBC.Components();
 
@@ -64,9 +82,9 @@ async function initViewer() {
     scene = world.scene.three;
 
 
-    // -------------------------------------------------
-    // THREE.JS WEBGL RENDERER
-    // -------------------------------------------------
+    // =================================================
+    // WEBGL RENDERER
+    // =================================================
 
     renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -89,9 +107,9 @@ async function initViewer() {
     );
 
 
-    // -------------------------------------------------
+    // =================================================
     // CAMERA
-    // -------------------------------------------------
+    // =================================================
 
     camera = new THREE.PerspectiveCamera(
         70,
@@ -114,16 +132,16 @@ async function initViewer() {
     );
 
 
-    // -------------------------------------------------
-    // INICIALIZAR COMPONENTS
-    // -------------------------------------------------
+    // =================================================
+    // COMPONENTS
+    // =================================================
 
     components.init();
 
 
-    // -------------------------------------------------
+    // =================================================
     // FRAGMENTS
-    // -------------------------------------------------
+    // =================================================
 
     fragments =
         components.get(
@@ -136,7 +154,7 @@ async function initViewer() {
 
 
     // =================================================
-    // MODELO CARGADO
+    // CUANDO SE CARGA EL MODELO
     // =================================================
 
     fragments.list.onItemSet.add(
@@ -162,7 +180,7 @@ async function initViewer() {
 
 
             // -------------------------------------------------
-            // ESCALA DEL MODELO
+            // ESCALA
             // -------------------------------------------------
 
             arModel.scale.set(
@@ -173,7 +191,7 @@ async function initViewer() {
 
 
             // -------------------------------------------------
-            // OCULTAR HASTA COLOCARLO
+            // OCULTO HASTA COLOCAR
             // -------------------------------------------------
 
             arModel.visible = false;
@@ -197,65 +215,15 @@ async function initViewer() {
             // APLICAR OPACIDAD ACTUAL
             // -------------------------------------------------
 
-            if (opacityControl) {
-
-                const opacity =
-                    Number(
-                        opacityControl.value
-                    ) / 100;
-
-                setModelOpacity(
-                    opacity
-                );
-            }
+            setModelOpacity(
+                opacityValue
+            );
         }
     );
 
 
     // =================================================
-    // CONTROL DE OPACIDAD
-    // =================================================
-
-    opacityControl =
-        document.getElementById(
-            'opacity'
-        );
-
-    opacityValue =
-        document.getElementById(
-            'opacity-value'
-        );
-
-
-    if (opacityControl) {
-
-        opacityControl.addEventListener(
-            'input',
-            () => {
-
-                const opacity =
-                    Number(
-                        opacityControl.value
-                    ) / 100;
-
-
-                if (opacityValue) {
-
-                    opacityValue.textContent =
-                        `${opacityControl.value}%`;
-                }
-
-
-                setModelOpacity(
-                    opacity
-                );
-            }
-        );
-    }
-
-
-    // =================================================
-    // AR BUTTON
+    // BOTÓN AR
     // =================================================
 
     const arButton =
@@ -283,7 +251,6 @@ async function initViewer() {
             0.1,
             32
         );
-
 
     reticleGeometry.rotateX(
         -Math.PI / 2
@@ -322,6 +289,18 @@ async function initViewer() {
 
 
     arController.addEventListener(
+        'selectstart',
+        onARSelectStart
+    );
+
+
+    arController.addEventListener(
+        'selectend',
+        onARSelectEnd
+    );
+
+
+    arController.addEventListener(
         'select',
         onARSelect
     );
@@ -333,7 +312,14 @@ async function initViewer() {
 
 
     // =================================================
-    // AR SESSION START
+    // CREAR HUD AR
+    // =================================================
+
+    createARUI();
+
+
+    // =================================================
+    // INICIO DE AR
     // =================================================
 
     renderer.xr.addEventListener(
@@ -355,20 +341,32 @@ async function initViewer() {
                 false;
 
 
-            // Ocultar modelo mientras
-            // buscamos dónde colocarlo
+            // -------------------------------------------------
+            // OCULTAR MODELO
+            // -------------------------------------------------
 
             if (arModel) {
 
                 arModel.visible =
                     false;
             }
+
+
+            // -------------------------------------------------
+            // MOSTRAR UI
+            // -------------------------------------------------
+
+            if (arUI) {
+
+                arUI.visible =
+                    true;
+            }
         }
     );
 
 
     // =================================================
-    // AR SESSION END
+    // FIN DE AR
     // =================================================
 
     renderer.xr.addEventListener(
@@ -390,6 +388,14 @@ async function initViewer() {
                 false;
 
 
+            opacityDragging =
+                false;
+
+
+            // -------------------------------------------------
+            // OCULTAR RETICLE
+            // -------------------------------------------------
+
             if (arReticle) {
 
                 arReticle.visible =
@@ -397,8 +403,20 @@ async function initViewer() {
             }
 
 
-            // Mostrar nuevamente
-            // el modelo fuera de AR
+            // -------------------------------------------------
+            // OCULTAR UI
+            // -------------------------------------------------
+
+            if (arUI) {
+
+                arUI.visible =
+                    false;
+            }
+
+
+            // -------------------------------------------------
+            // MOSTRAR MODELO
+            // -------------------------------------------------
 
             if (arModel) {
 
@@ -424,13 +442,26 @@ async function initViewer() {
 
 
             // -------------------------------------------------
+            // ACTUALIZAR SLIDER
+            // -------------------------------------------------
+
+            if (
+                isAR &&
+                opacityDragging
+            ) {
+
+                updateOpacitySlider();
+            }
+
+
+            // -------------------------------------------------
             // FRAGMENTS
             // -------------------------------------------------
 
-            // No ejecutamos Fragments mientras
-            // todavía no existe ningún modelo.
-
-            if (isAR && arModel) {
+            if (
+                isAR &&
+                arModel
+            ) {
 
                 fragments.core.update();
             }
@@ -460,6 +491,908 @@ async function initViewer() {
 
 
 // =====================================================
+// CREAR UI AR
+// =====================================================
+
+function createARUI() {
+
+    arUI =
+        new THREE.Group();
+
+
+    // -------------------------------------------------
+    // POSICIÓN DEL HUD
+    // -------------------------------------------------
+
+    arUI.position.set(
+        0,
+        -0.35,
+        -1.2
+    );
+
+
+    // =================================================
+    // PANEL
+    // =================================================
+
+    const panelGeometry =
+        new THREE.PlaneGeometry(
+            0.8,
+            0.25
+        );
+
+
+    const panelMaterial =
+        new THREE.MeshBasicMaterial({
+            color: 0x111111,
+            transparent: true,
+            opacity: 0.85,
+            depthTest: false
+        });
+
+
+    const panel =
+        new THREE.Mesh(
+            panelGeometry,
+            panelMaterial
+        );
+
+
+    panel.renderOrder =
+        100;
+
+
+    arUI.add(
+        panel
+    );
+
+
+    // =================================================
+    // BARRA
+    // =================================================
+
+    const barGeometry =
+        new THREE.PlaneGeometry(
+            0.55,
+            0.025
+        );
+
+
+    const barMaterial =
+        new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            depthTest: false
+        });
+
+
+    opacityBar =
+        new THREE.Mesh(
+            barGeometry,
+            barMaterial
+        );
+
+
+    opacityBar.position.set(
+        0,
+        -0.02,
+        0.02
+    );
+
+
+    opacityBar.renderOrder =
+        101;
+
+
+    arUI.add(
+        opacityBar
+    );
+
+
+    // =================================================
+    // KNOB
+    // =================================================
+
+    const knobGeometry =
+        new THREE.CircleGeometry(
+            0.045,
+            32
+        );
+
+
+    const knobMaterial =
+        new THREE.MeshBasicMaterial({
+            color: 0x4f46e5,
+            depthTest: false
+        });
+
+
+    opacityKnob =
+        new THREE.Mesh(
+            knobGeometry,
+            knobMaterial
+        );
+
+
+    opacityKnob.position.set(
+        0.275,
+        -0.02,
+        0.03
+    );
+
+
+    opacityKnob.renderOrder =
+        102;
+
+
+    arUI.add(
+        opacityKnob
+    );
+
+
+    // =================================================
+    // TEXTO
+    // =================================================
+
+    const label =
+        createTextSprite(
+            'OPACIDAD'
+        );
+
+
+    label.position.set(
+        -0.28,
+        0.055,
+        0.03
+    );
+
+
+    label.scale.set(
+        0.22,
+        0.07,
+        1
+    );
+
+
+    arUI.add(
+        label
+    );
+
+
+    // =================================================
+    // VALOR
+    // =================================================
+
+    const value =
+        createTextSprite(
+            '100%'
+        );
+
+
+    value.name =
+        'opacity-value';
+
+
+    value.position.set(
+        0.28,
+        0.055,
+        0.03
+    );
+
+
+    value.scale.set(
+        0.14,
+        0.06,
+        1
+    );
+
+
+    arUI.add(
+        value
+    );
+
+
+    // =================================================
+    // OCULTAR INICIALMENTE
+    // =================================================
+
+    arUI.visible =
+        false;
+
+
+    // =================================================
+    // AGREGAR A CÁMARA
+    // =================================================
+
+    camera.add(
+        arUI
+    );
+
+
+    scene.add(
+        camera
+    );
+}
+
+
+// =====================================================
+// CREAR TEXTO
+// =====================================================
+
+function createTextSprite(text) {
+
+    const canvas =
+        document.createElement(
+            'canvas'
+        );
+
+
+    canvas.width =
+        512;
+
+    canvas.height =
+        128;
+
+
+    const context =
+        canvas.getContext(
+            '2d'
+        );
+
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    context.font =
+        'bold 48px Arial';
+
+
+    context.fillStyle =
+        'white';
+
+
+    context.textAlign =
+        'center';
+
+
+    context.textBaseline =
+        'middle';
+
+
+    context.fillText(
+        text,
+        canvas.width / 2,
+        canvas.height / 2
+    );
+
+
+    const texture =
+        new THREE.CanvasTexture(
+            canvas
+        );
+
+
+    texture.needsUpdate =
+        true;
+
+
+    const material =
+        new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: false
+        });
+
+
+    const sprite =
+        new THREE.Sprite(
+            material
+        );
+
+
+    sprite.userData.canvas =
+        canvas;
+
+    sprite.userData.context =
+        context;
+
+
+    return sprite;
+}
+
+
+// =====================================================
+// ACTUALIZAR TEXTO DE OPACIDAD
+// =====================================================
+
+function updateOpacityText(value) {
+
+    if (!arUI) {
+        return;
+    }
+
+
+    const sprite =
+        arUI.getObjectByName(
+            'opacity-value'
+        );
+
+
+    if (!sprite) {
+        return;
+    }
+
+
+    const canvas =
+        sprite.userData.canvas;
+
+
+    const context =
+        sprite.userData.context;
+
+
+    context.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    context.font =
+        'bold 48px Arial';
+
+
+    context.fillStyle =
+        'white';
+
+
+    context.textAlign =
+        'center';
+
+
+    context.textBaseline =
+        'middle';
+
+
+    context.fillText(
+        `${Math.round(value * 100)}%`,
+        canvas.width / 2,
+        canvas.height / 2
+    );
+
+
+    sprite.material.map.needsUpdate =
+        true;
+}
+
+
+// =====================================================
+// ACTUALIZAR POSICIÓN DEL KNOB
+// =====================================================
+
+function updateOpacityKnob(value) {
+
+    if (!opacityKnob) {
+        return;
+    }
+
+
+    const minX =
+        -0.275;
+
+    const maxX =
+        0.275;
+
+
+    opacityKnob.position.x =
+        THREE.MathUtils.lerp(
+            minX,
+            maxX,
+            value
+        );
+}
+
+
+// =====================================================
+// CAMBIAR OPACIDAD DEL MODELO
+// =====================================================
+
+function setModelOpacity(opacity) {
+
+    opacityValue =
+        THREE.MathUtils.clamp(
+            opacity,
+            0,
+            1
+        );
+
+
+    updateOpacityKnob(
+        opacityValue
+    );
+
+
+    updateOpacityText(
+        opacityValue
+    );
+
+
+    if (!arModel) {
+        return;
+    }
+
+
+    arModel.traverse(
+        (object) => {
+
+            if (!object.isMesh) {
+                return;
+            }
+
+
+            if (!object.material) {
+                return;
+            }
+
+
+            const materials =
+                Array.isArray(
+                    object.material
+                )
+                    ? object.material
+                    : [object.material];
+
+
+            materials.forEach(
+                (material) => {
+
+                    material.transparent =
+                        opacityValue < 1;
+
+
+                    material.opacity =
+                        opacityValue;
+
+
+                    material.needsUpdate =
+                        true;
+                }
+            );
+        }
+    );
+}
+
+
+// =====================================================
+// SELECCIONAR / TOCAR
+// =====================================================
+
+function onARSelectStart() {
+
+    if (!isAR) {
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // COMPROBAR SI TOCÓ EL SLIDER
+    // -------------------------------------------------
+
+    if (isControllerOverSlider()) {
+
+        opacityDragging =
+            true;
+
+        updateOpacitySlider();
+
+        return;
+    }
+}
+
+
+// =====================================================
+// SOLTAR
+// =====================================================
+
+function onARSelectEnd() {
+
+    opacityDragging =
+        false;
+}
+
+
+// =====================================================
+// SELECT
+// =====================================================
+
+async function onARSelect() {
+
+    if (!isAR) {
+        return;
+    }
+
+
+    // Si estaba interactuando
+    // con el slider, no colocar modelo
+
+    if (isControllerOverSlider()) {
+
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // COMPROBAR RETICLE
+    // -------------------------------------------------
+
+    if (
+        !arReticle ||
+        !arReticle.visible
+    ) {
+
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // POSICIÓN
+    // -------------------------------------------------
+
+    const position =
+        new THREE.Vector3();
+
+
+    position.setFromMatrixPosition(
+        arReticle.matrix
+    );
+
+
+    // =================================================
+    // MODELO YA CARGADO
+    // =================================================
+
+    if (
+        modelLoaded &&
+        arModel
+    ) {
+
+        arModel.position.copy(
+            position
+        );
+
+
+        arModel.visible =
+            true;
+
+
+        console.log(
+            'Modelo colocado'
+        );
+
+
+        return;
+    }
+
+
+    // =================================================
+    // EVITAR DOBLE CARGA
+    // =================================================
+
+    if (modelLoading) {
+        return;
+    }
+
+
+    modelLoading =
+        true;
+
+
+    // =================================================
+    // URL
+    // =================================================
+
+    const url =
+        container.dataset.url;
+
+
+    if (!url) {
+
+        console.error(
+            'No existe data-url en #viewer'
+        );
+
+
+        modelLoading =
+            false;
+
+
+        return;
+    }
+
+
+    // =================================================
+    // CARGAR IFC
+    // =================================================
+
+    try {
+
+        console.log(
+            'Cargando modelo...'
+        );
+
+
+        const response =
+            await fetch(
+                url + '?type=frag'
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Error HTTP ${response.status}`
+            );
+        }
+
+
+        const buffer =
+            await response.arrayBuffer();
+
+
+        console.log(
+            'Fragment recibido'
+        );
+
+
+        await fragments.core.load(
+            buffer,
+            {
+                modelId: 'main'
+            }
+        );
+
+
+        // -------------------------------------------------
+        // COLOCAR
+        // -------------------------------------------------
+
+        if (arModel) {
+
+            arModel.position.copy(
+                position
+            );
+
+
+            arModel.scale.set(
+                0.1,
+                0.1,
+                0.1
+            );
+
+
+            arModel.visible =
+                true;
+
+
+            setModelOpacity(
+                opacityValue
+            );
+
+
+            fragments.core.update(
+                true
+            );
+
+
+            console.log(
+                'Modelo colocado en AR'
+            );
+        }
+
+    } catch (error) {
+
+        console.error(
+            'Error cargando IFC:',
+            error
+        );
+
+
+        modelLoading =
+            false;
+    }
+}
+
+
+// =====================================================
+// SABER SI EL CONTROLLER ESTÁ SOBRE EL SLIDER
+// =====================================================
+
+function isControllerOverSlider() {
+
+    if (
+        !arUI ||
+        !arUI.visible ||
+        !opacityBar
+    ) {
+
+        return false;
+    }
+
+
+    // -------------------------------------------------
+    // MATRIZ DEL CONTROLLER
+    // -------------------------------------------------
+
+    const origin =
+        new THREE.Vector3();
+
+
+    const direction =
+        new THREE.Vector3(
+            0,
+            0,
+            -1
+        );
+
+
+    origin.setFromMatrixPosition(
+        arController.matrixWorld
+    );
+
+
+    direction.applyQuaternion(
+        arController.quaternion
+    );
+
+
+    direction.normalize();
+
+
+    // -------------------------------------------------
+    // RAYCAST
+    // -------------------------------------------------
+
+    uiRaycaster.set(
+        origin,
+        direction
+    );
+
+
+    const intersects =
+        uiRaycaster.intersectObject(
+            opacityBar,
+            false
+        );
+
+
+    return intersects.length > 0;
+}
+
+
+// =====================================================
+// ACTUALIZAR SLIDER DURANTE DRAG
+// =====================================================
+
+function updateOpacitySlider() {
+
+    if (
+        !opacityDragging ||
+        !opacityBar
+    ) {
+
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // RAY DEL CONTROLLER
+    // -------------------------------------------------
+
+    const origin =
+        new THREE.Vector3();
+
+
+    const direction =
+        new THREE.Vector3(
+            0,
+            0,
+            -1
+        );
+
+
+    origin.setFromMatrixPosition(
+        arController.matrixWorld
+    );
+
+
+    direction.applyQuaternion(
+        arController.quaternion
+    );
+
+
+    direction.normalize();
+
+
+    uiRaycaster.set(
+        origin,
+        direction
+    );
+
+
+    // -------------------------------------------------
+    // INTERSECCIÓN
+    // -------------------------------------------------
+
+    const intersects =
+        uiRaycaster.intersectObject(
+            opacityBar,
+            false
+        );
+
+
+    if (!intersects.length) {
+        return;
+    }
+
+
+    const point =
+        intersects[0].point;
+
+
+    // -------------------------------------------------
+    // CONVERTIR A COORDENADAS DEL SLIDER
+    // -------------------------------------------------
+
+    const localPoint =
+        opacityBar.worldToLocal(
+            point.clone()
+        );
+
+
+    // -------------------------------------------------
+    // RANGO
+    // -------------------------------------------------
+
+    const minX =
+        -0.275;
+
+    const maxX =
+        0.275;
+
+
+    const x =
+        THREE.MathUtils.clamp(
+            localPoint.x,
+            minX,
+            maxX
+        );
+
+
+    // -------------------------------------------------
+    // CONVERTIR A 0-1
+    // -------------------------------------------------
+
+    const value =
+        (x - minX) /
+        (maxX - minX);
+
+
+    // -------------------------------------------------
+    // APLICAR
+    // -------------------------------------------------
+
+    setModelOpacity(
+        value
+    );
+}
+
+
+// =====================================================
 // HIT TEST
 // =====================================================
 
@@ -479,7 +1412,7 @@ function updateAR(frame) {
 
 
     // -------------------------------------------------
-    // SOLICITAR HIT TEST SOURCE
+    // HIT TEST SOURCE
     // -------------------------------------------------
 
     if (!hitTestSourceRequested) {
@@ -532,7 +1465,7 @@ function updateAR(frame) {
 
 
     // -------------------------------------------------
-    // OBTENER HIT TEST
+    // RESULTADOS
     // -------------------------------------------------
 
     if (hitTestSource) {
@@ -573,238 +1506,6 @@ function updateAR(frame) {
 
 
 // =====================================================
-// TAP EN AR
-// =====================================================
-
-async function onARSelect() {
-
-    // -------------------------------------------------
-    // NO HAY SUPERFICIE
-    // -------------------------------------------------
-
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
-        return;
-    }
-
-
-    // -------------------------------------------------
-    // GUARDAR POSICIÓN
-    // -------------------------------------------------
-
-    const position =
-        new THREE.Vector3();
-
-
-    position.setFromMatrixPosition(
-        arReticle.matrix
-    );
-
-
-    // =================================================
-    // MODELO YA CARGADO
-    // =================================================
-
-    if (
-        modelLoaded &&
-        arModel
-    ) {
-
-        arModel.position.copy(
-            position
-        );
-
-
-        arModel.visible =
-            true;
-
-
-        console.log(
-            'Modelo colocado'
-        );
-
-
-        return;
-    }
-
-
-    // =================================================
-    // EVITAR DOBLE CARGA
-    // =================================================
-
-    if (modelLoading) {
-        return;
-    }
-
-
-    modelLoading = true;
-
-
-    // =================================================
-    // OBTENER URL
-    // =================================================
-
-    const url =
-        container.dataset.url;
-
-
-    if (!url) {
-
-        console.error(
-            'No existe data-url en #viewer'
-        );
-
-
-        modelLoading =
-            false;
-
-        return;
-    }
-
-
-    // =================================================
-    // CARGAR IFC
-    // =================================================
-
-    try {
-
-        console.log(
-            'Cargando modelo...'
-        );
-
-
-        const response =
-            await fetch(
-                url + '?type=frag'
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Error HTTP ${response.status}`
-            );
-        }
-
-
-        const buffer =
-            await response.arrayBuffer();
-
-
-        console.log(
-            'Fragment recibido'
-        );
-
-
-        await fragments.core.load(
-            buffer,
-            {
-                modelId: 'main'
-            }
-        );
-
-
-        // -------------------------------------------------
-        // COLOCAR MODELO
-        // -------------------------------------------------
-
-        if (arModel) {
-
-            arModel.position.copy(
-                position
-            );
-
-
-            arModel.scale.set(
-                0.1,
-                0.1,
-                0.1
-            );
-
-
-            arModel.visible =
-                true;
-
-
-            fragments.core.update(
-                true
-            );
-
-
-            console.log(
-                'Modelo colocado en AR'
-            );
-        }
-
-    } catch (error) {
-
-        console.error(
-            'Error cargando IFC:',
-            error
-        );
-
-
-        modelLoading =
-            false;
-    }
-}
-
-
-// =====================================================
-// CAMBIAR OPACIDAD
-// =====================================================
-
-function setModelOpacity(opacity) {
-
-    if (!arModel) {
-        return;
-    }
-
-
-    arModel.traverse(
-        (object) => {
-
-            if (!object.isMesh) {
-                return;
-            }
-
-
-            if (!object.material) {
-                return;
-            }
-
-
-            const materials =
-                Array.isArray(
-                    object.material
-                )
-                    ? object.material
-                    : [object.material];
-
-
-            materials.forEach(
-                (material) => {
-
-                    material.transparent =
-                        opacity < 1;
-
-
-                    material.opacity =
-                        opacity;
-
-
-                    material.needsUpdate =
-                        true;
-                }
-            );
-        }
-    );
-}
-
-
-// =====================================================
 // RESIZE
 // =====================================================
 
@@ -815,6 +1516,7 @@ function onResize() {
         !camera ||
         !renderer
     ) {
+
         return;
     }
 
