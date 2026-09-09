@@ -904,18 +904,25 @@ function updateOpacityKnob(value) {
 
 function setModelOpacity(opacity) {
 
-    opacityValue = THREE.MathUtils.clamp(
+    const value = THREE.MathUtils.clamp(
         opacity,
         0,
         1
     );
 
-    updateOpacityKnob(opacityValue);
-    updateOpacityText(opacityValue);
+    console.log('Opacidad:', value);
+
+    const text =
+        document.getElementById('opacity-value');
+
+    text.textContent =
+        `${Math.round(value * 100)}%`;
+
 
     if (!arModel) {
         return;
     }
+
 
     arModel.traverse((object) => {
 
@@ -923,78 +930,116 @@ function setModelOpacity(opacity) {
             return;
         }
 
-        const materials = Array.isArray(object.material)
-            ? object.material
-            : [object.material];
+
+        const materials =
+            Array.isArray(object.material)
+                ? object.material
+                : [object.material];
+
 
         materials.forEach((material) => {
 
-            // Guardar estado original solamente una vez
-            if (material.userData.originalOpacity === undefined) {
+            // ==========================================
+            // GUARDAR ORIGINAL
+            // ==========================================
 
-                material.userData.originalOpacity =
-                    material.opacity;
+            if (!material.userData.opacityOriginal) {
 
-                material.userData.originalTransparent =
-                    material.transparent;
+                material.userData.opacityOriginal = {
 
-                material.userData.originalDepthWrite =
-                    material.depthWrite;
+                    opacity:
+                        material.opacity,
+
+                    transparent:
+                        material.transparent,
+
+                    depthWrite:
+                        material.depthWrite,
+
+                    depthTest:
+                        material.depthTest,
+
+                    side:
+                        material.side,
+
+                    alphaTest:
+                        material.alphaTest,
+
+                    blending:
+                        material.blending
+                };
+
+                console.log(
+                    'Guardando material original:',
+                    material.userData.opacityOriginal
+                );
             }
 
-            const originalOpacity =
-                material.userData.originalOpacity;
 
-            const originalTransparent =
-                material.userData.originalTransparent;
-
-            const originalDepthWrite =
-                material.userData.originalDepthWrite;
+            const original =
+                material.userData.opacityOriginal;
 
 
             // ==========================================
-            // ESTADO ORIGINAL
+            // 100%
             // ==========================================
 
-            if (opacityValue === 1) {
+            if (value >= 1) {
 
                 material.opacity =
-                    originalOpacity;
+                    original.opacity;
 
                 material.transparent =
-                    originalTransparent;
+                    original.transparent;
 
                 material.depthWrite =
-                    originalDepthWrite;
+                    original.depthWrite;
+
+                material.depthTest =
+                    original.depthTest;
+
+                material.side =
+                    original.side;
+
+                material.alphaTest =
+                    original.alphaTest;
+
+                material.blending =
+                    original.blending;
 
             }
 
 
             // ==========================================
-            // OPACIDAD GLOBAL
+            // < 100%
             // ==========================================
 
             else {
 
                 material.opacity =
-                    originalOpacity * opacityValue;
+                    original.opacity * value;
 
-                /*
-                 * Necesitamos transparent=true para que
-                 * los materiales originalmente opacos puedan
-                 * volverse transparentes.
-                 */
-                material.transparent = true;
+                material.transparent =
+                    true;
 
                 /*
                  * IMPORTANTE:
-                 * No tocamos depthWrite.
+                 * No modificamos depthWrite.
                  */
             }
+
 
             material.needsUpdate = true;
         });
     });
+
+
+    /*
+     * Forzar actualización de Fragments
+     */
+    if (fragments) {
+        fragments.core.update(true);
+    }
 }
 
 
