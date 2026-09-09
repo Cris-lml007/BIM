@@ -753,12 +753,6 @@ function renderAR(timestamp, frame) {
 
                     hitTestSource = source;
 
-                    alert(
-                        '[BIM AR]\n\n' +
-                        'Hit-test inicializado correctamente.\n\n' +
-                        'Mueve lentamente el teléfono ' +
-                        'para buscar una superficie.'
-                    );
 
                 })
                 .catch((error) => {
