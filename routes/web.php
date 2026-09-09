@@ -27,8 +27,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
 });
 
+
 Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
+Route::livewire('/ar','3d.view-ar');
 
 
     Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('dashboard');

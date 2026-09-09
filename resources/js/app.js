@@ -17,6 +17,8 @@ import Stats from 'stats.js';
 import * as BUI from '@thatopen/ui';
 import * as BUIC from '@thatopen/ui-obc'
 
+import { ARButton } from 'three/examples/jsm/Addons.js';
+
 window.Swal = Swal;
 window.THREE = THREE;
 window.GLTFLoader = GLTFLoader;
@@ -30,3 +32,4 @@ window.Stats = Stats;
 window.OBF = OBF;
 window.BUI = BUI;
 window.BUIC = BUIC;
+window.ARButton = ARButton;
