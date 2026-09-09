@@ -929,10 +929,7 @@ function setModelOpacity(opacity) {
 
         materials.forEach((material) => {
 
-            // ==========================================
-            // GUARDAR ESTADO ORIGINAL
-            // ==========================================
-
+            // Guardar estado original solamente una vez
             if (material.userData.originalOpacity === undefined) {
 
                 material.userData.originalOpacity =
@@ -945,7 +942,6 @@ function setModelOpacity(opacity) {
                     material.depthWrite;
             }
 
-
             const originalOpacity =
                 material.userData.originalOpacity;
 
@@ -957,10 +953,10 @@ function setModelOpacity(opacity) {
 
 
             // ==========================================
-            // RESTAURAR ESTADO ORIGINAL
+            // ESTADO ORIGINAL
             // ==========================================
 
-            if (opacityValue >= 1) {
+            if (opacityValue === 1) {
 
                 material.opacity =
                     originalOpacity;
@@ -975,7 +971,7 @@ function setModelOpacity(opacity) {
 
 
             // ==========================================
-            // APLICAR OPACIDAD GLOBAL
+            // OPACIDAD GLOBAL
             // ==========================================
 
             else {
@@ -984,17 +980,16 @@ function setModelOpacity(opacity) {
                     originalOpacity * opacityValue;
 
                 /*
-                 * Todos deben ser transparentes mientras
-                 * el slider esté por debajo del 100%.
+                 * Necesitamos transparent=true para que
+                 * los materiales originalmente opacos puedan
+                 * volverse transparentes.
                  */
                 material.transparent = true;
 
                 /*
-                 * Evita problemas de profundidad cuando
-                 * estamos haciendo transparente un material
-                 * que originalmente era opaco.
+                 * IMPORTANTE:
+                 * No tocamos depthWrite.
                  */
-                material.depthWrite = false;
             }
 
             material.needsUpdate = true;
