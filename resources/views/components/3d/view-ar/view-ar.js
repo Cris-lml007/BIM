@@ -929,7 +929,7 @@ function setModelOpacity(opacity) {
 
         materials.forEach((material) => {
 
-            // Guardar estado original una sola vez
+            // Guardar propiedades originales
             if (material.userData.originalOpacity === undefined) {
                 material.userData.originalOpacity =
                     material.opacity;
@@ -956,36 +956,38 @@ function setModelOpacity(opacity) {
 
 
             // =========================
-            // 100%
+            // MATERIAL ORIGINALMENTE TRANSPARENTE
             // =========================
 
-            if (opacityValue >= 1) {
-
-                material.opacity =
-                    originalOpacity;
-
-                material.transparent =
-                    originalTransparent;
-
-                material.depthWrite =
-                    originalDepthWrite;
-
-            }
-
-            // =========================
-            // MENOS DE 100%
-            // =========================
-
-            else {
+            if (originalTransparent) {
 
                 material.opacity =
                     originalOpacity * opacityValue;
 
-                material.transparent =
-                    true;
+                material.transparent = true;
 
                 material.depthWrite =
+                    opacityValue >= 1
+                        ? originalDepthWrite
+                        : false;
+            }
+
+
+            // =========================
+            // MATERIAL ORIGINALMENTE OPACO
+            // =========================
+
+            else {
+
+                // No modificamos su opacidad
+                material.opacity =
+                    originalOpacity;
+
+                material.transparent =
                     false;
+
+                material.depthWrite =
+                    originalDepthWrite;
             }
 
             material.needsUpdate = true;
