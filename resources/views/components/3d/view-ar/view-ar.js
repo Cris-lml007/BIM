@@ -1254,8 +1254,37 @@ async function ifcLoader(url, id) {
 
     }
 
+let arRoot = new THREE.Group();
+arRoot.visible = false;
+
+scene.add(arRoot);
+    for (const [, model] of fragments.list) {
+    arRoot.add(model.object);
+}
+    const box = new THREE.Box3().setFromObject(arRoot);
+const size = box.getSize(new THREE.Vector3());
+
+const maxSize = Math.max(size.x, size.y, size.z);
+
+// Por ahora queremos que el modelo mida aproximadamente 1 metro
+if (maxSize > 0) {
+    const scale = 1 / maxSize;
+    arRoot.scale.setScalar(scale);
 }
 
+}
+function onSelect() {
+
+    if (!reticle.visible) {
+        return;
+    }
+
+    arRoot.position.setFromMatrixPosition(reticle.matrix);
+
+    arRoot.quaternion.setFromRotationMatrix(reticle.matrix);
+
+    arRoot.visible = true;
+}
 
 // ======================================================
 // SECCIÓN
