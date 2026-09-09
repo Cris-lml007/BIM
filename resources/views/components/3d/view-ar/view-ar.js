@@ -48,18 +48,34 @@ async function initViewer() {
 
 
         // Renderer
-        world.renderer = new OBF.WebGLRenderer(
-            components,
-            container
-        );
+renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true
+});
 
-        renderer = world.renderer.three;
+renderer.setPixelRatio(
+    window.devicePixelRatio
+);
+
+renderer.setSize(
+    container.clientWidth,
+    container.clientHeight
+);
+
+renderer.xr.enabled = true;
+
+container.appendChild(
+    renderer.domElement
+);
 
 
         // Cámara
-        world.camera = new OBC.OrthoPerspectiveCamera(
-            components
-        );
+const camera = new THREE.PerspectiveCamera(
+    70,
+    container.clientWidth / container.clientHeight,
+    0.01,
+    1000
+);
 
         await world.camera.controls.setLookAt(
             10,
@@ -107,7 +123,7 @@ async function initViewer() {
                 for (const [, model] of fragments.list) {
 
                     model.useCamera(
-                        camera.three
+                        camera
                     );
 
                 }
@@ -125,7 +141,7 @@ async function initViewer() {
             ({ value: model }) => {
 
                 model.useCamera(
-                    world.camera.three
+                    camera
                 );
 
                 scene.add(
@@ -296,11 +312,13 @@ async function initViewer() {
 
                 updateAR(frame);
 
-                fragments.core.update();
+if (arModel) {
+        fragments.core.update();
+    }
 
                 renderer.render(
                     scene,
-                    world.camera.three
+                    camera
                 );
 
             }
