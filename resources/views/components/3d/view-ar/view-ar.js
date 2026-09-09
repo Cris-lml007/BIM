@@ -1,12 +1,24 @@
 
-// Contenedor
+// ==========================================
+// CONTENEDOR
+// ==========================================
+
 const container = document.getElementById('ar');
 
-// Escena
+
+// ==========================================
+// ESCENA
+// ==========================================
+
 const scene = new THREE.Scene();
+
 scene.background = new THREE.Color(0xf0f0f0);
 
-// Cámara
+
+// ==========================================
+// CÁMARA
+// ==========================================
+
 const camera = new THREE.PerspectiveCamera(
     75,
     container.clientWidth / container.clientHeight,
@@ -14,12 +26,16 @@ const camera = new THREE.PerspectiveCamera(
     1000
 );
 
-camera.position.z = 3;
 
-// Renderer
+// ==========================================
+// RENDERER
+// ==========================================
+
 const renderer = new THREE.WebGLRenderer({
-    antialias: true
+    antialias: true,
+    alpha: true
 });
+
 renderer.xr.enabled = true;
 
 renderer.setSize(
@@ -31,61 +47,268 @@ renderer.setPixelRatio(window.devicePixelRatio);
 
 container.appendChild(renderer.domElement);
 
+
+// ==========================================
+// BOTÓN AR
+// ==========================================
+
 document.body.appendChild(
     ARButton.createButton(renderer, {
         requiredFeatures: ['hit-test']
     })
 );
 
-// Cubo
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+
+// ==========================================
+// CUBO
+// ==========================================
+
+// 20 cm x 20 cm x 20 cm
+const geometry = new THREE.BoxGeometry(
+    0.2,
+    0.2,
+    0.2
+);
 
 const material = new THREE.MeshStandardMaterial({
     color: 0x2196f3
 });
 
-const cube = new THREE.Mesh(geometry, material);
+const cube = new THREE.Mesh(
+    geometry,
+    material
+);
+
+cube.visible = false;
 
 scene.add(cube);
 
-// Luces
-const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+
+// ==========================================
+// LUCES
+// ==========================================
+
+const ambientLight = new THREE.AmbientLight(
+    0xffffff,
+    1
+);
+
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+
+const directionalLight = new THREE.DirectionalLight(
+    0xffffff,
+    2
+);
+
 directionalLight.position.set(5, 5, 5);
+
 scene.add(directionalLight);
 
-// Animación
-function animate() {
 
-    requestAnimationFrame(animate);
+// ==========================================
+// CONTROLADOR XR
+// ==========================================
 
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+const controller = renderer.xr.getController(0);
 
-    renderer.render(scene, camera);
+controller.addEventListener(
+    'select',
+    onSelect
+);
 
-}
-renderer.setAnimationLoop(() => {
+scene.add(controller);
 
-    cube.rotation.y += 0.01;
 
-    renderer.render(scene, camera);
+// ==========================================
+// RETÍCULA
+// ==========================================
 
-});
-cube.position.set(0, 0, -2);
-// animate();
+const reticleGeometry = new THREE.RingGeometry(
+    0.08,
+    0.1,
+    32
+);
 
-// Resize
-window.addEventListener('resize', () => {
+reticleGeometry.rotateX(-Math.PI / 2);
 
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
 
-    renderer.setSize(
-        container.clientWidth,
-        container.clientHeight
+const reticleMaterial = new THREE.MeshBasicMaterial();
+
+const reticle = new THREE.Mesh(
+    reticleGeometry,
+    reticleMaterial
+);
+
+reticle.matrixAutoUpdate = false;
+
+reticle.visible = false;
+
+scene.add(reticle);
+
+
+// ==========================================
+// HIT TEST
+// ==========================================
+
+let hitTestSource = null;
+
+let hitTestSourceRequested = false;
+
+
+// ==========================================
+// COLOCAR CUBO
+// ==========================================
+
+function onSelect() {
+
+    if (!reticle.visible) {
+        return;
+    }
+
+    // Obtener posición detectada
+    cube.position.setFromMatrixPosition(
+        reticle.matrix
     );
 
-});
+    // Mostrar cubo
+    cube.visible = true;
+}
+
+
+// ==========================================
+// ANIMACIÓN XR
+// ==========================================
+
+renderer.setAnimationLoop(
+    (timestamp, frame) => {
+
+        if (frame) {
+
+            const referenceSpace =
+                renderer.xr.getReferenceSpace();
+
+            const session =
+                renderer.xr.getSession();
+
+
+            // ----------------------------------
+            // Solicitar HIT TEST
+            // ----------------------------------
+
+            if (!hitTestSourceRequested) {
+
+                session
+                    .requestReferenceSpace('viewer')
+                    .then((referenceSpace) => {
+
+                        session
+                            .requestHitTestSource({
+                                space: referenceSpace
+                            })
+                            .then((source) => {
+
+                                hitTestSource = source;
+
+                            });
+
+                    });
+
+
+                session.addEventListener(
+                    'end',
+                    () => {
+
+                        hitTestSourceRequested = false;
+
+                        hitTestSource = null;
+
+                        reticle.visible = false;
+
+                        cube.visible = false;
+
+                    }
+                );
+
+
+                hitTestSourceRequested = true;
+            }
+
+
+            // ----------------------------------
+            // RESULTADOS DEL HIT TEST
+            // ----------------------------------
+
+            if (hitTestSource) {
+
+                const hitTestResults =
+                    frame.getHitTestResults(
+                        hitTestSource
+                    );
+
+
+                if (hitTestResults.length) {
+
+                    const hit =
+                        hitTestResults[0];
+
+
+                    const pose =
+                        hit.getPose(
+                            referenceSpace
+                        );
+
+
+                    reticle.visible = true;
+
+
+                    reticle.matrix.fromArray(
+                        pose.transform.matrix
+                    );
+
+                } else {
+
+                    reticle.visible = false;
+
+                }
+
+            }
+
+        }
+
+
+        // ----------------------------------
+        // RENDER
+        // ----------------------------------
+
+        renderer.render(
+            scene,
+            camera
+        );
+
+    }
+);
+
+
+// ==========================================
+// RESIZE
+// ==========================================
+
+window.addEventListener(
+    'resize',
+    () => {
+
+        camera.aspect =
+            container.clientWidth /
+            container.clientHeight;
+
+        camera.updateProjectionMatrix();
+
+
+        renderer.setSize(
+            container.clientWidth,
+            container.clientHeight
+        );
+
+    }
+);
