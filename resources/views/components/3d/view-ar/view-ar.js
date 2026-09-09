@@ -48,7 +48,7 @@ async function initViewer() {
 
 
         // Renderer
-        world.renderer = new OBF.PostproductionRenderer(
+        world.renderer = new OBF.WebGLRenderer(
             components,
             container
         );
