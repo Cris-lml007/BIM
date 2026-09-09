@@ -246,33 +246,33 @@ async function loadIFC(url) {
     try {
 
         arAlert(
-            'Cargando IFC...\n\n' +
-            'Espera unos segundos.'
+            'Iniciando carga del modelo IFC...'
+        );
+
+        const fragUrl =
+            url + '?type=frag';
+
+
+        arAlert(
+            'Solicitando fragmento:\n\n' +
+            fragUrl
         );
 
 
-        // ----------------------------------------------------
-        // DESCARGAR ARCHIVO
-        // ----------------------------------------------------
-
         const response =
-            await fetch(url);
+            await fetch(fragUrl);
 
 
         if (!response.ok) {
 
             throw new Error(
-                'No se pudo descargar el IFC.\n\n' +
+                'No se pudo obtener el fragmento.\n\n' +
                 'HTTP: ' +
                 response.status
             );
 
         }
 
-
-        // ----------------------------------------------------
-        // ARRAY BUFFER
-        // ----------------------------------------------------
 
         const buffer =
             await response.arrayBuffer();
@@ -281,15 +281,20 @@ async function loadIFC(url) {
         if (!buffer || buffer.byteLength === 0) {
 
             throw new Error(
-                'El archivo IFC está vacío.'
+                'El fragmento recibido está vacío.'
             );
 
         }
 
 
-        // ----------------------------------------------------
-        // CARGAR FRAGMENT
-        // ----------------------------------------------------
+        arAlert(
+            'Fragmento recibido correctamente.\n\n' +
+            'Tamaño: ' +
+            (buffer.byteLength / 1024 / 1024).toFixed(2) +
+            ' MB\n\n' +
+            'Cargando en Fragments...'
+        );
+
 
         await fragments.core.load(
             buffer,
@@ -299,10 +304,6 @@ async function loadIFC(url) {
         );
 
 
-        // ----------------------------------------------------
-        // OBTENER MODELO
-        // ----------------------------------------------------
-
         model =
             fragments.list.get('main');
 
@@ -310,23 +311,23 @@ async function loadIFC(url) {
         if (!model) {
 
             throw new Error(
-                'El IFC se cargó pero no se encontró ' +
-                'el modelo "main" en fragments.list.'
+                'Fragments terminó la carga, ' +
+                'pero no existe el modelo "main".'
             );
 
         }
 
 
-        // ----------------------------------------------------
+        // ---------------------------------------------
         // ACTUALIZAR
-        // ----------------------------------------------------
+        // ---------------------------------------------
 
         fragments.core.update(true);
 
 
-        // ----------------------------------------------------
+        // ---------------------------------------------
         // CALCULAR TAMAÑO
-        // ----------------------------------------------------
+        // ---------------------------------------------
 
         const box =
             new THREE.Box3();
@@ -356,21 +357,16 @@ async function loadIFC(url) {
         ) {
 
             throw new Error(
-                'No se pudo obtener el tamaño del modelo.'
+                'El modelo existe pero su geometría ' +
+                'no tiene un tamaño válido.'
             );
 
         }
 
 
-        // ----------------------------------------------------
+        // ---------------------------------------------
         // ESCALA TEMPORAL
-        // ----------------------------------------------------
-
-        /*
-         * Por ahora queremos que el modelo
-         * tenga aproximadamente 1 metro
-         * en su dimensión más grande.
-         */
+        // ---------------------------------------------
 
         modelScale =
             1 / maxSize;
@@ -381,9 +377,14 @@ async function loadIFC(url) {
         );
 
 
-        // ----------------------------------------------------
-        // CENTRAR MODELO
-        // ----------------------------------------------------
+        // ---------------------------------------------
+        // CENTRAR
+        // ---------------------------------------------
+
+        model.object.updateMatrixWorld(
+            true
+        );
+
 
         const scaledBox =
             new THREE.Box3();
@@ -403,11 +404,6 @@ async function loadIFC(url) {
             scaledBox.min;
 
 
-        /*
-         * Centramos X/Z y apoyamos la parte
-         * inferior del modelo en Y = 0.
-         */
-
         model.object.position.x -=
             center.x;
 
@@ -417,10 +413,6 @@ async function loadIFC(url) {
         model.object.position.y -=
             min.y;
 
-
-        // ----------------------------------------------------
-        // ACTUALIZAR MATRICES
-        // ----------------------------------------------------
 
         model.object.updateMatrixWorld(
             true
@@ -432,32 +424,30 @@ async function loadIFC(url) {
         );
 
 
-        // ----------------------------------------------------
-        // INFORMACIÓN
-        // ----------------------------------------------------
-
         arAlert(
-            'IFC CARGADO CORRECTAMENTE.\n\n' +
+            '¡IFC CARGADO CORRECTAMENTE!\n\n' +
 
             'Modelos: ' +
             fragments.list.size +
 
-            '\n\nTamaño original:\n' +
+            '\n\n' +
+
+            'Tamaño original:\n' +
 
             'X: ' +
             size.x.toFixed(2) +
-            ' m\n' +
+            '\n' +
 
             'Y: ' +
             size.y.toFixed(2) +
-            ' m\n' +
+            '\n' +
 
             'Z: ' +
             size.z.toFixed(2) +
-            ' m\n\n' +
 
-            'Escala temporal:\n' +
+            '\n\n' +
 
+            'Escala temporal: ' +
             modelScale.toFixed(6)
         );
 
@@ -469,9 +459,10 @@ async function loadIFC(url) {
             error.message
         );
 
-        console.error(error);
-
-        throw error;
+        console.error(
+            '[BIM AR]',
+            error
+        );
 
     }
 
