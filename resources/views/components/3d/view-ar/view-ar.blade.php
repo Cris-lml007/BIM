@@ -2,53 +2,77 @@
 
 <div>
     <style>
-.viewport {
-    position: relative;
-    width: 100%;
-    height: 80vh;
+#ar-ui-container {
+    position: fixed;
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 9999;
 }
 
-.opacity-control {
+.ar-opacity {
     position: absolute;
-    z-index: 10;
 
-    left: 20px;
-    bottom: 20px;
+    left: 50%;
+    bottom: 40px;
 
-    width: 220px;
+    transform: translateX(-50%);
 
-    padding: 12px;
+    width: 300px;
 
-    background: rgba(0, 0, 0, 0.65);
-    border-radius: 8px;
+    padding: 15px 20px;
+
+    background: rgba(17, 17, 17, 0.85);
+
+    border-radius: 12px;
 
     color: white;
+
+    pointer-events: auto;
 }
 
-.opacity-control label {
+.ar-opacity label {
     display: block;
-    margin-bottom: 8px;
-    font-size: 14px;
+
+    margin-bottom: 10px;
+
+    text-align: center;
+
+    font-weight: bold;
 }
 
-.opacity-control input {
+#ar-opacity {
     width: 100%;
 }
 
     </style>
 
     <h1>asda</h1>
-    <div class="viewport" id="viewer" data-url="{{ route('app.Attachment', 1) }}" data-type="{{ $model->model->type }}">
+<div id="viewer"
+     class="viewport"
+     data-url="{{ route('app.Attachment', 1) }}"
+     data-type="{{ $model->model->type }}">
+</div>
 
-        <div class="opacity-control">
-            <label for="opacity">
-                Opacidad:
-                <span id="opacity-value">100%</span>
-            </label>
+<div id="ar-ui-container">
 
-            <input type="range" id="opacity" min="0" max="100" value="100" step="1">
-        </div>
+    <div class="ar-opacity">
+        <label>
+            Opacidad:
+            <span id="ar-opacity-value">100%</span>
+        </label>
 
+        <input
+            type="range"
+            id="ar-opacity"
+            min="0"
+            max="100"
+            value="100"
+            step="1"
+        >
     </div>
+
+</div>
 
 </div>
