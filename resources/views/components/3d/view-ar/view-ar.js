@@ -904,67 +904,93 @@ function updateOpacityKnob(value) {
 
 function setModelOpacity(opacity) {
 
-    opacityValue =
-        THREE.MathUtils.clamp(
-            opacity,
-            0,
-            1
-        );
-
-
-    updateOpacityKnob(
-        opacityValue
+    opacityValue = THREE.MathUtils.clamp(
+        opacity,
+        0,
+        1
     );
 
-
-    updateOpacityText(
-        opacityValue
-    );
-
+    updateOpacityKnob(opacityValue);
+    updateOpacityText(opacityValue);
 
     if (!arModel) {
         return;
     }
 
+    arModel.traverse((object) => {
 
-    arModel.traverse(
-        (object) => {
-
-            if (!object.isMesh) {
-                return;
-            }
-
-
-            if (!object.material) {
-                return;
-            }
-
-
-            const materials =
-                Array.isArray(
-                    object.material
-                )
-                    ? object.material
-                    : [object.material];
-
-
-            materials.forEach(
-                (material) => {
-
-                    material.transparent =
-                        opacityValue < 1;
-
-
-                    material.opacity =
-                        opacityValue;
-
-
-                    material.needsUpdate =
-                        true;
-                }
-            );
+        if (!object.isMesh || !object.material) {
+            return;
         }
-    );
+
+        const materials = Array.isArray(object.material)
+            ? object.material
+            : [object.material];
+
+        materials.forEach((material) => {
+
+            // Guardar estado original una sola vez
+            if (material.userData.originalOpacity === undefined) {
+                material.userData.originalOpacity =
+                    material.opacity;
+            }
+
+            if (material.userData.originalTransparent === undefined) {
+                material.userData.originalTransparent =
+                    material.transparent;
+            }
+
+            if (material.userData.originalDepthWrite === undefined) {
+                material.userData.originalDepthWrite =
+                    material.depthWrite;
+            }
+
+            const originalOpacity =
+                material.userData.originalOpacity;
+
+            const originalTransparent =
+                material.userData.originalTransparent;
+
+            const originalDepthWrite =
+                material.userData.originalDepthWrite;
+
+
+            // =========================
+            // 100%
+            // =========================
+
+            if (opacityValue >= 1) {
+
+                material.opacity =
+                    originalOpacity;
+
+                material.transparent =
+                    originalTransparent;
+
+                material.depthWrite =
+                    originalDepthWrite;
+
+            }
+
+            // =========================
+            // MENOS DE 100%
+            // =========================
+
+            else {
+
+                material.opacity =
+                    originalOpacity * opacityValue;
+
+                material.transparent =
+                    true;
+
+                material.depthWrite =
+                    false;
+            }
+
+            material.needsUpdate = true;
+        });
+    });
 }
 
 
