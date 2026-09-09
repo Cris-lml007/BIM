@@ -51,5 +51,4 @@
 
     </div>
 
-    @vite('resources/js/ar.js')
 </div>
