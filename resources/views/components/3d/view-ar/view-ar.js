@@ -1,90 +1,91 @@
-async function aaa(){
 
-    const canvas = document.createElement("canvas");
-    document.body.appendChild(canvas);
-    const gl = canvas.getContext("webgl", {xrCompatible: true});
+// Contenedor
+const container = document.getElementById('ar');
 
+// Escena
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf0f0f0);
 
-    const scene = new THREE.Scene();
+// Cámara
+const camera = new THREE.PerspectiveCamera(
+    75,
+    container.clientWidth / container.clientHeight,
+    0.1,
+    1000
+);
 
-    // The cube will have a different color on each side.
-    const materials = [
-        new THREE.MeshBasicMaterial({color: 0xff0000}),
-        new THREE.MeshBasicMaterial({color: 0x0000ff}),
-        new THREE.MeshBasicMaterial({color: 0x00ff00}),
-        new THREE.MeshBasicMaterial({color: 0xff00ff}),
-        new THREE.MeshBasicMaterial({color: 0x00ffff}),
-        new THREE.MeshBasicMaterial({color: 0xffff00})
-    ];
+camera.position.z = 3;
 
-    // Create the cube and add it to the demo scene.
+// Renderer
+const renderer = new THREE.WebGLRenderer({
+    antialias: true
+});
+renderer.xr.enabled = true;
 
-    // Set up the WebGLRenderer, which handles rendering to the session's base layer.
-    const renderer = new THREE.WebGLRenderer({
-        alpha: true,
-        preserveDrawingBuffer: true,
-        canvas: canvas,
-        context: gl
-    });
-    renderer.autoClear = false;
+renderer.setSize(
+    container.clientWidth,
+    container.clientHeight
+);
 
-    // The API directly updates the camera matrices.
-    // Disable matrix auto updates so three.js doesn't attempt
-    // to handle the matrices independently.
-    const camera = new THREE.PerspectiveCamera();
-    camera.matrixAutoUpdate = false;
+renderer.setPixelRatio(window.devicePixelRatio);
 
-    // Initialize a WebXR session using "immersive-ar".
-    const session = await navigator.xr.requestSession("immersive-ar");
-    session.updateRenderState({
-        baseLayer: new XRWebGLLayer(session, gl)
-    });
+container.appendChild(renderer.domElement);
 
-    // A 'local' reference space has a native origin that is located
-    // near the viewer's position at the time the session was created.
-    const referenceSpace = await session.requestReferenceSpace('local');
-
-    // Create a render loop that allows us to draw on the AR view.
-    const onXRFrame = (time, frame) => {
-        // Queue up the next draw request.
-        session.requestAnimationFrame(onXRFrame);
-
-        // Bind the graphics framebuffer to the baseLayer's framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer.framebuffer)
-
-        // Retrieve the pose of the device.
-        // XRFrame.getViewerPose can return null while the session attempts to establish tracking.
-        const pose = frame.getViewerPose(referenceSpace);
-        if (pose) {
-            // In mobile AR, we only have one view.
-            const view = pose.views[0];
-
-            const viewport = session.renderState.baseLayer.getViewport(view);
-            renderer.setSize(viewport.width, viewport.height)
-
-            // Use the view's transform matrix and projection matrix to configure the THREE.camera.
-            camera.matrix.fromArray(view.transform.matrix)
-            camera.projectionMatrix.fromArray(view.projectionMatrix);
-            camera.updateMatrixWorld(true);
-
-            // Render the scene with THREE.WebGLRenderer.
-            renderer.render(scene, camera)
-        }
-    }
-    session.requestAnimationFrame(onXRFrame);
-    console.log("asasa");
-    alert("o");
-}
-
-
-navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => {
-        document.getElementById('camara').srcObject = stream;
+document.body.appendChild(
+    ARButton.createButton(renderer, {
+        requiredFeatures: ['hit-test']
     })
-    .catch(error => {
-        console.error("No se pudo acceder a la cámara", error);
-    });
+);
 
-///
-//
-aaa();
+// Cubo
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+
+const material = new THREE.MeshStandardMaterial({
+    color: 0x2196f3
+});
+
+const cube = new THREE.Mesh(geometry, material);
+
+scene.add(cube);
+
+// Luces
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+directionalLight.position.set(5, 5, 5);
+scene.add(directionalLight);
+
+// Animación
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.01;
+
+    renderer.render(scene, camera);
+
+}
+renderer.setAnimationLoop(() => {
+
+    cube.rotation.y += 0.01;
+
+    renderer.render(scene, camera);
+
+});
+cube.position.set(0, 0, -2);
+// animate();
+
+// Resize
+window.addEventListener('resize', () => {
+
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+        container.clientWidth,
+        container.clientHeight
+    );
+
+});
