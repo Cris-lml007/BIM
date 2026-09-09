@@ -215,7 +215,7 @@ async function initViewer(container) {
 
     arController.addEventListener(
         'select',
-        onARSelect
+        onSelect
     );
 
 
