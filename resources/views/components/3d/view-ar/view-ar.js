@@ -246,55 +246,48 @@ async function loadIFC(url) {
     try {
 
         arAlert(
-            'Iniciando carga del modelo IFC...'
+            'Cargando fragmento IFC...'
         );
 
         const fragUrl =
             url + '?type=frag';
 
-
-        arAlert(
-            'Solicitando fragmento:\n\n' +
-            fragUrl
-        );
-
-
         const response =
             await fetch(fragUrl);
-
 
         if (!response.ok) {
 
             throw new Error(
-                'No se pudo obtener el fragmento.\n\n' +
+                'Error descargando el fragmento.\n\n' +
                 'HTTP: ' +
                 response.status
             );
 
         }
 
-
         const buffer =
             await response.arrayBuffer();
-
 
         if (!buffer || buffer.byteLength === 0) {
 
             throw new Error(
-                'El fragmento recibido está vacío.'
+                'El fragmento está vacío.'
             );
 
         }
 
-
         arAlert(
-            'Fragmento recibido correctamente.\n\n' +
+            'Fragmento recibido.\n\n' +
             'Tamaño: ' +
             (buffer.byteLength / 1024 / 1024).toFixed(2) +
             ' MB\n\n' +
-            'Cargando en Fragments...'
+            'Cargando con Fragments...'
         );
 
+
+        // ----------------------------------------------------
+        // CARGAR FRAGMENT
+        // ----------------------------------------------------
 
         await fragments.core.load(
             buffer,
@@ -304,6 +297,10 @@ async function loadIFC(url) {
         );
 
 
+        // ----------------------------------------------------
+        // OBTENER MODELO
+        // ----------------------------------------------------
+
         model =
             fragments.list.get('main');
 
@@ -312,112 +309,39 @@ async function loadIFC(url) {
 
             throw new Error(
                 'Fragments terminó la carga, ' +
-                'pero no existe el modelo "main".'
+                'pero no se encontró el modelo main.'
             );
 
         }
 
 
-        // ---------------------------------------------
-        // ACTUALIZAR
-        // ---------------------------------------------
-
-        fragments.core.update(true);
-
-
-        // ---------------------------------------------
-        // CALCULAR TAMAÑO
-        // ---------------------------------------------
-
-        const box =
-            new THREE.Box3();
-
-        box.setFromObject(
-            model.object
-        );
-
-
-        const size =
-            box.getSize(
-                new THREE.Vector3()
-            );
-
-
-        const maxSize =
-            Math.max(
-                size.x,
-                size.y,
-                size.z
-            );
-
+        // ----------------------------------------------------
+        // ASEGURAR QUE ESTÁ EN LA ESCENA
+        // ----------------------------------------------------
 
         if (
-            !Number.isFinite(maxSize) ||
-            maxSize <= 0
+            !model.object.parent
         ) {
 
-            throw new Error(
-                'El modelo existe pero su geometría ' +
-                'no tiene un tamaño válido.'
+            world.scene.three.add(
+                model.object
             );
 
         }
 
 
-        // ---------------------------------------------
-        // ESCALA TEMPORAL
-        // ---------------------------------------------
+        // ----------------------------------------------------
+        // CÁMARA NORMAL
+        // ----------------------------------------------------
 
-        modelScale =
-            1 / maxSize;
-
-
-        model.object.scale.setScalar(
-            modelScale
+        model.useCamera(
+            world.camera.three
         );
 
 
-        // ---------------------------------------------
-        // CENTRAR
-        // ---------------------------------------------
-
-        model.object.updateMatrixWorld(
-            true
-        );
-
-
-        const scaledBox =
-            new THREE.Box3();
-
-        scaledBox.setFromObject(
-            model.object
-        );
-
-
-        const center =
-            scaledBox.getCenter(
-                new THREE.Vector3()
-            );
-
-
-        const min =
-            scaledBox.min;
-
-
-        model.object.position.x -=
-            center.x;
-
-        model.object.position.z -=
-            center.z;
-
-        model.object.position.y -=
-            min.y;
-
-
-        model.object.updateMatrixWorld(
-            true
-        );
-
+        // ----------------------------------------------------
+        // ACTUALIZAR
+        // ----------------------------------------------------
 
         fragments.core.update(
             true
@@ -425,30 +349,10 @@ async function loadIFC(url) {
 
 
         arAlert(
-            '¡IFC CARGADO CORRECTAMENTE!\n\n' +
-
-            'Modelos: ' +
-            fragments.list.size +
-
-            '\n\n' +
-
-            'Tamaño original:\n' +
-
-            'X: ' +
-            size.x.toFixed(2) +
-            '\n' +
-
-            'Y: ' +
-            size.y.toFixed(2) +
-            '\n' +
-
-            'Z: ' +
-            size.z.toFixed(2) +
-
-            '\n\n' +
-
-            'Escala temporal: ' +
-            modelScale.toFixed(6)
+            '¡IFC CARGADO!\n\n' +
+            'Modelo encontrado: SI\n\n' +
+            'Ahora entra a AR.\n\n' +
+            'Busca una superficie y toca la pantalla.'
         );
 
 
