@@ -558,8 +558,10 @@ function onARSelect() {
 
     arModel.position.copy(position);
 
-    arModel.visible = true;
+    // Tamaño inicial del modelo en AR
+    arModel.scale.set(0.1, 0.1, 0.1);
 
+    arModel.visible = true;
 }
 
 
