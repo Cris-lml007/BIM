@@ -48,7 +48,7 @@
 
     </style>
 
-    <h1>asda</h1>
+    <h1>AR</h1>
 <div id="viewer"
      class="viewport"
      data-url="{{ route('app.Attachment', 1) }}"
