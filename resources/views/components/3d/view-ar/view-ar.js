@@ -244,6 +244,18 @@ async function initViewer() {
             arButton
         );
 
+renderer.xr.addEventListener('sessionstart', () => {
+    if (arModel) {
+        arModel.visible = false;
+    }
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+    if (arModel) {
+        arModel.visible = true;
+    }
+});
+
 
         // ==================================================
         // RETICLE
@@ -531,98 +543,22 @@ async function updateAR(frame) {
 
 function onARSelect() {
 
-    // --------------------------------------------------
-    // RETÍCULA
-    // --------------------------------------------------
-
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
-
-        arAlert(
-            'No se encontró una superficie.\n\n' +
-            'Mueve lentamente el teléfono ' +
-            'hasta que aparezca la retícula.'
-        );
-
+    if (!arReticle || !arReticle.visible) {
         return;
-
     }
-
-
-    // --------------------------------------------------
-    // MODELO
-    // --------------------------------------------------
 
     if (!arModel) {
-
-        arAlert(
-            'El modelo IFC todavía no está cargado.'
-        );
-
+        alert('El modelo IFC todavía no está cargado.');
         return;
-
     }
 
+    const position = new THREE.Vector3();
 
-    // --------------------------------------------------
-    // POSICIÓN
-    // --------------------------------------------------
+    position.setFromMatrixPosition(arReticle.matrix);
 
-    const position =
-        new THREE.Vector3();
+    arModel.position.copy(position);
 
-
-    position.setFromMatrixPosition(
-        arReticle.matrix
-    );
-
-
-    arModel.position.copy(
-        position
-    );
-
-
-    // --------------------------------------------------
-    // ROTACIÓN
-    // --------------------------------------------------
-
-    const quaternion =
-        new THREE.Quaternion();
-
-
-    quaternion.setFromRotationMatrix(
-        arReticle.matrix
-    );
-
-
-    arModel.quaternion.copy(
-        quaternion
-    );
-
-
-    // --------------------------------------------------
-    // VISIBILIDAD
-    // --------------------------------------------------
-
-    arModel.visible =
-        true;
-
-
-    arModel.updateMatrixWorld(
-        true
-    );
-
-
-    fragments.core.update(
-        true
-    );
-
-
-    arAlert(
-        'MODELO IFC COLOCADO.'
-    );
+    arModel.visible = true;
 
 }
 
