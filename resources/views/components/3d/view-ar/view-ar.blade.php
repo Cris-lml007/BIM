@@ -8,7 +8,7 @@
 
     pointer-events: none;
 
-    z-index: 9999;
+    z-index: 1;
 }
 
 .ar-opacity {

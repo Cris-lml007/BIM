@@ -221,9 +221,9 @@ async function initViewer() {
             // -------------------------------------------------
 
             arModel.scale.set(
-                0.1,
-                0.1,
-                0.1
+                1,
+                1,
+                1
             );
 
 
@@ -946,9 +946,9 @@ async function onARSelect() {
 
 
             arModel.scale.set(
-                0.1,
-                0.1,
-                0.1
+                1,
+                1,
+                1
             );
 
 
