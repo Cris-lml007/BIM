@@ -96,20 +96,20 @@ async function initViewer(container) {
         }
     });
 
-components.get(OBC.Raycasters).get(world);
+    components.get(OBC.Raycasters).get(world);
 
-highlighter = components.get(OBF.Highlighter);
+    highlighter = components.get(OBF.Highlighter);
 
-highlighter.setup({
-    world,
+    highlighter.setup({
+        world,
 
-    selectMaterialDefinition: {
-        color: new THREE.Color("#f59e0b"),
-        opacity: 1,
-        transparent: false,
-        renderedFaces: 0,
-    },
-});
+        selectMaterialDefinition: {
+            color: new THREE.Color("#f59e0b"),
+            opacity: 1,
+            transparent: false,
+            renderedFaces: 0,
+        },
+    });
 
     const stats = new Stats();
     stats.showPanel(2);
@@ -216,41 +216,41 @@ async function ifcLoader(url,id){
     await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
     buildLevelsUIFromClassifier();
 
-const raycasted = async (data) => {
+    const raycasted = async (data) => {
 
-    const results = [];
+        const results = [];
 
-    for (const [, model] of fragments.list) {
+        for (const [, model] of fragments.list) {
 
-        const result =
-            await model.raycast(data);
+            const result =
+                await model.raycast(data);
 
-        if (result) {
+            if (result) {
 
-            result.fragmentsModel = model;
+                result.fragmentsModel = model;
 
-            results.push(result);
+                results.push(result);
+            }
         }
-    }
 
-    if (results.length === 0) {
-        return null;
-    }
-
-    let closestResult = results[0];
-
-    for (let i = 1; i < results.length; i++) {
-
-        if (
-            results[i].distance <
-            closestResult.distance
-        ) {
-            closestResult = results[i];
+        if (results.length === 0) {
+            return null;
         }
-    }
 
-    return closestResult;
-};
+        let closestResult = results[0];
+
+        for (let i = 1; i < results.length; i++) {
+
+            if (
+                results[i].distance <
+                    closestResult.distance
+            ) {
+                closestResult = results[i];
+            }
+        }
+
+        return closestResult;
+    };
 
     const mouse = new THREE.Vector2();
 
@@ -295,93 +295,93 @@ const raycasted = async (data) => {
         const look = point.clone().add(normal);
         line.lookAt(look);
     };
-container.addEventListener("click", async (event) => {
+    container.addEventListener("click", async (event) => {
 
-    if (
-        activeTool !== 'anchor' &&
-        activeTool !== 'issue'
-    ) {
-        return;
-    }
-
-    mouse.x = event.clientX;
-    mouse.y = event.clientY;
-
-    const result = await raycasted({
-        camera: world.camera.three,
-        mouse,
-        dom: world.renderer.three.domElement,
-    });
-
-    if (!result) {
-        return;
-    }
-
-    onRaycastClickResult(result);
-});
-
-container.addEventListener("dblclick", async (event) => {
-
-    // =====================================
-    // HERRAMIENTAS
-    // =====================================
-
-    if (activeTool === 'clipper') {
-
-        if (clipper.enabled) {
-            //await clipper.create(world);
+        if (
+            activeTool !== 'anchor' &&
+                activeTool !== 'issue'
+        ) {
+            return;
         }
 
-        return;
-    }
+        mouse.x = event.clientX;
+        mouse.y = event.clientY;
 
-    if (activeTool === 'ruler') {
+        const result = await raycasted({
+            camera: world.camera.three,
+            mouse,
+            dom: world.renderer.three.domElement,
+        });
 
-        if (measurer.enabled) {
-            await measurer.create();
+        if (!result) {
+            return;
         }
 
-        return;
-    }
-
-
-    // =====================================
-    // ANCLA / INCIDENCIA
-    // =====================================
-
-    if (
-        activeTool === 'anchor' ||
-        activeTool === 'issue'
-    ) {
-        return;
-    }
-
-
-    // =====================================
-    // BIM
-    // =====================================
-
-    // Si no hay ninguna herramienta activa,
-    // el doble click selecciona BIM.
-
-    mouse.x = event.clientX;
-    mouse.y = event.clientY;
-
-    const result = await raycasted({
-        camera: world.camera.three,
-        mouse,
-        dom: world.renderer.three.domElement,
+        onRaycastClickResult(result);
     });
 
-    if (!result) {
-        return;
-    }
+    container.addEventListener("dblclick", async (event) => {
 
-    await selectBimElement(
-        result.fragmentsModel,
-        result.localId
-    );
-});
+        // =====================================
+        // HERRAMIENTAS
+        // =====================================
+
+        if (activeTool === 'clipper') {
+
+            if (clipper.enabled) {
+                //await clipper.create(world);
+            }
+
+            return;
+        }
+
+        if (activeTool === 'ruler') {
+
+            if (measurer.enabled) {
+                await measurer.create();
+            }
+
+            return;
+        }
+
+
+        // =====================================
+        // ANCLA / INCIDENCIA
+        // =====================================
+
+        if (
+            activeTool === 'anchor' ||
+                activeTool === 'issue'
+        ) {
+            return;
+        }
+
+
+        // =====================================
+        // BIM
+        // =====================================
+
+        // Si no hay ninguna herramienta activa,
+        // el doble click selecciona BIM.
+
+        mouse.x = event.clientX;
+        mouse.y = event.clientY;
+
+        const result = await raycasted({
+            camera: world.camera.three,
+            mouse,
+            dom: world.renderer.three.domElement,
+        });
+
+        if (!result) {
+            return;
+        }
+
+        await selectBimElement(
+            result.fragmentsModel,
+            result.localId
+        );
+    });
 
 
     box_world = new THREE.Box3();
@@ -394,16 +394,16 @@ container.addEventListener("dblclick", async (event) => {
     max = box_world.max;
     center = box_world.getCenter(new THREE.Vector3());
 
-clipperInitialValues = {
-    xMin: min.x,
-    xMax: max.x,
+    clipperInitialValues = {
+        xMin: min.x,
+        xMax: max.x,
 
-    yMin: min.y,
-    yMax: max.y,
+        yMin: min.y,
+        yMax: max.y,
 
-    zMin: min.z,
-    zMax: max.z,
-};
+        zMin: min.z,
+        zMax: max.z,
+    };
 
     createSectionPlanes();
     let v = $wire.anchors;
@@ -451,13 +451,13 @@ clipperInitialValues = {
 function buildElementInfoUI({ info, propertySets }) {
 
     const panel =
-        document.getElementById('element-info-panel');
+    document.getElementById('element-info-panel');
 
     const title =
-        document.getElementById('element-info-title');
+    document.getElementById('element-info-title');
 
     const content =
-        document.getElementById('element-info-content');
+    document.getElementById('element-info-content');
 
     title.textContent =
         info.name || 'Elemento BIM';
@@ -485,25 +485,25 @@ function buildElementInfoUI({ info, propertySets }) {
 
         if (
             value === null ||
-            value === undefined ||
-            value === ''
+                value === undefined ||
+                value === ''
         ) {
             continue;
         }
 
         basic.innerHTML += `
-            <div class="element-info-row">
+<div class="element-info-row">
 
-                <div class="element-info-label">
-                    ${escapeHtml(label)}
-                </div>
+<div class="element-info-label">
+${escapeHtml(label)}
+</div>
 
-                <div class="element-info-value">
-                    ${escapeHtml(String(value))}
-                </div>
+<div class="element-info-value">
+${escapeHtml(String(value))}
+</div>
 
-            </div>
-        `;
+</div>
+`;
     }
 
     content.appendChild(basic);
@@ -516,27 +516,27 @@ function buildElementInfoUI({ info, propertySets }) {
     for (const [setName, properties] of propertySets) {
 
         const section =
-            document.createElement('div');
+        document.createElement('div');
 
         section.className =
             'element-info-section';
 
         const header =
-            document.createElement('div');
+        document.createElement('div');
 
         header.className =
             'element-info-section-header';
 
         header.innerHTML = `
-            <span>
-                ${escapeHtml(setName)}
-            </span>
+<span>
+    ${escapeHtml(setName)}
+</span>
 
-            <i class="bi bi-chevron-down"></i>
-        `;
+<i class="bi bi-chevron-down"></i>
+`;
 
         const body =
-            document.createElement('div');
+        document.createElement('div');
 
         body.className =
             'element-info-section-body';
@@ -544,31 +544,31 @@ function buildElementInfoUI({ info, propertySets }) {
         for (const property of properties) {
 
             body.innerHTML += `
-                <div class="element-info-row">
+<div class="element-info-row">
 
-                    <div class="element-info-label">
-                        ${escapeHtml(property.name)}
-                    </div>
+<div class="element-info-label">
+${escapeHtml(property.name)}
+</div>
 
-                    <div class="element-info-value">
-                        ${escapeHtml(
-                            property.value !== null
-                                ? String(property.value)
-                                : '-'
-                        )}
-                    </div>
+<div class="element-info-value">
+${escapeHtml(
+property.value !== null
+? String(property.value)
+: '-'
+)}
+</div>
 
-                </div>
-            `;
+</div>
+`;
         }
 
         header.addEventListener('click', () => {
 
             const hidden =
-                body.classList.toggle('d-none');
+            body.classList.toggle('d-none');
 
             const icon =
-                header.querySelector('i');
+            header.querySelector('i');
 
             icon.className = hidden
                 ? 'bi bi-chevron-right'
@@ -587,7 +587,7 @@ function buildElementInfoUI({ info, propertySets }) {
 function escapeHtml(value) {
 
     const div =
-        document.createElement('div');
+    document.createElement('div');
 
     div.textContent = value;
 
@@ -629,26 +629,26 @@ async function selectBimElement(model, localId) {
 
     const info = {
         localId:
-            data._localId?.value,
+        data._localId?.value,
 
         guid:
-            data._guid?.value,
+        data._guid?.value,
 
         category:
-            data._category?.value,
+        data._category?.value,
 
         name:
-            data.Name?.value,
+        data.Name?.value,
 
         objectType:
-            data.ObjectType?.value,
+        data.ObjectType?.value,
 
         tag:
-            data.Tag?.value,
+        data.Tag?.value,
     };
 
     const propertySets =
-        extractPropertySets(data);
+    extractPropertySets(data);
 
     buildElementInfoUI({
         info,
@@ -665,7 +665,7 @@ function extractPropertySets(data) {
 
         if (
             !node ||
-            typeof node !== 'object'
+                typeof node !== 'object'
         ) {
             return;
         }
@@ -704,10 +704,10 @@ function extractPropertySets(data) {
                     .push({
                         name,
                         value:
-                            property.NominalValue?.value ??
+                        property.NominalValue?.value ??
                             null,
                         type:
-                            property.NominalValue?.type ??
+                        property.NominalValue?.type ??
                             null
                     });
             }
@@ -725,7 +725,7 @@ function extractPropertySets(data) {
 
             } else if (
                 value &&
-                typeof value === 'object'
+                    typeof value === 'object'
             ) {
 
                 traverse(value);
@@ -771,7 +771,7 @@ async function buildModelProperties(model) {
     const items = await model.getItems();
 
     const ids =
-        Array.from(items.keys());
+    Array.from(items.keys());
 
     const data =
         await model.getItemsData(
@@ -805,22 +805,22 @@ async function buildModelProperties(model) {
         }
 
         const propertySets =
-            extractPropertySets(item);
+        extractPropertySets(item);
 
         for (
-            const [, propertyList]
-            of propertySets
-        ) {
+        const [, propertyList]
+        of propertySets
+    ) {
 
             for (
-                const property
-                of propertyList
-            ) {
+            const property
+            of propertyList
+        ) {
 
                 if (
                     property.value === null ||
-                    property.value === undefined ||
-                    property.value === ''
+                        property.value === undefined ||
+                        property.value === ''
                 ) {
                     continue;
                 }
@@ -829,7 +829,7 @@ async function buildModelProperties(model) {
                     property.name;
 
                 const value =
-                    String(property.value);
+                String(property.value);
 
                 if (!properties.has(key)) {
 
@@ -840,7 +840,7 @@ async function buildModelProperties(model) {
                 }
 
                 const values =
-                    properties.get(key);
+                properties.get(key);
 
                 if (!values.has(value)) {
 
@@ -902,7 +902,7 @@ async function buildModelCategories(model) {
 
         if (
             id === undefined ||
-            !category
+                !category
         ) {
             continue;
         }
@@ -1168,11 +1168,11 @@ async function createMarker(item) {
     // =========================
 
     const normal =
-        new THREE.Vector3(
-            item.normalX ?? 0,
-            item.normalY ?? 1,
-            item.normalZ ?? 0
-        ).normalize();
+    new THREE.Vector3(
+        item.normalX ?? 0,
+        item.normalY ?? 1,
+        item.normalZ ?? 0
+    ).normalize();
 
     const up =
         new THREE.Vector3(0, 1, 0);
@@ -1202,14 +1202,14 @@ async function createMarker(item) {
     // =========================
 
     const element = BUI.Component.create(() => BUI.html`
-        <div
-            style="
-                width: 40px;
-                height: 40px;
-                pointer-events: auto;
-            ">
-        </div>
-    `);
+<div
+style="
+width: 40px;
+height: 40px;
+pointer-events: auto;
+">
+</div>
+`);
 
 
     const markerInstance = marker.create(
@@ -1279,25 +1279,25 @@ Estado: ${item.status}
 function addToTable(item) {
 
     const tbody =
-        document.getElementById('anchors-table');
+    document.getElementById('anchors-table');
 
     const tr =
-        document.createElement('tr');
+    document.createElement('tr');
 
     tr.innerHTML = `
-        <td>${item.name}</td>
-        <td>${item.type}</td>
-        <td>${item.status}</td>
-        <td class="d-flex gap-1">
-            <button class="btn btn-primary btn-sm btn-view">
-                <i class="nf nf-fa-eye"></i>
-            </button>
+<td>${item.name}</td>
+<td>${item.type}</td>
+<td>${item.status}</td>
+<td class="d-flex gap-1">
+    <button class="btn btn-primary btn-sm btn-view">
+        <i class="nf nf-fa-eye"></i>
+    </button>
 
-            <button class="btn btn-danger btn-sm btn-delete">
-                <i class="nf nf-fa-trash"></i>
-            </button>
-        </td>
-    `;
+    <button class="btn btn-danger btn-sm btn-delete">
+        <i class="nf nf-fa-trash"></i>
+    </button>
+</td>
+`;
 
     // Click en la fila
     tr.addEventListener('click', (e) => {
@@ -1739,54 +1739,54 @@ async function processModel() {
 function buildUI({ categories }) {
 
     const container =
-        document.getElementById('layers-container');
+    document.getElementById('layers-container');
 
     container.innerHTML = '';
 
     for (const [groupName] of categories) {
 
         const group =
-            document.createElement('div');
+        document.createElement('div');
 
         group.className =
             'tree-group card mb-2 shadow-sm';
 
         const header =
-            document.createElement('div');
+        document.createElement('div');
 
         header.className =
             'tree-header d-flex align-items-center justify-content-between p-2';
 
         header.innerHTML = `
-            <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+<div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
 
-                <input
-                    type="checkbox"
-                    checked
-                    class="form-check-input visibility-toggle m-0"
-                >
+    <input
+        type="checkbox"
+        checked
+        class="form-check-input visibility-toggle m-0"
+    >
 
-                <input
-                    type="radio"
-                    name="isolate-group"
-                    class="form-check-input isolate-toggle m-0"
-                >
+    <input
+        type="radio"
+        name="isolate-group"
+        class="form-check-input isolate-toggle m-0"
+    >
 
-                <span
-                    class="fw-semibold text-truncate flex-grow-1"
-                    title="${groupName}"
-                >
-                    ${groupName}
-                </span>
+    <span
+        class="fw-semibold text-truncate flex-grow-1"
+        title="${groupName}"
+    >
+        ${groupName}
+    </span>
 
-            </div>
-        `;
+</div>
+`;
 
         const visibility =
-            header.querySelector('.visibility-toggle');
+        header.querySelector('.visibility-toggle');
 
         const isolate =
-            header.querySelector('.isolate-toggle');
+        header.querySelector('.isolate-toggle');
 
         visibility.addEventListener(
             'change',
@@ -1842,39 +1842,39 @@ function buildUI({ categories }) {
 function buildPropertyUI() {
 
     const selectKey =
-        document.getElementById(
-            'property-key'
-        );
+    document.getElementById(
+        'property-key'
+    );
 
     const selectValue =
-        document.getElementById(
-            'property-value'
-        );
+    document.getElementById(
+        'property-value'
+    );
 
     if (!selectKey || !selectValue) {
         return;
     }
 
     selectKey.innerHTML = `
-        <option value="">
-            Seleccionar propiedad
-        </option>
-    `;
+<option value="">
+    Seleccionar propiedad
+</option>
+`;
 
     selectValue.innerHTML = `
-        <option value="">
-            Seleccionar valor
-        </option>
-    `;
+<option value="">
+    Seleccionar valor
+</option>
+`;
 
     selectValue.disabled = true;
 
     const allKeys = new Set();
 
     for (
-        const modelId
-        of Object.keys(modelProperties)
-    ) {
+    const modelId
+    of Object.keys(modelProperties)
+) {
 
         const properties =
             modelProperties[modelId];
@@ -1889,15 +1889,15 @@ function buildPropertyUI() {
     }
 
     const sortedKeys =
-        Array.from(allKeys)
-            .sort((a, b) =>
-                a.localeCompare(b)
-            );
+    Array.from(allKeys)
+    .sort((a, b) =>
+        a.localeCompare(b)
+    );
 
     for (const key of sortedKeys) {
 
         const option =
-            document.createElement('option');
+        document.createElement('option');
 
         option.value = key;
         option.textContent = key;
@@ -1927,9 +1927,9 @@ async function toggleCategory(category, visible, type) {
          * Todas las categorías se ocultan.
          */
         for (
-            const [, model]
-            of fragments.list
-        ) {
+        const [, model]
+        of fragments.list
+    ) {
 
             const categories =
                 modelCategories[model.modelId];
@@ -2047,10 +2047,10 @@ document
             .getElementById(
                 'property-value'
             ).innerHTML = `
-                <option value="">
-                    Seleccionar valor
-                </option>
-            `;
+<option value="">
+    Seleccionar valor
+</option>
+`;
 
         document
             .getElementById(
@@ -2162,7 +2162,7 @@ function setClipperControlsEnabled(enabled) {
     for (const id of ids) {
 
         const input =
-            document.getElementById(id);
+        document.getElementById(id);
 
         if (!input) {
             continue;
@@ -2172,7 +2172,7 @@ function setClipperControlsEnabled(enabled) {
     }
 
     const reset =
-        document.getElementById('btn-reset-clipper');
+    document.getElementById('btn-reset-clipper');
 
     if (reset) {
         reset.disabled = !enabled;
@@ -2187,7 +2187,7 @@ function updateUI() {
 }
 
 let btnClipper =
-    document.getElementById('btn-clipper');
+document.getElementById('btn-clipper');
 
 btnClipper.addEventListener('click', () => {
 
@@ -2214,7 +2214,7 @@ btnClipper.addEventListener('click', () => {
 });
 
 const btnResetClipper =
-    document.getElementById('btn-reset-clipper');
+document.getElementById('btn-reset-clipper');
 
 btnResetClipper.addEventListener('click', () => {
     resetSectionPlanes();
@@ -2223,7 +2223,7 @@ btnResetClipper.addEventListener('click', () => {
 async function resetSectionPlanes() {
 
     const size =
-        box_world.getSize(new THREE.Vector3()).length();
+    box_world.getSize(new THREE.Vector3()).length();
 
     const offset = size * 0.5;
 
@@ -2293,10 +2293,10 @@ async function resetSectionPlanes() {
     axes.forEach(axis => {
 
         const minInput =
-            document.getElementById(`${axis}Min`);
+        document.getElementById(`${axis}Min`);
 
         const maxInput =
-            document.getElementById(`${axis}Max`);
+        document.getElementById(`${axis}Max`);
 
         minInput.value =
             box_world.min[axis];
@@ -2328,7 +2328,7 @@ function resetClipperSliders() {
     for (const [id, value] of Object.entries(values)) {
 
         const input =
-            document.getElementById(id);
+        document.getElementById(id);
 
         if (!input) {
             continue;
@@ -2533,7 +2533,7 @@ async function applyPropertyFilter() {
             'property-filter-info'
         )
         .textContent =
-            `${key}: ${value}`;
+        `${key}: ${value}`;
 }
 
 function getFilteredModelIds(model) {
@@ -2575,7 +2575,7 @@ function getFilteredModelIds(model) {
      */
     if (
         Object.keys(activeLevels).length &&
-        activeLevels[model.modelId]
+            activeLevels[model.modelId]
     ) {
 
         const levelIds =
@@ -2592,16 +2592,16 @@ function getFilteredModelIds(model) {
     /*
      * PROPIEDAD
      */
-if (activePropertyFilters.length) {
+    if (activePropertyFilters.length) {
 
-    const properties =
-        modelProperties[model.modelId];
+        const properties =
+            modelProperties[model.modelId];
 
-    if (!properties) {
-        return new Set();
-    }
+        if (!properties) {
+            return new Set();
+        }
 
-    /*
+        /*
      * Agrupar filtros por clave.
      *
      * Ejemplo:
@@ -2613,94 +2613,94 @@ if (activePropertyFilters.length) {
      * Fase:
      *   - New Construction
      */
-    const filtersByKey = new Map();
+        const filtersByKey = new Map();
 
-    for (
+        for (
         const filter
         of activePropertyFilters
     ) {
 
-        if (!filtersByKey.has(filter.key)) {
+            if (!filtersByKey.has(filter.key)) {
 
-            filtersByKey.set(
-                filter.key,
-                []
-            );
+                filtersByKey.set(
+                    filter.key,
+                    []
+                );
+            }
+
+            filtersByKey
+                .get(filter.key)
+                .push(filter.value);
         }
 
-        filtersByKey
-            .get(filter.key)
-            .push(filter.value);
-    }
 
-
-    /*
+        /*
      * Cada clave diferente representa
      * un grupo AND.
      */
-    for (
+        for (
         const [key, values]
         of filtersByKey
     ) {
 
-        const propertyValues =
+            const propertyValues =
             properties.get(key);
 
-        if (!propertyValues) {
-            return new Set();
-        }
+            if (!propertyValues) {
+                return new Set();
+            }
 
 
-        /*
+            /*
          * Dentro de la misma clave:
          *
          * Muro OR Puerta OR Ventana
          */
-        const groupIds = new Set();
+            const groupIds = new Set();
 
-        for (const value of values) {
+            for (const value of values) {
 
-            const propertyIds =
+                const propertyIds =
                 propertyValues.get(value);
 
-            if (!propertyIds) {
-                continue;
+                if (!propertyIds) {
+                    continue;
+                }
+
+                for (const id of propertyIds) {
+                    groupIds.add(id);
+                }
             }
 
-            for (const id of propertyIds) {
-                groupIds.add(id);
-            }
-        }
 
-
-        /*
+            /*
          * Ningún valor de este grupo
          * coincide.
          */
-        if (!groupIds.size) {
-            return new Set();
-        }
+            if (!groupIds.size) {
+                return new Set();
+            }
 
 
-        /*
+            /*
          * AND con los otros grupos.
          */
-        ids = new Set(
-            [...ids].filter(
-                id => groupIds.has(id)
-            )
-        );
+            ids = new Set(
+                [...ids].filter(
+                    id => groupIds.has(id)
+                )
+            );
 
 
-        /*
+            /*
          * Si ya no quedan elementos,
          * podemos terminar.
          */
-        if (!ids.size) {
-            return ids;
+            if (!ids.size) {
+                return ids;
+            }
         }
     }
-}
 
     return ids;
 }
@@ -2708,9 +2708,9 @@ if (activePropertyFilters.length) {
 function renderPropertyFilters() {
 
     const container =
-        document.getElementById(
-            'property-filters'
-        );
+    document.getElementById(
+        'property-filters'
+    );
 
     if (!container) {
         return;
@@ -2721,49 +2721,49 @@ function renderPropertyFilters() {
     if (!activePropertyFilters.length) {
 
         container.innerHTML = `
-            <div class="small text-secondary">
-                Sin filtros activos
-            </div>
-        `;
+<div class="small text-secondary">
+    Sin filtros activos
+</div>
+`;
 
         return;
     }
 
     for (
-        let index = 0;
-        index < activePropertyFilters.length;
-        index++
-    ) {
+    let index = 0;
+    index < activePropertyFilters.length;
+    index++
+) {
 
         const filter =
             activePropertyFilters[index];
 
         const item =
-            document.createElement('div');
+        document.createElement('div');
 
         item.className =
             'd-flex align-items-center justify-content-between gap-2 mb-1 p-2 bg-dark rounded';
 
         item.innerHTML = `
-            <div class="small text-truncate">
+<div class="small text-truncate">
 
-                <div class="text-secondary">
-                    ${escapeHtml(filter.key)}
-                </div>
+    <div class="text-secondary">
+        ${escapeHtml(filter.key)}
+    </div>
 
-                <div class="text-white text-truncate">
-                    ${escapeHtml(filter.value)}
-                </div>
+    <div class="text-white text-truncate">
+        ${escapeHtml(filter.value)}
+    </div>
 
-            </div>
+</div>
 
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-light property-filter-remove"
-                data-index="${index}">
-                <i class="bi bi-x"></i>
-            </button>
-        `;
+<button
+    type="button"
+    class="btn btn-sm btn-outline-light property-filter-remove"
+    data-index="${index}">
+    <i class="bi bi-x"></i>
+</button>
+`;
 
         container.appendChild(item);
     }
@@ -2779,9 +2779,9 @@ function renderPropertyFilters() {
                 async () => {
 
                     const index =
-                        Number(
-                            button.dataset.index
-                        );
+                    Number(
+                        button.dataset.index
+                    );
 
                     activePropertyFilters
                         .splice(index, 1);
@@ -2801,7 +2801,7 @@ async function applyAllFilters() {
     for (const [, model] of fragments.list) {
 
         const ids =
-            getFilteredModelIds(model);
+        getFilteredModelIds(model);
 
         modelIdMap[model.modelId] =
             ids;
@@ -2878,20 +2878,20 @@ document
             this.value;
 
         const selectValue =
-            document.getElementById(
-                'property-value'
-            );
+        document.getElementById(
+            'property-value'
+        );
 
         const btnApply =
-            document.getElementById(
-                'btn-apply-property'
-            );
+        document.getElementById(
+            'btn-apply-property'
+        );
 
         selectValue.innerHTML = `
-            <option value="">
-                Seleccionar valor
-            </option>
-        `;
+<option value="">
+    Seleccionar valor
+</option>
+`;
 
         selectValue.disabled = true;
         btnApply.disabled = true;
@@ -2903,9 +2903,9 @@ document
         const allValues = new Set();
 
         for (
-            const modelId
-            of Object.keys(modelProperties)
-        ) {
+        const modelId
+        of Object.keys(modelProperties)
+    ) {
 
             const properties =
                 modelProperties[modelId];
@@ -2915,7 +2915,7 @@ document
             }
 
             const values =
-                properties.get(key);
+            properties.get(key);
 
             if (!values) {
                 continue;
@@ -2927,15 +2927,15 @@ document
         }
 
         const sortedValues =
-            Array.from(allValues)
-                .sort((a, b) =>
-                    a.localeCompare(b)
-                );
+        Array.from(allValues)
+        .sort((a, b) =>
+            a.localeCompare(b)
+        );
 
         for (const value of sortedValues) {
 
             const option =
-                document.createElement('option');
+            document.createElement('option');
 
             option.value = value;
             option.textContent = value;
@@ -2973,11 +2973,11 @@ document
              * Evitar duplicados.
              */
             const exists =
-                activePropertyFilters.some(
-                    filter =>
-                        filter.key === key &&
+            activePropertyFilters.some(
+                filter =>
+                    filter.key === key &&
                         filter.value === value
-                );
+            );
 
             if (!exists) {
 
@@ -3001,10 +3001,10 @@ document
                 .getElementById(
                     'property-value'
                 ).innerHTML = `
-                    <option value="">
-                        Seleccionar valor
-                    </option>
-                `;
+<option value="">
+    Seleccionar valor
+</option>
+`;
 
             document
                 .getElementById(
@@ -3050,10 +3050,10 @@ document
                 .getElementById(
                     'property-value'
                 ).innerHTML = `
-                    <option value="">
-                        Seleccionar valor
-                    </option>
-                `;
+<option value="">
+    Seleccionar valor
+</option>
+`;
 
             document
                 .getElementById(
@@ -3096,7 +3096,7 @@ document
 
         button.addEventListener('dblclick', event =>{
             event.stopPropagation();
-            })
+        })
 
     });
 
