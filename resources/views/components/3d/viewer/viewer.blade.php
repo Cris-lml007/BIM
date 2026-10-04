@@ -25,12 +25,81 @@
 
             <!-- Sidebar -->
             <div class="sidebar left p-3" id="leftSidebar">
-                <div class="panel-title">Capas</div>
-                <!-- <input type="text" class="form-control form-control-sm mb-1" placeholder="Buscar..."> -->
-                <button class="btn btn-dark w-100 panel-title mb-3" type="button"
-                    id="btn-reset-isolate">Reiniciar</button>
+
+                <!-- CAPAS -->
+                <div class="panel-title">
+                    Capas
+                </div>
+
+                <button class="btn btn-dark w-100 panel-title mb-3" type="button" id="btn-reset-isolate">
+                    Reiniciar
+                </button>
+
                 <div id="layers-container"></div>
+
+
+                <!-- PROPIEDADES -->
+                <hr class="border-secondary my-3">
+
+                <div class="panel-title">
+                    Propiedades
+                </div>
+
+                <div class="mb-2">
+
+                    <label for="property-key" class="form-label small mb-1">
+                        Clave
+                    </label>
+
+                    <select id="property-key" class="form-control form-control-sm">
+
+                        <option value="">
+                            Seleccionar propiedad
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="mb-2">
+
+                    <label for="property-value" class="form-label small mb-1">
+                        Valor
+                    </label>
+
+                    <select id="property-value" class="form-control form-control-sm" disabled>
+
+                        <option value="">
+                            Seleccionar valor
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="d-flex gap-1">
+
+                    <button type="button" id="btn-apply-property" class="btn btn-primary btn-sm flex-grow-1" disabled>
+                        Aplicar
+                    </button>
+
+                    <button type="button" id="btn-clear-property" class="btn btn-secondary btn-sm">
+                        Limpiar
+                    </button>
+
+                </div>
+
+                <div id="property-filters" class="mt-3">
+                </div>
+
+
+                <div id="property-filter-info" class="small text-secondary mt-2">
+                </div>
+
             </div>
+
             <div class="sidebar-tab left-tab" id="leftTab">
                 <i class="bi bi-chevron-right"></i>
             </div>
@@ -50,7 +119,30 @@
                 <div class="viewport" id="viewer" data-url="{{ route('app.Attachment', $model->model->id) }}"
                     data-type="{{ $model->model->type }}">
 
-                    <div class="toolbar">
+                    <!-- Panel de información BIM -->
+                    <div id="element-info-panel" class="element-info-panel d-none">
+
+                        <div class="element-info-header">
+                            <div class="overflow-hidden">
+                                <small class="text-secondary">Elemento BIM</small>
+
+                                <div id="element-info-title" class="fw-semibold text-truncate">
+                                    Elemento
+                                </div>
+                            </div>
+
+                            <button type="button" id="close-element-info" class="btn btn-sm btn-dark">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div id="element-info-content" class="element-info-content">
+                        </div>
+
+                    </div>
+
+
+                    <div class="toolbar" id="toolbar">
                         <button id="btn-anchor" class="tool-btn"><i class="nf nf-fa-anchor"></i></button>
                         <button id="btn-issue" class="tool-btn"><i class="nf nf-oct-issue_opened"></i></button>
                         <button id="btn-fit" class="tool-btn"><i class="nf nf-md-fit_to_screen"></i></button>
@@ -58,7 +150,15 @@
                         <button id="btn-clipper" class="tool-btn"><i class="bi bi-scissors"></i></button>
                     </div>
                     <div id="clipper-panel" class="clipper-panel d-none">
-                        <div class="clipper-title">Secciones de Corte</div>
+
+                        <div class="clipper-title d-flex justify-content-between align-items-center">
+                            <span>Secciones de Corte</span>
+
+                            <button type="button" id="btn-reset-clipper" class="btn btn-sm btn-outline-light">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                                Reset
+                            </button>
+                        </div>
 
                         <label>X</label>
                         <div class="range-group">
@@ -77,6 +177,7 @@
                             <input type="range" id="zMin" step="0.1">
                             <input type="range" id="zMax" step="0.1">
                         </div>
+
                     </div>
 
 

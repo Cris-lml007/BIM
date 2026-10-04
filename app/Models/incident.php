@@ -16,7 +16,10 @@ class incident extends Model
         'x',
         'y',
         'z',
-        'project_id'
+        'project_id',
+        'normal_x',
+        'normal_y',
+        'normal_z'
     ];
     public function comments(){
         return $this->hasMany(Comment::class);

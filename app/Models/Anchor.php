@@ -14,7 +14,10 @@ class Anchor extends Model
         'x',
         'y',
         'z',
-        'title'
+        'title',
+        'normal_x',
+        'normal_y',
+        'normal_z'
     ];
 
     public function user(){

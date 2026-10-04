@@ -22,6 +22,9 @@ let hider;
 
 let box_world;
 let min,max,center;
+let clipperInitialValues;
+let highlighter;
+
 const sectionPlanes = {
     xMin: null,
     xMax: null,
@@ -39,6 +42,15 @@ let classifier;
 let activeLevels = {};
 let anchors = [];
 let marker;
+
+let modelCategories = [];
+let modelProperties = [];
+let activePropertyFilters = [];
+
+let categoryVisibility = new Map();
+
+let selectedBimElement = null;
+
 
 async function initViewer(container) {
     components = new OBC.Components();
@@ -83,6 +95,21 @@ async function initViewer(container) {
             material.polygonOffsetFactor = Math.random();
         }
     });
+
+components.get(OBC.Raycasters).get(world);
+
+highlighter = components.get(OBF.Highlighter);
+
+highlighter.setup({
+    world,
+
+    selectMaterialDefinition: {
+        color: new THREE.Color("#f59e0b"),
+        opacity: 1,
+        transparent: false,
+        renderedFaces: 0,
+    },
+});
 
     const stats = new Stats();
     stats.showPanel(2);
@@ -189,30 +216,41 @@ async function ifcLoader(url,id){
     await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
     buildLevelsUIFromClassifier();
 
-    const raycasted = async (data) => {
-        const results = [];
-        for (const [_, model] of fragments.list) {
-            const result = await model.raycast(data);
-            if (result) {
-                results.push(result);
-            }
+const raycasted = async (data) => {
+
+    const results = [];
+
+    for (const [, model] of fragments.list) {
+
+        const result =
+            await model.raycast(data);
+
+        if (result) {
+
+            result.fragmentsModel = model;
+
+            results.push(result);
         }
-        await Promise.all(results);
-        if (results.length === 0) return null;
+    }
 
-        // Find result with smallest distance
-        let closestResult = results[0];
-        let minDistance = closestResult.distance;
+    if (results.length === 0) {
+        return null;
+    }
 
-        for (let i = 1; i < results.length; i++) {
-            if (results[i].distance < minDistance) {
-                minDistance = results[i].distance;
-                closestResult = results[i];
-            }
+    let closestResult = results[0];
+
+    for (let i = 1; i < results.length; i++) {
+
+        if (
+            results[i].distance <
+            closestResult.distance
+        ) {
+            closestResult = results[i];
         }
+    }
 
-        return closestResult;
-    };
+    return closestResult;
+};
 
     const mouse = new THREE.Vector2();
 
@@ -257,19 +295,94 @@ async function ifcLoader(url,id){
         const look = point.clone().add(normal);
         line.lookAt(look);
     };
-    container.addEventListener("click", async (event) => {
-        if(activeTool == 'anchor' || activeTool == 'issue'){
-            mouse.x = event.clientX;
-            mouse.y = event.clientY;
-            const result = await raycasted({
-                camera: world.camera.three,
-                mouse,
-                dom: world.renderer.three.domElement,
-            });
+container.addEventListener("click", async (event) => {
 
-            onRaycastClickResult(result);
-        }
+    if (
+        activeTool !== 'anchor' &&
+        activeTool !== 'issue'
+    ) {
+        return;
+    }
+
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+
+    const result = await raycasted({
+        camera: world.camera.three,
+        mouse,
+        dom: world.renderer.three.domElement,
     });
+
+    if (!result) {
+        return;
+    }
+
+    onRaycastClickResult(result);
+});
+
+container.addEventListener("dblclick", async (event) => {
+
+    // =====================================
+    // HERRAMIENTAS
+    // =====================================
+
+    if (activeTool === 'clipper') {
+
+        if (clipper.enabled) {
+            //await clipper.create(world);
+        }
+
+        return;
+    }
+
+    if (activeTool === 'ruler') {
+
+        if (measurer.enabled) {
+            await measurer.create();
+        }
+
+        return;
+    }
+
+
+    // =====================================
+    // ANCLA / INCIDENCIA
+    // =====================================
+
+    if (
+        activeTool === 'anchor' ||
+        activeTool === 'issue'
+    ) {
+        return;
+    }
+
+
+    // =====================================
+    // BIM
+    // =====================================
+
+    // Si no hay ninguna herramienta activa,
+    // el doble click selecciona BIM.
+
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+
+    const result = await raycasted({
+        camera: world.camera.three,
+        mouse,
+        dom: world.renderer.three.domElement,
+    });
+
+    if (!result) {
+        return;
+    }
+
+    await selectBimElement(
+        result.fragmentsModel,
+        result.localId
+    );
+});
+
 
     box_world = new THREE.Box3();
 
@@ -280,8 +393,21 @@ async function ifcLoader(url,id){
     min = box_world.min;
     max = box_world.max;
     center = box_world.getCenter(new THREE.Vector3());
+
+clipperInitialValues = {
+    xMin: min.x,
+    xMax: max.x,
+
+    yMin: min.y,
+    yMax: max.y,
+
+    zMin: min.z,
+    zMax: max.z,
+};
+
     createSectionPlanes();
     let v = $wire.anchors;
+    let w = $wire.incidents;
 
     for(let i = 0;i < v.length;i++){
         let item = {
@@ -292,7 +418,28 @@ async function ifcLoader(url,id){
             x:  parseFloat(v[i].x),
             y: parseFloat(v[i].y),
             z: parseFloat(v[i].z),
+            normalX: parseFloat(v[i].normal_x ?? 0) ?? 0,
+            normalY: parseFloat(v[i].normal_y ?? 1) ?? 1,
+            normalZ: parseFloat(v[i].normal_z ?? 0) ?? 0,
             status: v[i].is_active ? 'activo': 'inhabilitado'
+        };
+        anchors.push(item);
+        createMarker(item);
+        addToTable(item);
+    }
+    for(let i = 0;i < w.length;i++){
+        let item = {
+            id: w[i].id,
+            name: w[i].title,
+            model: w[i].mode_id,
+            type: 'incident',
+            x:  parseFloat(w[i].x),
+            y: parseFloat(w[i].y),
+            z: parseFloat(w[i].z),
+            normalX: parseFloat(w[i].normal_x ?? 0) ?? 0,
+            normalY: parseFloat(w[i].normal_y ?? 1) ?? 1,
+            normalZ: parseFloat(w[i].normal_z ?? 0) ?? 0,
+            status: w[i].is_active ? 'activo': 'inhabilitado'
         };
         anchors.push(item);
         createMarker(item);
@@ -300,6 +447,489 @@ async function ifcLoader(url,id){
     }
 
 }
+
+function buildElementInfoUI({ info, propertySets }) {
+
+    const panel =
+        document.getElementById('element-info-panel');
+
+    const title =
+        document.getElementById('element-info-title');
+
+    const content =
+        document.getElementById('element-info-content');
+
+    title.textContent =
+        info.name || 'Elemento BIM';
+
+    content.innerHTML = '';
+
+    // =========================
+    // INFORMACIÓN BÁSICA
+    // =========================
+
+    const basic = document.createElement('div');
+
+    basic.className = 'element-info-basic';
+
+    const basicFields = [
+        ['Categoría', info.category],
+        ['Nombre', info.name],
+        ['Tipo', info.objectType],
+        ['GUID', info.guid],
+        ['Tag', info.tag],
+        ['ID', info.localId],
+    ];
+
+    for (const [label, value] of basicFields) {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ''
+        ) {
+            continue;
+        }
+
+        basic.innerHTML += `
+            <div class="element-info-row">
+
+                <div class="element-info-label">
+                    ${escapeHtml(label)}
+                </div>
+
+                <div class="element-info-value">
+                    ${escapeHtml(String(value))}
+                </div>
+
+            </div>
+        `;
+    }
+
+    content.appendChild(basic);
+
+
+    // =========================
+    // PROPERTY SETS
+    // =========================
+
+    for (const [setName, properties] of propertySets) {
+
+        const section =
+            document.createElement('div');
+
+        section.className =
+            'element-info-section';
+
+        const header =
+            document.createElement('div');
+
+        header.className =
+            'element-info-section-header';
+
+        header.innerHTML = `
+            <span>
+                ${escapeHtml(setName)}
+            </span>
+
+            <i class="bi bi-chevron-down"></i>
+        `;
+
+        const body =
+            document.createElement('div');
+
+        body.className =
+            'element-info-section-body';
+
+        for (const property of properties) {
+
+            body.innerHTML += `
+                <div class="element-info-row">
+
+                    <div class="element-info-label">
+                        ${escapeHtml(property.name)}
+                    </div>
+
+                    <div class="element-info-value">
+                        ${escapeHtml(
+                            property.value !== null
+                                ? String(property.value)
+                                : '-'
+                        )}
+                    </div>
+
+                </div>
+            `;
+        }
+
+        header.addEventListener('click', () => {
+
+            const hidden =
+                body.classList.toggle('d-none');
+
+            const icon =
+                header.querySelector('i');
+
+            icon.className = hidden
+                ? 'bi bi-chevron-right'
+                : 'bi bi-chevron-down';
+        });
+
+        section.appendChild(header);
+        section.appendChild(body);
+
+        content.appendChild(section);
+    }
+
+    panel.classList.remove('d-none');
+}
+
+function escapeHtml(value) {
+
+    const div =
+        document.createElement('div');
+
+    div.textContent = value;
+
+    return div.innerHTML;
+}
+
+async function selectBimElement(model, localId) {
+
+    const data =
+        await getElementInfo(
+            model,
+            localId
+        );
+
+    if (!data) {
+        return;
+    }
+
+    // Quitar selección anterior
+    await highlighter.clear('select');
+
+    const modelIdMap = {};
+
+    modelIdMap[model.modelId] = new Set([
+        localId
+    ]);
+
+    // Seleccionar elemento
+    await highlighter.highlightByID(
+        'select',
+        modelIdMap,
+        false
+    );
+
+    selectedBimElement = {
+        model,
+        localId
+    };
+
+    const info = {
+        localId:
+            data._localId?.value,
+
+        guid:
+            data._guid?.value,
+
+        category:
+            data._category?.value,
+
+        name:
+            data.Name?.value,
+
+        objectType:
+            data.ObjectType?.value,
+
+        tag:
+            data.Tag?.value,
+    };
+
+    const propertySets =
+        extractPropertySets(data);
+
+    buildElementInfoUI({
+        info,
+        propertySets
+    });
+}
+
+function extractPropertySets(data) {
+
+    const propertySets = new Map();
+    const visited = new Set();
+
+    function traverse(node) {
+
+        if (
+            !node ||
+            typeof node !== 'object'
+        ) {
+            return;
+        }
+
+        if (visited.has(node)) {
+            return;
+        }
+
+        visited.add(node);
+
+        if (
+            node._category?.value === 'IFCPROPERTYSET'
+        ) {
+
+            const setName =
+                node.Name?.value ?? 'Sin nombre';
+
+            if (!propertySets.has(setName)) {
+                propertySets.set(setName, []);
+            }
+
+            const properties =
+                node.HasProperties ?? [];
+
+            for (const property of properties) {
+
+                const name =
+                    property.Name?.value;
+
+                if (!name) {
+                    continue;
+                }
+
+                propertySets
+                    .get(setName)
+                    .push({
+                        name,
+                        value:
+                            property.NominalValue?.value ??
+                            null,
+                        type:
+                            property.NominalValue?.type ??
+                            null
+                    });
+            }
+        }
+
+        for (const key of Object.keys(node)) {
+
+            const value = node[key];
+
+            if (Array.isArray(value)) {
+
+                for (const child of value) {
+                    traverse(child);
+                }
+
+            } else if (
+                value &&
+                typeof value === 'object'
+            ) {
+
+                traverse(value);
+            }
+        }
+    }
+
+    traverse(data);
+
+    return propertySets;
+}
+
+async function getElementInfo(model, localId) {
+
+    const data = await model.getItemsData(
+        [localId],
+        {
+            attributesDefault: true,
+
+            relations: {
+                IsDefinedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+
+                IsTypedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+            },
+        }
+    );
+
+    if (!data.length) {
+        return null;
+    }
+
+    return data[0];
+}
+
+async function buildModelProperties(model) {
+
+    const items = await model.getItems();
+
+    const ids =
+        Array.from(items.keys());
+
+    const data =
+        await model.getItemsData(
+            ids,
+            {
+                attributesDefault: true,
+
+                relations: {
+                    IsDefinedBy: {
+                        attributes: true,
+                        relations: true,
+                    },
+
+                    IsTypedBy: {
+                        attributes: true,
+                        relations: true,
+                    },
+                },
+            }
+        );
+
+    const properties = new Map();
+
+    for (const item of data) {
+
+        const id =
+            item._localId?.value;
+
+        if (id === undefined) {
+            continue;
+        }
+
+        const propertySets =
+            extractPropertySets(item);
+
+        for (
+            const [, propertyList]
+            of propertySets
+        ) {
+
+            for (
+                const property
+                of propertyList
+            ) {
+
+                if (
+                    property.value === null ||
+                    property.value === undefined ||
+                    property.value === ''
+                ) {
+                    continue;
+                }
+
+                const key =
+                    property.name;
+
+                const value =
+                    String(property.value);
+
+                if (!properties.has(key)) {
+
+                    properties.set(
+                        key,
+                        new Map()
+                    );
+                }
+
+                const values =
+                    properties.get(key);
+
+                if (!values.has(value)) {
+
+                    values.set(
+                        value,
+                        []
+                    );
+                }
+
+                values
+                    .get(value)
+                    .push(id);
+            }
+        }
+    }
+
+    // console.log(
+    //     'PROPIEDADES IFC:',
+    //     properties
+    // );
+
+    return properties;
+}
+
+async function buildModelCategories(model) {
+
+    const items = await model.getItems();
+
+    const ids = Array.from(items.keys());
+
+    const data = await model.getItemsData(
+        ids,
+        {
+            attributesDefault: true,
+
+            relations: {
+                IsDefinedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+
+                IsTypedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+            },
+        }
+    );
+
+    const categories = new Map();
+
+    for (const item of data) {
+
+        const id =
+            item._localId?.value;
+
+        const category =
+            item._category?.value;
+
+        if (
+            id === undefined ||
+            !category
+        ) {
+            continue;
+        }
+
+        if (!categories.has(category)) {
+
+            categories.set(
+                category,
+                []
+            );
+        }
+
+        categories
+            .get(category)
+            .push(id);
+    }
+
+    // console.log(
+    //     'CATEGORÍAS IFC:',
+    //     categories
+    // );
+
+    return categories;
+}
+
+
+
 
 async function createSectionPlanes() {
     const size = box_world.getSize(new THREE.Vector3()).length();
@@ -415,7 +1045,7 @@ async function onRaycastClickResult(result) {
 
     if (activeTool !== 'anchor' && activeTool !== 'issue') return;
 
-    const { point } = result;
+    const { point, normal } = result;
 
     const name = prompt(`Nombre del ${activeTool}:`);
     if (!name) return;
@@ -429,11 +1059,14 @@ async function onRaycastClickResult(result) {
         x: point.x,
         y: point.y,
         z: point.z,
+        normalX: normal?.x ?? 0,
+        normalY: normal?.y ?? 1,
+        normalZ: normal?.z ?? 0,
         status: 'activo'
     };
     createMarker(item);
 
-    let r = await $wire.saveMark(item.name,item.model,item.type,item.x,item.y,item.z)
+    let r = await $wire.saveMark(item.name,item.model,item.type,item.x,item.y,item.z, item.normalX, item.normalY, item.normalZ)
     if(r != 'fail'){
         Swal.fire({icon: 'success',title: 'Creado Correctamente'})
     }else{
@@ -447,24 +1080,162 @@ async function onRaycastClickResult(result) {
 
 async function createMarker(item) {
 
+    const group = new THREE.Group();
+
+    const color =
+        item.type === 'anchor'
+            ? 0x2563eb
+            : 0xdc2626;
+
+
+    // =========================
+    // FIGURA SEGÚN EL TIPO
+    // =========================
+
+    let geometry;
+
+    if (item.type === 'anchor') {
+
+        // Anclaje → esfera
+        geometry = new THREE.SphereGeometry(
+            0.08,
+            16,
+            16
+        );
+
+    } else {
+
+        // Incidencia → octaedro
+        geometry = new THREE.OctahedronGeometry(
+            0.10
+        );
+    }
+
+
+    const material =
+        new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.4,
+            metalness: 0.1
+        });
+
+
+    const markerMesh =
+        new THREE.Mesh(
+            geometry,
+            material
+        );
+
+    group.add(markerMesh);
+
+
+    // =========================
+    // PEQUEÑO POSTE
+    // =========================
+
+    const cylinderGeometry =
+        new THREE.CylinderGeometry(
+            0.025,
+            0.025,
+            0.20,
+            12
+        );
+
+    const cylinder =
+        new THREE.Mesh(
+            cylinderGeometry,
+            material
+        );
+
+    cylinder.position.y = 0.10;
+
+    group.add(cylinder);
+
+
+    // =========================
+    // POSICIÓN
+    // =========================
+
+    group.position.set(
+        item.x,
+        item.y,
+        item.z
+    );
+
+
+    // =========================
+    // ORIENTACIÓN SEGÚN NORMAL
+    // =========================
+
+    const normal =
+        new THREE.Vector3(
+            item.normalX ?? 0,
+            item.normalY ?? 1,
+            item.normalZ ?? 0
+        ).normalize();
+
+    const up =
+        new THREE.Vector3(0, 1, 0);
+
+    const quaternion =
+        new THREE.Quaternion();
+
+    quaternion.setFromUnitVectors(
+        up,
+        normal
+    );
+
+    group.quaternion.copy(
+        quaternion
+    );
+
+
+    // =========================
+    // GUARDAR ITEM
+    // =========================
+
+    group.userData.markerItem = item;
+
+
+    // =========================
+    // MARKER DE THAT OPEN
+    // =========================
+
     const element = BUI.Component.create(() => BUI.html`
-<div class="marker ${item.type}">
-${item.type === 'anchor' ? '⚓' : '⚠️'}
-</div>
-`);
+        <div
+            style="
+                width: 40px;
+                height: 40px;
+                pointer-events: auto;
+            ">
+        </div>
+    `);
+
 
     const markerInstance = marker.create(
         world,
         element,
-        new THREE.Vector3(item.x, item.y, item.z)
+        new THREE.Vector3(
+            item.x,
+            item.y,
+            item.z
+        )
     );
 
-    // 🔥 guardar referencia
-    item._marker = markerInstance;
 
+    // Click sobre el marcador
     element.addEventListener('click', () => {
         focusItem(item);
     });
+
+
+    // Guardar referencias
+    item._marker = markerInstance;
+    item._marker3D = group;
+
+
+    // Añadir objeto 3D
+    world.scene.three.add(group);
 }
 
 function focusItem(item) {
@@ -507,52 +1278,80 @@ Estado: ${item.status}
 
 function addToTable(item) {
 
-    const tbody = document.getElementById('anchors-table');
-    const tr = document.createElement('tr');
+    const tbody =
+        document.getElementById('anchors-table');
+
+    const tr =
+        document.createElement('tr');
 
     tr.innerHTML = `
-<td>${item.name}</td>
-<td>${item.type}</td>
-<td>${item.status}</td>
-<td class="d-flex gap-1">
-    <button class="btn btn-primary btn-sm btn-view">
-        <i class="nf nf-fa-eye"></i>
-    </button>
-    <button class="btn btn-danger btn-sm btn-delete">
-        <i class="nf nf-fa-trash"></i>
-    </button>
-</td>
-`;
+        <td>${item.name}</td>
+        <td>${item.type}</td>
+        <td>${item.status}</td>
+        <td class="d-flex gap-1">
+            <button class="btn btn-primary btn-sm btn-view">
+                <i class="nf nf-fa-eye"></i>
+            </button>
 
-    // 👁️ SOLO ver detalles
-    tr.querySelector('.btn-view').addEventListener('click', (e) => {
-        e.stopPropagation(); // 🔥 evita que dispare el click de la fila
-        viewItem(item);
-    });
+            <button class="btn btn-danger btn-sm btn-delete">
+                <i class="nf nf-fa-trash"></i>
+            </button>
+        </td>
+    `;
 
-    // 🗑️ eliminar
-    tr.querySelector('.btn-delete').addEventListener('click', (e) => {
+    // Click en la fila
+    tr.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm('¿Eliminar elemento?')) {
-            removeItem(item, tr);
-        }
-    });
-
-    // 🎯 CLICK EN FILA → ENFOCAR
-    tr.addEventListener('click', () => {
         focusItem(item);
     });
 
-    // ✨ hover highlight (opcional pero top)
+    // Doble click en la fila
+    tr.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+    });
+
+    // Ver
+    tr.querySelector('.btn-view')
+        .addEventListener('click', (e) => {
+            e.stopPropagation();
+            viewItem(item);
+        });
+
+    tr.querySelector('.btn-view')
+        .addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+        });
+
+    // Eliminar
+    tr.querySelector('.btn-delete')
+        .addEventListener('click', (e) => {
+
+            e.stopPropagation();
+
+            if (confirm('¿Eliminar elemento?')) {
+                removeItem(item, tr);
+            }
+        });
+
+    tr.querySelector('.btn-delete')
+        .addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+        });
+
+    // Hover
     tr.addEventListener('mouseenter', () => {
+
         if (item._marker?.element) {
-            item._marker.element.style.transform = 'scale(1.5)';
+            item._marker.element.style.transform =
+                'scale(1.5)';
         }
     });
 
     tr.addEventListener('mouseleave', () => {
+
         if (item._marker?.element) {
-            item._marker.element.style.transform = 'scale(1)';
+            item._marker.element.style.transform =
+                'scale(1)';
         }
     });
 
@@ -896,139 +1695,276 @@ async function processModel() {
 
     for (const [modelId, model] of fragments.list) {
 
+        // 🔹 CATEGORÍAS BIM REALES
+        modelCategories[modelId] =
+            await buildModelCategories(model);
 
-        // 🔹 1. CLASES (IFCWALL, IFCWINDOW, etc)
-        const categories = await model.getItemsOfCategories([/IFC/]);
+        modelProperties[modelId] =
+            await buildModelProperties(model);
 
-        // 🔹 2. NIVELES (STOREYS)
-        const storeys = await model.getItemsOfCategories([/BUILDINGSTOREY/]);
-        const storeyIds = Object.values(storeys).flat();
-        const storeysData = await model.getItemsData(storeyIds);
+        // // 🔹 NIVELES
+        // const storeys =
+        //     await model.getItemsOfCategories([
+        //         /BUILDINGSTOREY/
+        //     ]);
+        //
+        // const storeyIds =
+        //     Object.values(storeys).flat();
+        //
+        // const storeysData =
+        //     await model.getItemsData(storeyIds);
+        //
+        // // 🔹 GEOMETRÍA POR CATEGORÍA
+        // const geomCategories =
+        //     await model.getItemsWithGeometryCategories();
+        //
+        // // 🔹 DATOS
+        // const categories =
+        //     await model.getItemsOfCategories([/IFC/]);
+        //
+        // const allIds =
+        //     Object.values(categories).flat();
+        //
+        // const data =
+        //     await model.getItemsData(allIds);
 
-        // storeysData.forEach(storey => {
-        //     console.log(storey.Name?.value); // nombre del nivel
-        // });
-        // console.log(Object.values(storeys).flat());
-        // console.log("Niveles:", storeys);
-
-
-        // 🔹 3. GEOMETRÍA POR CATEGORÍA
-        const geomCategories = await model.getItemsWithGeometryCategories();
-
-        // 🔹 4. DATOS (propiedades BIM reales)
-        const allIds = Object.values(categories).flat();
-
-        const data = await model.getItemsData(allIds);
-
-        // 👉 AQUÍ construyes tus tablas UI
         buildUI({
-            categories,
-            storeys,
-            geomCategories,
-            data,
-            model
+            categories: modelCategories[modelId],
         });
+
+        buildPropertyUI(modelId)
     }
 }
 
 function buildUI({ categories }) {
 
-    const container = document.getElementById('layers-container');
+    const container =
+        document.getElementById('layers-container');
+
     container.innerHTML = '';
 
-    for (const groupName in categories) {
+    for (const [groupName] of categories) {
 
-        const group = document.createElement('div');
-        group.className = 'tree-group card mb-2 shadow-sm';
+        const group =
+            document.createElement('div');
 
-        const header = document.createElement('div');
-        header.className = 'tree-header d-flex align-items-center justify-content-between p-2';
+        group.className =
+            'tree-group card mb-2 shadow-sm';
+
+        const header =
+            document.createElement('div');
+
+        header.className =
+            'tree-header d-flex align-items-center justify-content-between p-2';
 
         header.innerHTML = `
-<div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
-    <!-- 👁️ VISIBILIDAD -->
-    <input type="checkbox" checked class="form-check-input visibility-toggle m-0">
+            <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
 
-    <!-- 🎯 AISLAR -->
-    <input type="radio" name="isolate-group" class="form-check-input isolate-toggle m-0">
+                <input
+                    type="checkbox"
+                    checked
+                    class="form-check-input visibility-toggle m-0"
+                >
 
-    <!-- TEXTO -->
-    <span class="fw-semibold text-truncate flex-grow-1" title="${groupName}">
-        ${groupName}
-    </span>
-</div>
-`;
+                <input
+                    type="radio"
+                    name="isolate-group"
+                    class="form-check-input isolate-toggle m-0"
+                >
 
-        const visibility = header.querySelector('.visibility-toggle');
-        const isolate = header.querySelector('.isolate-toggle');
+                <span
+                    class="fw-semibold text-truncate flex-grow-1"
+                    title="${groupName}"
+                >
+                    ${groupName}
+                </span>
 
-        // 👁️ Mostrar / ocultar
-        visibility.addEventListener('change', async (e) => {
-            await toggleCategory(groupName, e.target.checked, '');
-        });
+            </div>
+        `;
 
-        // 🎯 Aislar
-        isolate.addEventListener('change', async (e) => {
-            if (e.target.checked) {
-                await toggleCategory(groupName, true, 'isolate');
+        const visibility =
+            header.querySelector('.visibility-toggle');
+
+        const isolate =
+            header.querySelector('.isolate-toggle');
+
+        visibility.addEventListener(
+            'change',
+            async (e) => {
+
+                await toggleCategory(
+                    groupName,
+                    e.target.checked,
+                    ''
+                );
             }
-        });
+        );
 
-        group.style.background = '#1f222a';
-        // hover UX
-        group.addEventListener('mouseenter', () => {
-            group.style.background = '#0D6EFD';
-        });
+        isolate.addEventListener(
+            'change',
+            async (e) => {
 
-        group.addEventListener('mouseleave', () => {
-            group.style.background = '#1f222a';
-        });
+                if (e.target.checked) {
+
+                    await toggleCategory(
+                        groupName,
+                        true,
+                        'isolate'
+                    );
+                }
+            }
+        );
+
+        group.style.background =
+            '#1f222a';
+
+        group.addEventListener(
+            'mouseenter',
+            () => {
+                group.style.background =
+                    '#0D6EFD';
+            }
+        );
+
+        group.addEventListener(
+            'mouseleave',
+            () => {
+                group.style.background =
+                    '#1f222a';
+            }
+        );
 
         group.appendChild(header);
         container.appendChild(group);
     }
 }
 
-async function toggleCategory(category, visible, type) {
+function buildPropertyUI() {
 
-    const modelIdMap = {};
+    const selectKey =
+        document.getElementById(
+            'property-key'
+        );
 
-    for (const [, model] of fragments.list) {
+    const selectValue =
+        document.getElementById(
+            'property-value'
+        );
 
-        // 🔹 1. obtener elementos por categoría
-        const categoryItems = await model.getItemsOfCategories([
-            new RegExp(`^${category}$`)
-        ]);
+    if (!selectKey || !selectValue) {
+        return;
+    }
 
-        const categoryIds = new Set(Object.values(categoryItems).flat());
+    selectKey.innerHTML = `
+        <option value="">
+            Seleccionar propiedad
+        </option>
+    `;
 
-        let finalIds = categoryIds;
+    selectValue.innerHTML = `
+        <option value="">
+            Seleccionar valor
+        </option>
+    `;
 
-        // 🔥 2. intersectar con niveles activos (si existen)
-        if (Object.keys(activeLevels).length && activeLevels[model.modelId]) {
+    selectValue.disabled = true;
 
-            const levelIds = activeLevels[model.modelId];
+    const allKeys = new Set();
 
-            finalIds = new Set(
-                [...categoryIds].filter(id => levelIds.has(id))
-            );
+    for (
+        const modelId
+        of Object.keys(modelProperties)
+    ) {
+
+        const properties =
+            modelProperties[modelId];
+
+        if (!properties) {
+            continue;
         }
 
-        modelIdMap[model.modelId] = finalIds;
+        for (const key of properties.keys()) {
+            allKeys.add(key);
+        }
     }
 
-    // 🔹 3. aplicar visibilidad
+    const sortedKeys =
+        Array.from(allKeys)
+            .sort((a, b) =>
+                a.localeCompare(b)
+            );
+
+    for (const key of sortedKeys) {
+
+        const option =
+            document.createElement('option');
+
+        option.value = key;
+        option.textContent = key;
+
+        selectKey.appendChild(option);
+    }
+}
+
+
+async function toggleCategory(category, visible, type) {
+
+    /*
+     * Guardamos el estado de la capa.
+     */
+    categoryVisibility.set(
+        category,
+        visible
+    );
+
+
+    /*
+     * AISLAR
+     */
     if (type === 'isolate') {
 
-        document.querySelectorAll('.visibility-toggle')
-            .forEach(cb => cb.checked = false);
+        /*
+         * Todas las categorías se ocultan.
+         */
+        for (
+            const [, model]
+            of fragments.list
+        ) {
 
-        await hider.isolate(modelIdMap);
+            const categories =
+                modelCategories[model.modelId];
 
-    } else {
+            if (!categories) {
+                continue;
+            }
 
-        await hider.set(visible, modelIdMap);
+            for (const categoryName of categories.keys()) {
+
+                categoryVisibility.set(
+                    categoryName,
+                    categoryName === category
+                );
+            }
+        }
+
+        document
+            .querySelectorAll(
+                '.visibility-toggle'
+            )
+            .forEach(cb => {
+                cb.checked = false;
+            });
+
+        await applyAllFilters();
+
+        return;
     }
+
+
+    /*
+     * VISIBILIDAD NORMAL
+     */
+    await applyAllFilters();
 }
 
 
@@ -1063,23 +1999,86 @@ rightSidebar.addEventListener('dblclick', () => {
     rightSidebar.classList.add('collapsed');
 });
 
-document.getElementById('btn-reset-isolate').addEventListener('click', async () => {
+document
+    .getElementById('btn-reset-isolate')
+    .addEventListener('click', async () => {
 
-    // 🔹 reset UI categorías
-    document.querySelectorAll('input[name="isolate-group"]').forEach(r => r.checked = false);
-    document.querySelectorAll('.visibility-toggle').forEach(cb => cb.checked = true);
+        /*
+         * Todas las capas vuelven a estar visibles.
+         */
+        categoryVisibility.clear();
 
-    // 🔹 caso 1: hay niveles activos → respetarlos
-    if (Object.keys(activeLevels).length) {
 
-        await hider.set(false);              // ocultar todo
-        await hider.set(true, activeLevels); // mostrar SOLO niveles activos
+        /*
+         * UI de capas
+         */
+        document
+            .querySelectorAll(
+                'input[name="isolate-group"]'
+            )
+            .forEach(r => {
+                r.checked = false;
+            });
 
-    } else {
-        // 🔹 caso 2: no hay filtro → mostrar todo
-        await hider.set(true);
-    }
-});
+        document
+            .querySelectorAll(
+                '.visibility-toggle'
+            )
+            .forEach(cb => {
+                cb.checked = true;
+            });
+
+
+        /*
+         * También eliminamos el filtro
+         * de propiedades.
+         */
+        activePropertyFilters = [];
+
+        renderPropertyFilters();
+
+        document
+            .getElementById(
+                'property-key'
+            )
+            .value = '';
+
+        document
+            .getElementById(
+                'property-value'
+            ).innerHTML = `
+                <option value="">
+                    Seleccionar valor
+                </option>
+            `;
+
+        document
+            .getElementById(
+                'property-value'
+            )
+            .disabled = true;
+
+        document
+            .getElementById(
+                'btn-apply-property'
+            )
+            .disabled = true;
+
+        document
+            .getElementById(
+                'property-filter-info'
+            )
+            .textContent = '';
+
+
+        /*
+         * Aplicar nuevamente los filtros.
+         *
+         * Si hay niveles activos,
+         * solamente esos niveles quedarán visibles.
+         */
+        await applyAllFilters();
+    });
 
 let toolState = {
     clipper: false,
@@ -1088,33 +2087,95 @@ let toolState = {
 
 let activeTool = null
 
-document.addEventListener('dblclick',() => {
-    window.clip = clipper;
-    if(activeTool == 'clipper' && clipper.enabled){
-        clipper.create(world)
-        return;
-    }else if(activeTool == 'ruler' && measurer.enabled){
-        measurer.create()
-        return;
-    }
-})
 
-function setActiveTool(tool){
+function setActiveTool(tool) {
+
     activeTool = tool;
 
-    clipper.enabled = false
-    measurer.enabled = false
+    clipper.enabled = false;
+    measurer.enabled = false;
 
-    if( tool === 'clipper' && toolState.clipper){
-        clipper.enabled = true
-        toolState.ruler = false
-    }else if(tool === 'ruler' && toolState.ruler){
-        measurer.enabled = true
-        toolState.clipper = false
-    }else if( tool == 'anchor' ){
+    if (tool === 'clipper') {
 
-    }else if(tool == 'issue'){
+        clipper.enabled = true;
 
+        toolState.clipper = true;
+        toolState.ruler = false;
+
+        measurer.list.clear();
+
+        setClipperControlsEnabled(true);
+
+    }
+
+    else if (tool === 'ruler') {
+
+        measurer.enabled = true;
+
+        toolState.ruler = true;
+        toolState.clipper = false;
+
+        setClipperControlsEnabled(false);
+
+    }
+
+    else if (tool === 'anchor') {
+
+        toolState.clipper = false;
+        toolState.ruler = false;
+
+        setClipperControlsEnabled(false);
+
+    }
+
+    else if (tool === 'issue') {
+
+        toolState.clipper = false;
+        toolState.ruler = false;
+
+        setClipperControlsEnabled(false);
+
+    }
+
+    else {
+
+        toolState.clipper = false;
+        toolState.ruler = false;
+
+        setClipperControlsEnabled(false);
+    }
+
+    updateUI();
+}
+
+function setClipperControlsEnabled(enabled) {
+
+    const ids = [
+        'xMin',
+        'xMax',
+        'yMin',
+        'yMax',
+        'zMin',
+        'zMax'
+    ];
+
+    for (const id of ids) {
+
+        const input =
+            document.getElementById(id);
+
+        if (!input) {
+            continue;
+        }
+
+        input.disabled = !enabled;
+    }
+
+    const reset =
+        document.getElementById('btn-reset-clipper');
+
+    if (reset) {
+        reset.disabled = !enabled;
     }
 }
 
@@ -1125,54 +2186,223 @@ function updateUI() {
     btnIssue.classList.toggle('active', activeTool === 'issue');
 }
 
-let btnClipper = document.getElementById('btn-clipper');
-btnClipper.addEventListener('click',() => {
-    document.getElementById('clipper-panel').classList.toggle('d-none');
-    toolState.clipper = !toolState.clipper
-    if(toolState.clipper){
-        setActiveTool('clipper')
-    }else{
-        clipper.deleteAll()
-        if(activeTool === 'clipper')
-            activeTool = null
+let btnClipper =
+    document.getElementById('btn-clipper');
+
+btnClipper.addEventListener('click', () => {
+
+    if (activeTool === 'clipper') {
+
+        // Desactivar interacción,
+        // PERO conservar los cortes.
+        setActiveTool(null);
+
+    } else {
+
+        // Volver a activar interacción.
+        setActiveTool('clipper');
     }
-    updateUI()
+
+    document
+        .getElementById('clipper-panel')
+        .classList.toggle(
+            'd-none',
+            activeTool !== 'clipper'
+        );
+
+    updateUI();
 });
+
+const btnResetClipper =
+    document.getElementById('btn-reset-clipper');
+
+btnResetClipper.addEventListener('click', () => {
+    resetSectionPlanes();
+});
+
+async function resetSectionPlanes() {
+
+    const size =
+        box_world.getSize(new THREE.Vector3()).length();
+
+    const offset = size * 0.5;
+
+    // X+
+    sectionPlanes.xMax.helper.position.set(
+        max.x + offset,
+        center.y,
+        center.z
+    );
+
+    sectionPlanes.xMax.update();
+
+
+    // X-
+    sectionPlanes.xMin.helper.position.set(
+        min.x - offset,
+        center.y,
+        center.z
+    );
+
+    sectionPlanes.xMin.update();
+
+
+    // Y+
+    sectionPlanes.yMax.helper.position.set(
+        center.x,
+        max.y + offset,
+        center.z
+    );
+
+    sectionPlanes.yMax.update();
+
+
+    // Y-
+    sectionPlanes.yMin.helper.position.set(
+        center.x,
+        min.y - offset,
+        center.z
+    );
+
+    sectionPlanes.yMin.update();
+
+
+    // Z+
+    sectionPlanes.zMax.helper.position.set(
+        center.x,
+        center.y,
+        max.z + offset
+    );
+
+    sectionPlanes.zMax.update();
+
+
+    // Z-
+    sectionPlanes.zMin.helper.position.set(
+        center.x,
+        center.y,
+        min.z - offset
+    );
+
+    sectionPlanes.zMin.update();
+
+
+    // Restaurar sliders
+    const axes = ['x', 'y', 'z'];
+
+    axes.forEach(axis => {
+
+        const minInput =
+            document.getElementById(`${axis}Min`);
+
+        const maxInput =
+            document.getElementById(`${axis}Max`);
+
+        minInput.value =
+            box_world.min[axis];
+
+        maxInput.value =
+            box_world.max[axis];
+
+    });
+}
+
+
+function resetClipperSliders() {
+
+    if (!clipperInitialValues) {
+        return;
+    }
+
+    const values = {
+        xMin: clipperInitialValues.xMin,
+        xMax: clipperInitialValues.xMax,
+
+        yMin: clipperInitialValues.yMin,
+        yMax: clipperInitialValues.yMax,
+
+        zMin: clipperInitialValues.zMin,
+        zMax: clipperInitialValues.zMax,
+    };
+
+    for (const [id, value] of Object.entries(values)) {
+
+        const input =
+            document.getElementById(id);
+
+        if (!input) {
+            continue;
+        }
+
+        input.value = value;
+
+        // Importante:
+        // ejecuta la misma lógica que al mover el slider
+        input.dispatchEvent(
+            new Event('input', {
+                bubbles: true
+            })
+        );
+    }
+}
+
+function resetClipperPlanes() {
+
+    sectionPlanes.xMin = null;
+    sectionPlanes.xMax = null;
+
+    sectionPlanes.yMin = null;
+    sectionPlanes.yMax = null;
+
+    sectionPlanes.zMin = null;
+    sectionPlanes.zMax = null;
+}
 
 
 let btnRulers = document.getElementById('btn-rulers');
-btnRulers.addEventListener('click',() => {
-    toolState.ruler = !toolState.ruler
+btnRulers.addEventListener('click', () => {
 
-    if(toolState.ruler){
-        setActiveTool('ruler')
-    }else{
-        measurer.list.clear()
-        measurer.enabled =false
-        if(activeTool == 'ruler'){
-            activeTool = null
-        }
+    if (activeTool === 'ruler') {
+
+        measurer.list.clear();
+
+        toolState.ruler = false;
+
+        setActiveTool(null);
+
+    } else {
+
+        setActiveTool('ruler');
     }
-    updateUI()
-})
+
+    updateUI();
+});
 
 const btnAnchor = document.getElementById('btn-anchor');
-btnAnchor.addEventListener('click',(ev) =>{
-    if(activeTool == 'anchor')
-        setActiveTool('')
-        else
-        setActiveTool('anchor')
-    updateUI()
-})
+
+btnAnchor.addEventListener('click', () => {
+
+    if (activeTool === 'anchor') {
+        setActiveTool(null);
+    } else {
+        setActiveTool('anchor');
+    }
+
+    updateUI();
+});
 
 const btnIssue = document.getElementById('btn-issue');
-btnIssue.addEventListener('click',(ev) =>{
-    if(activeTool == 'issue')
-        setActiveTool('')
-        else
-        setActiveTool('issue')
-    updateUI()
-})
+
+btnIssue.addEventListener('click', () => {
+
+    if (activeTool === 'issue') {
+        setActiveTool(null);
+    } else {
+        setActiveTool('issue');
+    }
+
+    updateUI();
+});
 
 
 
@@ -1284,6 +2514,317 @@ function fitView() {
     );
 }
 
+async function applyPropertyFilter() {
+
+    const key =
+        activePropertyFilter.key;
+
+    const value =
+        activePropertyFilter.value;
+
+    if (!key || !value) {
+        return;
+    }
+
+    await applyAllFilters();
+
+    document
+        .getElementById(
+            'property-filter-info'
+        )
+        .textContent =
+            `${key}: ${value}`;
+}
+
+function getFilteredModelIds(model) {
+
+    const categories =
+        modelCategories[model.modelId];
+
+    if (!categories) {
+        return new Set();
+    }
+
+    let ids = new Set();
+
+    /*
+     * CAPAS
+     *
+     * Si una categoría no tiene estado registrado,
+     * asumimos que está visible.
+     */
+    for (const [category, categoryIds] of categories) {
+
+        const visible =
+            categoryVisibility.has(category)
+                ? categoryVisibility.get(category)
+                : true;
+
+        if (!visible) {
+            continue;
+        }
+
+        for (const id of categoryIds) {
+            ids.add(id);
+        }
+    }
+
+
+    /*
+     * NIVELES
+     */
+    if (
+        Object.keys(activeLevels).length &&
+        activeLevels[model.modelId]
+    ) {
+
+        const levelIds =
+            activeLevels[model.modelId];
+
+        ids = new Set(
+            [...ids].filter(
+                id => levelIds.has(id)
+            )
+        );
+    }
+
+
+    /*
+     * PROPIEDAD
+     */
+if (activePropertyFilters.length) {
+
+    const properties =
+        modelProperties[model.modelId];
+
+    if (!properties) {
+        return new Set();
+    }
+
+    /*
+     * Agrupar filtros por clave.
+     *
+     * Ejemplo:
+     *
+     * Categoría:
+     *   - Muro
+     *   - Puerta
+     *
+     * Fase:
+     *   - New Construction
+     */
+    const filtersByKey = new Map();
+
+    for (
+        const filter
+        of activePropertyFilters
+    ) {
+
+        if (!filtersByKey.has(filter.key)) {
+
+            filtersByKey.set(
+                filter.key,
+                []
+            );
+        }
+
+        filtersByKey
+            .get(filter.key)
+            .push(filter.value);
+    }
+
+
+    /*
+     * Cada clave diferente representa
+     * un grupo AND.
+     */
+    for (
+        const [key, values]
+        of filtersByKey
+    ) {
+
+        const propertyValues =
+            properties.get(key);
+
+        if (!propertyValues) {
+            return new Set();
+        }
+
+
+        /*
+         * Dentro de la misma clave:
+         *
+         * Muro OR Puerta OR Ventana
+         */
+        const groupIds = new Set();
+
+        for (const value of values) {
+
+            const propertyIds =
+                propertyValues.get(value);
+
+            if (!propertyIds) {
+                continue;
+            }
+
+            for (const id of propertyIds) {
+                groupIds.add(id);
+            }
+        }
+
+
+        /*
+         * Ningún valor de este grupo
+         * coincide.
+         */
+        if (!groupIds.size) {
+            return new Set();
+        }
+
+
+        /*
+         * AND con los otros grupos.
+         */
+        ids = new Set(
+            [...ids].filter(
+                id => groupIds.has(id)
+            )
+        );
+
+
+        /*
+         * Si ya no quedan elementos,
+         * podemos terminar.
+         */
+        if (!ids.size) {
+            return ids;
+        }
+    }
+}
+
+    return ids;
+}
+
+function renderPropertyFilters() {
+
+    const container =
+        document.getElementById(
+            'property-filters'
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = '';
+
+    if (!activePropertyFilters.length) {
+
+        container.innerHTML = `
+            <div class="small text-secondary">
+                Sin filtros activos
+            </div>
+        `;
+
+        return;
+    }
+
+    for (
+        let index = 0;
+        index < activePropertyFilters.length;
+        index++
+    ) {
+
+        const filter =
+            activePropertyFilters[index];
+
+        const item =
+            document.createElement('div');
+
+        item.className =
+            'd-flex align-items-center justify-content-between gap-2 mb-1 p-2 bg-dark rounded';
+
+        item.innerHTML = `
+            <div class="small text-truncate">
+
+                <div class="text-secondary">
+                    ${escapeHtml(filter.key)}
+                </div>
+
+                <div class="text-white text-truncate">
+                    ${escapeHtml(filter.value)}
+                </div>
+
+            </div>
+
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-light property-filter-remove"
+                data-index="${index}">
+                <i class="bi bi-x"></i>
+            </button>
+        `;
+
+        container.appendChild(item);
+    }
+
+    container
+        .querySelectorAll(
+            '.property-filter-remove'
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                'click',
+                async () => {
+
+                    const index =
+                        Number(
+                            button.dataset.index
+                        );
+
+                    activePropertyFilters
+                        .splice(index, 1);
+
+                    renderPropertyFilters();
+
+                    await applyAllFilters();
+                }
+            );
+        });
+}
+
+async function applyAllFilters() {
+
+    const modelIdMap = {};
+
+    for (const [, model] of fragments.list) {
+
+        const ids =
+            getFilteredModelIds(model);
+
+        modelIdMap[model.modelId] =
+            ids;
+    }
+
+    await hider.set(false);
+
+    await hider.set(
+        true,
+        modelIdMap
+    );
+}
+
+async function clearPropertyFilter() {
+
+    activePropertyFilter.key = null;
+    activePropertyFilter.value = null;
+
+    await applyAllFilters();
+}
+
+
+
 document.querySelectorAll('.view-card').forEach(card => {
     card.addEventListener('click', () => {
 
@@ -1315,3 +2856,258 @@ if (url) {
 setTimeout(() => {
     splash.classList.add('hidden');
 }, 2000);
+
+document
+    .getElementById('close-element-info')
+    .addEventListener('click', async () => {
+
+        await highlighter.clear('select');
+
+        selectedBimElement = null;
+
+        document
+            .getElementById('element-info-panel')
+            .classList.add('d-none');
+    });
+
+document
+    .getElementById('property-key')
+    .addEventListener('change', function () {
+
+        const key =
+            this.value;
+
+        const selectValue =
+            document.getElementById(
+                'property-value'
+            );
+
+        const btnApply =
+            document.getElementById(
+                'btn-apply-property'
+            );
+
+        selectValue.innerHTML = `
+            <option value="">
+                Seleccionar valor
+            </option>
+        `;
+
+        selectValue.disabled = true;
+        btnApply.disabled = true;
+
+        if (!key) {
+            return;
+        }
+
+        const allValues = new Set();
+
+        for (
+            const modelId
+            of Object.keys(modelProperties)
+        ) {
+
+            const properties =
+                modelProperties[modelId];
+
+            if (!properties) {
+                continue;
+            }
+
+            const values =
+                properties.get(key);
+
+            if (!values) {
+                continue;
+            }
+
+            for (const value of values.keys()) {
+                allValues.add(value);
+            }
+        }
+
+        const sortedValues =
+            Array.from(allValues)
+                .sort((a, b) =>
+                    a.localeCompare(b)
+                );
+
+        for (const value of sortedValues) {
+
+            const option =
+                document.createElement('option');
+
+            option.value = value;
+            option.textContent = value;
+
+            selectValue.appendChild(option);
+        }
+
+        selectValue.disabled =
+            sortedValues.length === 0;
+    });
+
+document
+    .getElementById(
+        'btn-apply-property'
+    )
+    .addEventListener(
+        'click',
+        async () => {
+
+            const key =
+                document.getElementById(
+                    'property-key'
+                ).value;
+
+            const value =
+                document.getElementById(
+                    'property-value'
+                ).value;
+
+            if (!key || !value) {
+                return;
+            }
+
+            /*
+             * Evitar duplicados.
+             */
+            const exists =
+                activePropertyFilters.some(
+                    filter =>
+                        filter.key === key &&
+                        filter.value === value
+                );
+
+            if (!exists) {
+
+                activePropertyFilters.push({
+                    key,
+                    value
+                });
+            }
+
+            /*
+             * Limpiar selección
+             * para poder agregar otro filtro.
+             */
+            document
+                .getElementById(
+                    'property-key'
+                )
+                .value = '';
+
+            document
+                .getElementById(
+                    'property-value'
+                ).innerHTML = `
+                    <option value="">
+                        Seleccionar valor
+                    </option>
+                `;
+
+            document
+                .getElementById(
+                    'property-value'
+                )
+                .disabled = true;
+
+            document
+                .getElementById(
+                    'btn-apply-property'
+                )
+                .disabled = true;
+
+            /*
+             * Actualizar lista.
+             */
+            renderPropertyFilters();
+
+            /*
+             * Aplicar todos los filtros.
+             */
+            await applyAllFilters();
+        }
+    );
+
+document
+    .getElementById(
+        'btn-clear-property'
+    )
+    .addEventListener(
+        'click',
+        async () => {
+
+            activePropertyFilters = [];
+
+            document
+                .getElementById(
+                    'property-key'
+                )
+                .value = '';
+
+            document
+                .getElementById(
+                    'property-value'
+                ).innerHTML = `
+                    <option value="">
+                        Seleccionar valor
+                    </option>
+                `;
+
+            document
+                .getElementById(
+                    'property-value'
+                ).disabled = true;
+
+            document
+                .getElementById(
+                    'btn-apply-property'
+                ).disabled = true;
+
+            renderPropertyFilters();
+
+            await applyAllFilters();
+        }
+    );
+
+document
+    .getElementById('property-value')
+    .addEventListener('change', function () {
+
+        document
+            .getElementById(
+                'btn-apply-property'
+            )
+            .disabled = !this.value;
+    });
+
+document
+    .querySelectorAll('.toolbar button')
+    .forEach(button => {
+
+        button.addEventListener('mousedown', event => {
+            event.stopPropagation();
+        });
+
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+        });
+
+        button.addEventListener('dblclick', event =>{
+            event.stopPropagation();
+            })
+
+    });
+
+document
+    .getElementById('bottomBar')
+    .addEventListener('mousedown', event => {
+        event.stopPropagation();
+    });
+
+document
+    .getElementById('bottomBar')
+    .addEventListener('click', event => {
+        event.stopPropagation();
+    });
