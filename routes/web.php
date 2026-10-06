@@ -8,6 +8,7 @@ use App\Http\Controllers\MembersController;
 use App\Http\Controllers\InvitationController;
 use App\Livewire\Admin\UsersForm;
 use App\Livewire\App\AnchorsView;
+use App\Livewire\App\IncidentDetail;
 use App\Livewire\App\Model3dView;
 use App\Livewire\App\ProjectsView;
 use App\Livewire\App\ProjectView;
@@ -57,6 +58,7 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
         Route::get('/incidents', [IncidentController::class, 'show'])->name('app.project.incidents');
         Route::get('/anchors',AnchorsView::class)->name('app.project.anchors');
+        Route::get('/incidents/{id}',IncidentDetail::class)->name('app.project.incidents.id');
     });
 
     Route::get('/documents/{document}/view', [DocumentsController::class, 'view'])

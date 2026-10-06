@@ -1263,9 +1263,13 @@ function removeItem(item, tr) {
 
 function viewItem(item) {
 
-    if (item.type === 'issue') {
+    if (item.type === 'incident') {
         // 🔥 puedes cambiar esto por modal si quieres
-        window.open(`/incidencias/${item.id}`, '_blank');
+        // window.open(`/incidencias/${item.id}`, '_blank');
+        $wire.dispatch('getIncident',{ id: item.id });
+        document
+            .getElementById('open-incident-modal')
+            .click();
     } else {
         // 🔹 anclaje → mostrar info simple
         alert(`
@@ -3111,3 +3115,4 @@ document
     .addEventListener('click', event => {
         event.stopPropagation();
     });
+

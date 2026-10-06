@@ -22,10 +22,10 @@
     @endphp
     <div class="container">
         <div class="row">
-            <div class="col-md-4 d-flex flex-column bg-light rounded-3 shadow-sm">
+            <div class="col-md-4 d-flex flex-column bg-light rounded-3 shadow-sm pt-3" id="cont">
 
                 <div class="text-center mb-2">
-                    <h5 class="fw-bold mb-0">
+                    <h5 class="fw-bold mb-0 text-dark">
                         {{ strtoupper($incident->title ?? '...') }}
                     </h5>
                 </div>

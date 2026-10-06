@@ -1,4 +1,8 @@
 <div>
+<link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
     <div id="app-splash" class="app-splash">
         <div class="splash-content">
             <div class="spinner-border text-light"></div>
@@ -240,6 +244,35 @@
         </div>
     </div>
 
+    <div class="modal fade" id="incidentDetailModal" tabindex="-1" aria-hidden="true">
+
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+
+            <div class="modal-content bg-dark text-white">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Detalle de incidencia
+                    </h5>
+
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <livewire:app.incident-detail modal_name="modal-incident-detail" :project="$project" />
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+    <button type="button" id="open-incident-modal" class="d-none" data-bs-toggle="modal"
+        data-bs-target="#incidentDetailModal">
+    </button>
 
     <div class="modal fade" tabindex="-1" id="modal-views" data-bs-theme="dark">
         <div class="modal-dialog modal-md modal-dialog-centered">
