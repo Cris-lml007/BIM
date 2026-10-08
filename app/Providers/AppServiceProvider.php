@@ -102,8 +102,8 @@ class AppServiceProvider extends ServiceProvider
             }
             $after = 'dashboard';
 
-            if(auth()->user()->role != RoleSaas::ADMIN){         
-                if( $this->getRoleByProject() == RoleProject::OWNER->value){ //es propietario
+            if(auth()->user()->role != RoleSaas::ADMIN){
+                if( $this->getRoleByProject() != RoleProject::OWNER->value){ //es propietario
                     $event->menu->addAfter('dashboard',[
                     'key' => 'new-project',
                     'text' => 'Nuevo Proyecto',
@@ -112,7 +112,7 @@ class AppServiceProvider extends ServiceProvider
                     ]);
                     $after = 'new-project';
                 }
-                    
+
                 $event->menu->addAfter($after,[
                         'text' => 'Proyectos',
                          'icon' => 'fas fa-city',
@@ -133,9 +133,9 @@ class AppServiceProvider extends ServiceProvider
             if ($idOwnerProject) {
                 return 1; // 'owner';
             }
-            return 0; //'no_member';            
+            return 0; //'no_member';
         }
         //es invitado
-        return $userInProject->role; 
+        return $userInProject->role;
     }
 }
