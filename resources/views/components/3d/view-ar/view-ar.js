@@ -53,6 +53,12 @@ let isAR = false;
 
 let opacityValue = 1;
 
+let arModelData = new Map();
+let arPropertySets = new Map();
+let arActiveFilters = [];
+let arHider;
+
+
 
 // =====================================================
 // INICIALIZAR VISOR
@@ -187,7 +193,7 @@ async function initViewer() {
     // =================================================
 
     fragments.list.onItemSet.add(
-        ({ value: model }) => {
+        async ({ value: model }) => {
 
             console.log(
                 'Modelo Fragments cargado'
@@ -264,6 +270,13 @@ async function initViewer() {
             console.log(
                 'Modelo preparado'
             );
+
+arModelData.set(model.modelId, model);
+
+arPropertySets = await buildARPropertyIndex(model);
+
+buildARPropertyUI();
+initARPropertyFilters();
         }
     );
 
@@ -1178,3 +1191,306 @@ initViewer()
             );
         }
     );
+
+arHider = components.get(OBC.Hider);
+
+async function buildARPropertyIndex(model) {
+
+    const items = await model.getItems();
+    const ids = Array.from(items.keys());
+
+    const data = await model.getItemsData(ids, {
+        attributesDefault: true,
+        relations: {
+            IsDefinedBy: {
+                attributes: true,
+                relations: true,
+            },
+            IsTypedBy: {
+                attributes: true,
+                relations: true,
+            },
+        },
+    });
+
+    const propertySets = new Map();
+
+    for (const item of data) {
+
+        const id = item._localId?.value;
+
+        if (id === undefined) continue;
+
+        const visited = new Set();
+
+        function traverse(node) {
+
+            if (!node || typeof node !== 'object') return;
+            if (visited.has(node)) return;
+
+            visited.add(node);
+
+            if (node._category?.value === 'IFCPROPERTYSET') {
+
+                const setName = node.Name?.value ?? 'Sin nombre';
+
+                if (!propertySets.has(setName)) {
+                    propertySets.set(setName, new Map());
+                }
+
+                const properties = propertySets.get(setName);
+
+                for (const property of node.HasProperties ?? []) {
+
+                    const name = property.Name?.value;
+                    const rawValue = property.NominalValue?.value;
+
+                    if (
+                        !name ||
+                        rawValue === null ||
+                        rawValue === undefined ||
+                        rawValue === ''
+                    ) continue;
+
+                    const value = String(rawValue);
+
+                    if (!properties.has(name)) {
+                        properties.set(name, new Map());
+                    }
+
+                    const values = properties.get(name);
+
+                    if (!values.has(value)) {
+                        values.set(value, new Set());
+                    }
+
+                    values.get(value).add(id);
+                }
+            }
+
+            for (const value of Object.values(node)) {
+
+                if (Array.isArray(value)) {
+                    value.forEach(traverse);
+                } else if (value && typeof value === 'object') {
+                    traverse(value);
+                }
+            }
+        }
+
+        traverse(item);
+    }
+
+    return propertySets;
+}
+
+function buildARPropertyUI() {
+
+    const psetSelect = document.getElementById('ar-pset');
+    if (!psetSelect) return;
+
+    psetSelect.innerHTML =
+        '<option value="">Seleccionar conjunto</option>';
+
+    for (const name of arPropertySets.keys()) {
+
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+
+        psetSelect.appendChild(option);
+    }
+}
+
+function fillARSelect(select, placeholder, values) {
+
+    select.innerHTML = '';
+
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = placeholder;
+    select.appendChild(first);
+
+    for (const value of values) {
+
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+
+        select.appendChild(option);
+    }
+
+    select.disabled = values.length === 0;
+}
+
+function initARPropertyFilters() {
+
+    const psetSelect = document.getElementById('ar-pset');
+    const propertySelect = document.getElementById('ar-property');
+    const valueSelect = document.getElementById('ar-property-value');
+    const applyButton = document.getElementById('ar-apply-filter');
+
+    if (!psetSelect || psetSelect.dataset.initialized) return;
+
+    psetSelect.dataset.initialized = 'true';
+
+    psetSelect.addEventListener('change', () => {
+
+        const properties = arPropertySets.get(psetSelect.value);
+
+        fillARSelect(
+            propertySelect,
+            'Seleccionar propiedad',
+            properties ? Array.from(properties.keys()).sort() : []
+        );
+
+        fillARSelect(valueSelect, 'Seleccionar valor', []);
+        applyButton.disabled = true;
+    });
+
+    propertySelect.addEventListener('change', () => {
+
+        const properties = arPropertySets.get(psetSelect.value);
+        const values = properties?.get(propertySelect.value);
+
+        fillARSelect(
+            valueSelect,
+            'Seleccionar valor',
+            values ? Array.from(values.keys()).sort() : []
+        );
+
+        applyButton.disabled = true;
+    });
+
+    valueSelect.addEventListener('change', () => {
+        applyButton.disabled = !valueSelect.value;
+    });
+
+    applyButton.addEventListener('click', async () => {
+
+        const filter = {
+            pset: psetSelect.value,
+            property: propertySelect.value,
+            value: valueSelect.value,
+        };
+
+        const exists = arActiveFilters.some(item =>
+            item.pset === filter.pset &&
+            item.property === filter.property &&
+            item.value === filter.value
+        );
+
+        if (!exists) {
+            arActiveFilters.push(filter);
+        }
+
+        renderARActiveFilters();
+        await applyARPropertyFilters();
+    });
+
+    document.getElementById('ar-clear-filters')
+        ?.addEventListener('click', async () => {
+
+            arActiveFilters = [];
+
+            renderARActiveFilters();
+            await applyARPropertyFilters();
+        });
+}
+
+async function applyARPropertyFilters() {
+
+    if (!arModelData.size) return;
+
+    const modelIdMap = {};
+
+    for (const [modelId, model] of arModelData) {
+
+        const allItems = await model.getItems();
+        let ids = new Set(allItems.keys());
+
+        const grouped = new Map();
+
+        for (const filter of arActiveFilters) {
+
+            const key = `${filter.pset}|||${filter.property}`;
+
+            if (!grouped.has(key)) {
+                grouped.set(key, []);
+            }
+
+            grouped.get(key).push(filter);
+        }
+
+        const propertySets = arPropertySets;
+
+        for (const filters of grouped.values()) {
+
+            const matchingIds = new Set();
+
+            for (const filter of filters) {
+
+                const values = propertySets
+                    .get(filter.pset)
+                    ?.get(filter.property);
+
+                const propertyIds = values?.get(filter.value);
+
+                if (propertyIds) {
+                    for (const id of propertyIds) {
+                        matchingIds.add(id);
+                    }
+                }
+            }
+
+            ids = new Set([...ids].filter(id => matchingIds.has(id)));
+        }
+
+        modelIdMap[modelId] = ids;
+    }
+
+    await arHider.set(false);
+    await arHider.set(true, modelIdMap);
+
+    fragments.core.update(true);
+}
+
+function renderARActiveFilters() {
+
+    const container = document.getElementById('ar-active-filters');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!arActiveFilters.length) {
+        container.innerHTML =
+            '<div class="small text-light">Sin filtros activos</div>';
+        return;
+    }
+
+    arActiveFilters.forEach((filter, index) => {
+
+        const row = document.createElement('div');
+
+        row.className =
+            'd-flex justify-content-between align-items-center gap-2 small mb-1';
+
+        const label = document.createElement('span');
+        label.textContent =
+            `${filter.pset} · ${filter.property}: ${filter.value}`;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm btn-outline-light';
+        button.textContent = '×';
+
+        button.addEventListener('click', async () => {
+            arActiveFilters.splice(index, 1);
+            renderARActiveFilters();
+            await applyARPropertyFilters();
+        });
+
+        row.append(label, button);
+        container.appendChild(row);
+    });
+}
