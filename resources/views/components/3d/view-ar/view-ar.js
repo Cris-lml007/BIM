@@ -2,8 +2,7 @@
 const container = document.getElementById('viewer');
 
 if (!container) {
-    alert('Error AR: no se encontró #viewer.');
-    throw new Error('No se encontró #viewer');
+    throw new Error('No se encontró el elemento #viewer');
 }
 
 const arUI = document.getElementById('ar-ui-container');
@@ -13,141 +12,40 @@ const opacityText = document.getElementById('ar-opacity-value');
 let components;
 let world;
 let fragments;
+let hider;
+
 let renderer;
 let scene;
 let camera;
+
 let arController;
 let arReticle;
-let arHider;
 
 let hitTestSource = null;
 let hitTestSourceRequested = false;
+
 let arModel = null;
-let arModelInstance = null;
-let arIndexModelId = null;
+let bimModel = null;
+let bimModelId = null;
 
 let modelLoading = false;
 let modelLoaded = false;
 let isAR = false;
 let opacityValue = 1;
 
-let arPropertySets = new Map();
-let arActiveFilters = [];
-let filterEventsInitialized = false;
-let errorPanel = null;
+let modelCategories = new Map();
+let modelProperties = new Map();
+let allModelIds = [];
+let activePropertyFilters = [];
+let categoryVisibility = new Map();
+let filterUIReady = false;
 
-
-// ==================================================
-// ERRORES VISIBLES
-// ==================================================
-
-function showARError(message, error = null) {
-    const details = error
-        ? (error.message || String(error))
-        : '';
-
-    const fullMessage = details
-        ? `${message}\nDetalle: ${details}`
-        : message;
-
-    console.error('[Visor AR]', fullMessage, error || '');
-
-    if (!errorPanel) {
-        errorPanel = document.getElementById('ar-error-panel');
-
-        if (!errorPanel) {
-            errorPanel = document.createElement('div');
-            errorPanel.id = 'ar-error-panel';
-            errorPanel.style.cssText = `
-                position:fixed;
-                z-index:20000;
-                top:12px;
-                left:12px;
-                right:12px;
-                padding:14px;
-                color:white;
-                background:#842029;
-                border:1px solid #f5c2c7;
-                border-radius:8px;
-                font:14px/1.4 Arial,sans-serif;
-                overflow-wrap:anywhere;
-                pointer-events:auto;
-            `;
-            document.body.appendChild(errorPanel);
-        }
-    }
-
-    errorPanel.replaceChildren();
-
-    const heading = document.createElement('strong');
-    heading.textContent = 'Error del visor AR';
-
-    const detail = document.createElement('pre');
-    detail.style.cssText = 'white-space:pre-wrap;margin:8px 0;';
-    detail.textContent = fullMessage;
-
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.textContent = 'Cerrar';
-    close.addEventListener('click', () => {
-        errorPanel.style.display = 'none';
-    });
-
-    errorPanel.append(heading, detail, close);
-    errorPanel.style.display = 'block';
-
-    window.alert(fullMessage);
-}
-
-window.addEventListener('error', event => {
-    showARError(
-        'Se produjo un error JavaScript.',
-        event.error || event.message
-    );
-});
-
-window.addEventListener('unhandledrejection', event => {
-    showARError(
-        'Falló una operación asíncrona.',
-        event.reason
-    );
-});
-
-
-// ==================================================
-// INICIALIZACIÓN DEL VISOR
-// ==================================================
+// =====================================================
+// INICIALIZACIÓN
+// =====================================================
 
 async function initViewer() {
     try {
-        if (!window.THREE) {
-            throw new Error('Three.js no está cargado.');
-        }
-
-        if (!window.OBC) {
-            throw new Error('La librería OBC no está cargada.');
-        }
-
-        if (!window.ARButton) {
-            throw new Error('ARButton no está cargado.');
-        }
-
-        if (!arUI) {
-            throw new Error('No se encontró #ar-ui-container.');
-        }
-
-        const OBC = window.OBC;
-
-        // La raíz del overlay debe permanecer disponible para WebXR.
-        arUI.style.display = 'block';
-        arUI.style.pointerEvents = 'none';
-
-        const controls = document.getElementById('ar-controls');
-        const filterPanel = document.getElementById('ar-property-filter');
-
-        if (controls) controls.style.display = 'none';
-        if (filterPanel) filterPanel.style.display = 'none';
-
         components = new OBC.Components();
 
         const worlds = components.get(OBC.Worlds);
@@ -169,8 +67,8 @@ async function initViewer() {
             container.clientWidth,
             container.clientHeight
         );
-        renderer.xr.enabled = true;
 
+        renderer.xr.enabled = true;
         container.appendChild(renderer.domElement);
 
         camera = new THREE.PerspectiveCamera(
@@ -186,205 +84,202 @@ async function initViewer() {
         components.init();
 
         fragments = components.get(OBC.FragmentsManager);
-
-        try {
-            arHider = components.get(OBC.Hider);
-        } catch (error) {
-            arHider = null;
-            console.warn('OBC.Hider no disponible:', error);
-        }
+        hider = components.get(OBC.Hider);
 
         await fragments.init('/engine/worker.mjs');
 
-        // Registrar el modelo cuando FragmentsManager lo notifique.
-        fragments.list.onItemSet.add(({ value: model }) => {
-            prepareLoadedModel(model).catch(error => {
-                showARError(
-                    'El modelo se cargó, pero falló su preparación.',
-                    error
-                );
-            });
-        });
+        // Registrar el evento antes de cargar cualquier modelo.
+        fragments.list.onItemSet.add(async ({ key, value: model }) => {
+            try {
+                console.log('Modelo Fragments registrado:', key);
 
-        const arButton = ARButton.createButton(renderer, {
-            requiredFeatures: ['hit-test'],
-            optionalFeatures: ['dom-overlay'],
-            domOverlay: { root: arUI }
-        });
+                model.useCamera(camera);
+                scene.add(model.object);
 
-        document.body.appendChild(arButton);
+                // Guardamos por separado el objeto Three.js
+                // y el modelo BIM administrado por Fragments.
+                bimModel = model;
+                bimModelId = key;
+                arModel = model.object;
 
-        // Evitar que los controles provoquen una selección del mundo AR.
-        arUI.addEventListener('beforexrselect', event => {
-            if (event.target.closest('#ar-controls, #ar-property-filter')) {
-                event.preventDefault();
-            }
-        });
+                arModel.scale.set(1, 1, 1);
+                arModel.visible = false;
 
-        // Opacidad.
-        if (opacitySlider) {
-            opacitySlider.addEventListener('input', () => {
-                opacityValue = Number(opacitySlider.value) / 100;
-
-                if (opacityText) {
-                    opacityText.textContent =
-                        `${opacitySlider.value}%`;
-                }
+                fragments.core.update(true);
 
                 setModelOpacity(opacityValue);
-            });
-        }
 
-        // Retícula de hit-test.
-        const geometry = new THREE.RingGeometry(0.08, 0.1, 32);
-        geometry.rotateX(-Math.PI / 2);
+                modelLoaded = true;
+                modelLoading = false;
 
-        arReticle = new THREE.Mesh(
-            geometry,
-            new THREE.MeshBasicMaterial({
-                color: 0x00ff88,
-                side: THREE.DoubleSide
-            })
-        );
+                await prepareBimFilters(model);
 
-        arReticle.matrixAutoUpdate = false;
-        arReticle.visible = false;
-        scene.add(arReticle);
-
-        arController = renderer.xr.getController(0);
-        arController.addEventListener('select', onARSelect);
-        scene.add(arController);
-
-        renderer.xr.addEventListener('sessionstart', () => {
-            isAR = true;
-            hitTestSource = null;
-            hitTestSourceRequested = false;
-
-            if (arModel) arModel.visible = false;
-
-            if (controls) controls.style.display = 'block';
-            if (filterPanel) filterPanel.style.display = 'block';
-
-            if (opacitySlider) {
-                opacitySlider.value = String(
-                    Math.round(opacityValue * 100)
+                console.log('Modelo BIM preparado:', key);
+            } catch (error) {
+                modelLoading = false;
+                showARError(
+                    'El modelo se cargó, pero falló la preparación de los filtros BIM.',
+                    error
                 );
             }
-
-            if (opacityText) {
-                opacityText.textContent =
-                    `${Math.round(opacityValue * 100)}%`;
-            }
-
-            console.info('Sesión AR iniciada.');
         });
 
-        renderer.xr.addEventListener('sessionend', () => {
-            isAR = false;
-            hitTestSource = null;
-            hitTestSourceRequested = false;
-
-            if (arReticle) arReticle.visible = false;
-            if (controls) controls.style.display = 'none';
-            if (filterPanel) filterPanel.style.display = 'none';
-
-            if (arModel) arModel.visible = true;
-        });
+        createARInterface();
+        createReticle();
+        createARController();
+        configureARSessionEvents();
 
         renderer.setAnimationLoop((timestamp, frame) => {
-            try {
-                updateAR(frame);
+            updateAR(frame);
 
-                if (isAR && arModel && fragments) {
-                    fragments.core.update();
-                }
-
-                renderer.render(scene, camera);
-            } catch (error) {
-                renderer.setAnimationLoop(null);
-                showARError('Error renderizando la escena AR.', error);
+            if (isAR && bimModel) {
+                fragments.core.update();
             }
+
+            renderer.render(scene, camera);
         });
 
         window.addEventListener('resize', onResize);
 
-        console.info('Visor inicializado.');
-
+        if (arUI) {
+            arUI.style.display = 'none';
+        }
     } catch (error) {
-        showARError(
-            'No se pudo inicializar el visor. Comprueba WebXR, las dependencias y la ruta del worker.',
-            error
-        );
-
-        throw error;
+        showARError('No se pudo iniciar el visor AR.', error);
     }
 }
 
+// =====================================================
+// INTERFAZ AR
+// =====================================================
 
-// ==================================================
-// PREPARACIÓN DEL MODELO
-// ==================================================
+function createARInterface() {
+    const arButton = ARButton.createButton(renderer, {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay'],
+        domOverlay: { root: arUI || document.body }
+    });
 
-async function prepareLoadedModel(model) {
-    if (!model) {
-        throw new Error('FragmentsManager notificó un modelo vacío.');
+    document.body.appendChild(arButton);
+
+    if (opacitySlider) {
+        opacitySlider.addEventListener('input', () => {
+            opacityValue = Number(opacitySlider.value) / 100;
+
+            if (opacityText) {
+                opacityText.textContent = `${opacitySlider.value}%`;
+            }
+
+            setModelOpacity(opacityValue);
+        });
     }
 
-    model.useCamera(camera);
-
-    if (model.object.parent !== scene) {
-        scene.add(model.object);
-    }
-
-    arModelInstance = model;
-    arModel = model.object;
-
-    // Usar siempre el identificador que devuelve Fragments.
-    arIndexModelId = model.modelId;
-
-    arModel.scale.set(1, 1, 1);
-    arModel.visible = false;
-
-    modelLoaded = true;
-    modelLoading = false;
-
-    fragments.core.update(true);
-    setModelOpacity(opacityValue);
-
-    // Un error del índice BIM no debe romper la cámara.
-    try {
-        arPropertySets = await buildARPropertyIndex(model);
-
-        buildARPropertyUI();
-        initARPropertyFilters();
-        renderARActiveFilters();
-
-        console.info(
-            'Índice BIM preparado:',
-            arPropertySets.size,
-            'Property Sets'
-        );
-    } catch (error) {
-        console.error('Error preparando filtros BIM:', error);
-
-        showARError(
-            'El modelo está cargado, pero falló la lectura de sus propiedades BIM.',
-            error
-        );
-    }
+    createFilterPanel();
 }
 
+function createFilterPanel() {
+    if (!arUI || document.getElementById('ar-bim-filters')) {
+        return;
+    }
 
-// ==================================================
-// ÍNDICE BIM
-// ==================================================
+    const panel = document.createElement('div');
+    panel.id = 'ar-bim-filters';
+    panel.innerHTML = `
+        <details>
+            <summary><strong>Filtros BIM</strong></summary>
 
-async function buildARPropertyIndex(model) {
-    // Consultar directamente la instancia recibida por onItemSet.
-    const items = await model.getItems();
-    const ids = Array.from(items.keys());
+            <div class="ar-filter-section">
+                <label for="ar-category-search">Buscar categoría</label>
+                <input id="ar-category-search" type="search"
+                       placeholder="Ej. IFCWALL">
 
-    const data = await model.getItemsData(ids, {
+                <div id="ar-category-list" class="ar-category-list">
+                    Carga un modelo para ver las categorías.
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="ar-filter-section">
+                <label for="ar-property-key">Propiedad</label>
+                <select id="ar-property-key">
+                    <option value="">Selecciona una propiedad</option>
+                </select>
+
+                <label for="ar-property-value">Valor</label>
+                <select id="ar-property-value" disabled>
+                    <option value="">Selecciona un valor</option>
+                </select>
+
+                <button type="button" id="ar-add-property-filter">
+                    Añadir filtro
+                </button>
+
+                <div id="ar-property-filters"></div>
+            </div>
+
+            <div id="ar-filter-info" aria-live="polite">
+                Sin filtros aplicados.
+            </div>
+
+            <div class="ar-filter-actions">
+                <button type="button" id="ar-apply-filters">
+                    Aplicar filtros
+                </button>
+                <button type="button" id="ar-clear-filters">
+                    Limpiar filtros
+                </button>
+            </div>
+        </details>
+    `;
+
+    arUI.appendChild(panel);
+
+    document.getElementById('ar-category-search')
+        .addEventListener('input', renderCategoryList);
+
+    document.getElementById('ar-property-key')
+        .addEventListener('change', renderPropertyValues);
+
+    document.getElementById('ar-add-property-filter')
+        .addEventListener('click', addPropertyFilter);
+
+    document.getElementById('ar-apply-filters')
+        .addEventListener('click', () => {
+            applyAllFilters().catch(error => {
+                showARError('No se pudieron aplicar los filtros.', error);
+            });
+        });
+
+    document.getElementById('ar-clear-filters')
+        .addEventListener('click', () => {
+            clearAllFilters().catch(error => {
+                showARError('No se pudieron limpiar los filtros.', error);
+            });
+        });
+
+    filterUIReady = true;
+}
+
+// =====================================================
+// PREPARAR CATEGORÍAS Y PROPIEDADES DEL MODELO
+// =====================================================
+
+async function prepareBimFilters(model) {
+    modelCategories = new Map();
+    modelProperties = new Map();
+    categoryVisibility = new Map();
+    activePropertyFilters = [];
+
+    const ids = await getAllModelIds(model);
+    allModelIds = ids.map(normalizeId);
+
+    if (!allModelIds.length) {
+        updateFilterInfo('No se encontraron elementos BIM en el modelo.');
+        return;
+    }
+
+    const data = await model.getItemsData(allModelIds, {
         attributesDefault: true,
         relations: {
             IsDefinedBy: {
@@ -398,333 +293,649 @@ async function buildARPropertyIndex(model) {
         }
     });
 
-    const propertySets = new Map();
+    for (let i = 0; i < allModelIds.length; i++) {
+        const id = allModelIds[i];
+        const item = data[i];
 
-    for (const item of data) {
-        const localId = item._localId?.value;
+        if (!item) continue;
 
-        if (localId === undefined || localId === null) continue;
+        const category = getCategoryName(item);
 
-        const visited = new Set();
-
-        function traverse(node) {
-            if (!node || typeof node !== 'object') return;
-            if (visited.has(node)) return;
-
-            visited.add(node);
-
-            if (node._category?.value === 'IFCPROPERTYSET') {
-                const setName = node.Name?.value || 'Sin nombre';
-
-                if (!propertySets.has(setName)) {
-                    propertySets.set(setName, new Map());
-                }
-
-                const properties = propertySets.get(setName);
-
-                for (const property of node.HasProperties || []) {
-                    const name = property.Name?.value;
-                    const rawValue = property.NominalValue?.value;
-
-                    if (
-                        !name ||
-                        rawValue === undefined ||
-                        rawValue === null ||
-                        rawValue === ''
-                    ) {
-                        continue;
-                    }
-
-                    const value = String(rawValue);
-
-                    if (!properties.has(name)) {
-                        properties.set(name, new Map());
-                    }
-
-                    const values = properties.get(name);
-
-                    if (!values.has(value)) {
-                        values.set(value, new Set());
-                    }
-
-                    values.get(value).add(localId);
-                }
+        if (category) {
+            if (!modelCategories.has(category)) {
+                modelCategories.set(category, []);
             }
 
-            for (const child of Object.values(node)) {
-                if (Array.isArray(child)) {
-                    child.forEach(traverse);
-                } else if (child && typeof child === 'object') {
-                    traverse(child);
-                }
-            }
+            modelCategories.get(category).push(id);
         }
 
-        traverse(item);
+        const propertySets = extractPropertySets(item);
+
+        for (const [setName, properties] of propertySets) {
+            for (const property of properties) {
+                const key = `${setName}.${property.name}`;
+                const value = String(property.value ?? '(sin valor)');
+
+                if (!modelProperties.has(key)) {
+                    modelProperties.set(key, new Map());
+                }
+
+                const valuesMap = modelProperties.get(key);
+
+                if (!valuesMap.has(value)) {
+                    valuesMap.set(value, []);
+                }
+
+                valuesMap.get(value).push(id);
+            }
+        }
     }
 
-    return propertySets;
+    for (const category of modelCategories.keys()) {
+        categoryVisibility.set(category, true);
+    }
+
+    renderCategoryList();
+    renderPropertyKeys();
+    renderPropertyFilters();
+    updateFilterInfo(
+        `Modelo ${String(bimModelId)}: ${allModelIds.length} elementos, ` +
+        `${modelCategories.size} categorías y ${modelProperties.size} propiedades.`
+    );
 }
 
+async function getAllModelIds(model) {
+    // Método usado por versiones de Fragments que exponen todos los IDs.
+    if (typeof model.getItemsIds === 'function') {
+        return await model.getItemsIds();
+    }
 
-// ==================================================
-// SELECTORES BIM
-// ==================================================
+    // Alternativa para versiones con consulta por categorías.
+    if (typeof model.getItemsOfCategories === 'function') {
+        return await model.getItemsOfCategories([/.*/]);
+    }
 
-function fillARSelect(select, placeholder, values) {
+    throw new Error(
+        'La versión de Fragments no expone getItemsIds() ni getItemsOfCategories().'
+    );
+}
+
+function normalizeId(id) {
+    return id;
+}
+
+function getCategoryName(item) {
+    const value =
+        item?._category?.value ??
+        item?._category ??
+        item?.category?.value ??
+        item?.category;
+
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    return null;
+}
+
+// =====================================================
+// EXTRAER CONJUNTOS DE PROPIEDADES IFC
+// =====================================================
+
+function extractPropertySets(root) {
+    const result = new Map();
+    const visited = new Set();
+
+    function visit(node) {
+        if (!node || typeof node !== 'object') return;
+        if (visited.has(node)) return;
+
+        visited.add(node);
+
+        if (Array.isArray(node)) {
+            for (const child of node) visit(child);
+            return;
+        }
+
+        const category = node?._category?.value;
+        const isPropertySet = category === 'IFCPROPERTYSET';
+
+        if (isPropertySet) {
+            const setName =
+                node.Name?.value ??
+                node.Name ??
+                'Propiedades';
+
+            const properties = [];
+            const children = node.HasProperties ?? [];
+
+            const propertyNodes = Array.isArray(children)
+                ? children
+                : Object.values(children);
+
+            for (const property of propertyNodes) {
+                if (!property || typeof property !== 'object') continue;
+
+                const name =
+                    property.Name?.value ??
+                    property.Name;
+
+                const nominalValue = property.NominalValue;
+                let value = nominalValue?.value ?? nominalValue;
+
+                if (value === undefined || value === null) {
+                    value =
+                        property.Value?.value ??
+                        property.Value ??
+                        '';
+                }
+
+                if (name !== undefined && name !== null) {
+                    properties.push({
+                        name: String(name),
+                        value: String(value ?? '')
+                    });
+                }
+            }
+
+            if (!result.has(String(setName))) {
+                result.set(String(setName), []);
+            }
+
+            result.get(String(setName)).push(...properties);
+        }
+
+        for (const value of Object.values(node)) {
+            if (value && typeof value === 'object') {
+                visit(value);
+            }
+        }
+    }
+
+    visit(root);
+    return result;
+}
+
+// =====================================================
+// INTERFAZ DE CATEGORÍAS
+// =====================================================
+
+function renderCategoryList() {
+    const list = document.getElementById('ar-category-list');
+    const search = document.getElementById('ar-category-search');
+
+    if (!list) return;
+
+    const query = (search?.value ?? '').trim().toLowerCase();
+    list.replaceChildren();
+
+    const categories = [...modelCategories.keys()]
+        .filter(category => category.toLowerCase().includes(query))
+        .sort();
+
+    if (!categories.length) {
+        list.textContent = 'No hay categorías coincidentes.';
+        return;
+    }
+
+    for (const category of categories) {
+        const label = document.createElement('label');
+        label.className = 'ar-category-option';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = categoryVisibility.get(category) !== false;
+
+        checkbox.addEventListener('change', async () => {
+            categoryVisibility.set(category, checkbox.checked);
+
+            try {
+                await applyAllFilters();
+            } catch (error) {
+                showARError('No se pudo filtrar la categoría.', error);
+            }
+        });
+
+        const text = document.createElement('span');
+        text.textContent =
+            `${category} (${modelCategories.get(category).length})`;
+
+        label.append(checkbox, text);
+        list.appendChild(label);
+    }
+}
+
+// =====================================================
+// INTERFAZ DE PROPIEDADES
+// =====================================================
+
+function renderPropertyKeys() {
+    const select = document.getElementById('ar-property-key');
     if (!select) return;
 
     select.replaceChildren();
 
-    const option = document.createElement('option');
-    option.value = '';
-    option.textContent = placeholder;
-    select.appendChild(option);
+    const initial = document.createElement('option');
+    initial.value = '';
+    initial.textContent = 'Selecciona una propiedad';
+    select.appendChild(initial);
 
-    for (const value of values) {
-        const item = document.createElement('option');
-        item.value = value;
-        item.textContent = value;
-        select.appendChild(item);
+    for (const key of [...modelProperties.keys()].sort()) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = key;
+        select.appendChild(option);
     }
 
-    select.disabled = values.length === 0;
+    renderPropertyValues();
 }
 
-function buildARPropertyUI() {
-    const pset = document.getElementById('ar-pset');
-    const property = document.getElementById('ar-property');
-    const value = document.getElementById('ar-property-value');
-    const apply = document.getElementById('ar-apply-filter');
+function renderPropertyValues() {
+    const keySelect = document.getElementById('ar-property-key');
+    const valueSelect = document.getElementById('ar-property-value');
 
-    if (!pset || !property || !value || !apply) {
-        console.warn('Faltan controles HTML para filtros BIM.');
+    if (!keySelect || !valueSelect) return;
+
+    valueSelect.replaceChildren();
+
+    const initial = document.createElement('option');
+    initial.value = '';
+    initial.textContent = 'Selecciona un valor';
+    valueSelect.appendChild(initial);
+
+    const key = keySelect.value;
+    const values = modelProperties.get(key);
+
+    if (!values) {
+        valueSelect.disabled = true;
         return;
     }
 
-    fillARSelect(
-        pset,
-        'Seleccionar conjunto',
-        Array.from(arPropertySets.keys()).sort()
+    valueSelect.disabled = false;
+
+    for (const value of [...values.keys()].sort()) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = `${value} (${values.get(value).length})`;
+        valueSelect.appendChild(option);
+    }
+}
+
+function addPropertyFilter() {
+    const key = document.getElementById('ar-property-key')?.value;
+    const value = document.getElementById('ar-property-value')?.value;
+
+    if (!key || value === undefined || value === '') {
+        updateFilterInfo('Selecciona una propiedad y un valor.');
+        return;
+    }
+
+    const exists = activePropertyFilters.some(
+        filter => filter.key === key && filter.value === value
     );
 
-    fillARSelect(property, 'Seleccionar propiedad', []);
-    fillARSelect(value, 'Seleccionar valor', []);
+    if (!exists) {
+        activePropertyFilters.push({ key, value });
+    }
 
-    apply.disabled = true;
+    renderPropertyFilters();
 }
 
-function initARPropertyFilters() {
-    if (filterEventsInitialized) return;
+function renderPropertyFilters() {
+    const container = document.getElementById('ar-property-filters');
+    if (!container) return;
 
-    const pset = document.getElementById('ar-pset');
-    const property = document.getElementById('ar-property');
-    const value = document.getElementById('ar-property-value');
-    const apply = document.getElementById('ar-apply-filter');
-    const clear = document.getElementById('ar-clear-filters');
+    container.replaceChildren();
 
-    if (!pset || !property || !value || !apply || !clear) return;
-
-    filterEventsInitialized = true;
-
-    pset.addEventListener('change', () => {
-        const properties = arPropertySets.get(pset.value);
-
-        fillARSelect(
-            property,
-            'Seleccionar propiedad',
-            properties ? Array.from(properties.keys()).sort() : []
-        );
-
-        fillARSelect(value, 'Seleccionar valor', []);
-        apply.disabled = true;
-    });
-
-    property.addEventListener('change', () => {
-        const properties = arPropertySets.get(pset.value);
-        const values = properties?.get(property.value);
-
-        fillARSelect(
-            value,
-            'Seleccionar valor',
-            values ? Array.from(values.keys()).sort() : []
-        );
-
-        apply.disabled = true;
-    });
-
-    value.addEventListener('change', () => {
-        apply.disabled = !value.value;
-    });
-
-    apply.addEventListener('click', async event => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (!pset.value || !property.value || !value.value) return;
-
-        const filter = {
-            pset: pset.value,
-            property: property.value,
-            value: value.value
-        };
-
-        const exists = arActiveFilters.some(item =>
-            item.pset === filter.pset &&
-            item.property === filter.property &&
-            item.value === filter.value
-        );
-
-        if (!exists) arActiveFilters.push(filter);
-
-        renderARActiveFilters();
-
-        try {
-            await applyARPropertyFilters();
-        } catch (error) {
-            showARError('No se pudieron aplicar los filtros BIM.', error);
-        }
-    });
-
-    clear.addEventListener('click', async event => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        arActiveFilters = [];
-        renderARActiveFilters();
-
-        try {
-            await applyARPropertyFilters();
-        } catch (error) {
-            showARError('No se pudieron limpiar los filtros BIM.', error);
-        }
-    });
-}
-
-function renderARActiveFilters() {
-    const target = document.getElementById('ar-active-filters');
-    if (!target) return;
-
-    target.replaceChildren();
-
-    if (arActiveFilters.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'small';
-        empty.textContent = 'Sin filtros activos';
-        target.appendChild(empty);
+    if (!activePropertyFilters.length) {
+        container.textContent = 'No hay filtros de propiedades.';
         return;
     }
 
-    arActiveFilters.forEach((filter, index) => {
+    for (const filter of activePropertyFilters) {
         const row = document.createElement('div');
-        row.className = 'ar-filter-item';
+        row.className = 'ar-property-filter';
 
         const text = document.createElement('span');
-        text.textContent =
-            `${filter.pset} · ${filter.property}: ${filter.value}`;
+        text.textContent = `${filter.key} = ${filter.value}`;
 
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = '×';
-        button.setAttribute('aria-label', 'Eliminar filtro');
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.setAttribute(
+            'aria-label',
+            `Quitar filtro ${filter.key} ${filter.value}`
+        );
 
-        button.addEventListener('click', async event => {
-            event.preventDefault();
-            event.stopPropagation();
+        remove.addEventListener('click', async () => {
+            activePropertyFilters = activePropertyFilters.filter(
+                item => !(item.key === filter.key && item.value === filter.value)
+            );
 
-            arActiveFilters.splice(index, 1);
-            renderARActiveFilters();
+            renderPropertyFilters();
 
             try {
-                await applyARPropertyFilters();
+                await applyAllFilters();
             } catch (error) {
-                showARError('No se pudo eliminar el filtro.', error);
+                showARError('No se pudo actualizar el filtro.', error);
             }
         });
 
-        row.append(text, button);
-        target.appendChild(row);
-    });
+        row.append(text, remove);
+        container.appendChild(row);
+    }
 }
 
-
-// ==================================================
+// =====================================================
 // APLICAR FILTROS
-// ==================================================
+// =====================================================
 
-async function applyARPropertyFilters() {
-    if (!arModelInstance || !fragments) {
-        throw new Error('El modelo Fragments todavía no está preparado.');
+async function getFilteredModelIds(model) {
+    const categoryIds = new Set();
+
+    for (const [category, ids] of modelCategories) {
+        if (categoryVisibility.get(category) !== false) {
+            for (const id of ids) categoryIds.add(id);
+        }
     }
 
-    if (!arHider) {
-        throw new Error(
-            'OBC.Hider no está disponible en la versión instalada.'
-        );
+    // Si un elemento no tiene categoría reconocida, no se incluye
+    // cuando se está aplicando el filtro de categorías.
+    let filtered = new Set(
+        allModelIds.filter(id => categoryIds.has(id))
+    );
+
+    // Múltiples valores de una misma propiedad: OR.
+    // Propiedades diferentes: AND.
+    const filtersByKey = new Map();
+
+    for (const filter of activePropertyFilters) {
+        if (!filtersByKey.has(filter.key)) {
+            filtersByKey.set(filter.key, []);
+        }
+
+        filtersByKey.get(filter.key).push(filter.value);
     }
 
-    const items = await arModelInstance.getItems();
-    const allIds = new Set(items.keys());
+    for (const [key, values] of filtersByKey) {
+        const propertyValues = modelProperties.get(key);
+        const matchingIds = new Set();
 
-    if (arActiveFilters.length === 0) {
-        // Mostrar todos los elementos del modelo.
-        await arHider.set(true);
-        fragments.core.update(true);
-        return;
-    }
+        for (const value of values) {
+            const ids = propertyValues?.get(value) ?? [];
 
-    // OR entre valores de una misma propiedad;
-    // AND entre propiedades diferentes.
-    const groups = new Map();
-
-    for (const filter of arActiveFilters) {
-        const key = `${filter.pset}|||${filter.property}`;
-
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(filter);
-    }
-
-    let matchingIds = new Set(allIds);
-
-    for (const filters of groups.values()) {
-        const groupIds = new Set();
-
-        for (const filter of filters) {
-            const ids = arPropertySets
-                .get(filter.pset)
-                ?.get(filter.property)
-                ?.get(filter.value);
-
-            if (ids) {
-                for (const id of ids) groupIds.add(id);
+            for (const id of ids) {
+                matchingIds.add(id);
             }
         }
 
-        matchingIds = new Set(
-            [...matchingIds].filter(id => groupIds.has(id))
+        filtered = new Set(
+            [...filtered].filter(id => matchingIds.has(id))
         );
     }
 
-    // Usar el identificador real, nunca asumir que es "main".
-    if (!arIndexModelId) {
-        throw new Error('Fragments no proporcionó model.modelId.');
+    return [...filtered];
+}
+
+async function applyAllFilters() {
+    if (!bimModel || !bimModelId || !hider) {
+        updateFilterInfo('Carga el modelo antes de aplicar filtros.');
+        return;
     }
 
-    await arHider.set(false);
+    const ids = await getFilteredModelIds(bimModel);
 
-    if (matchingIds.size > 0) {
-        await arHider.set(true, {
-            [arIndexModelId]: matchingIds
-        });
-    }
+    // La clave debe coincidir con la clave registrada en fragments.list.
+    const modelIdMap = {
+        [bimModelId]: ids
+    };
+
+    await hider.set(false);
+    await hider.set(true, modelIdMap);
+
+    updateFilterInfo(
+        `Visibles: ${ids.length} de ${allModelIds.length} elementos.`
+    );
 
     fragments.core.update(true);
 }
 
+async function clearAllFilters() {
+    activePropertyFilters = [];
 
-// ==================================================
+    for (const category of modelCategories.keys()) {
+        categoryVisibility.set(category, true);
+    }
+
+    renderCategoryList();
+    renderPropertyFilters();
+
+    if (bimModel && hider) {
+        await hider.set(false);
+        await hider.set(true, {
+            [bimModelId]: allModelIds
+        });
+
+        fragments.core.update(true);
+    }
+
+    updateFilterInfo('Filtros limpiados.');
+}
+
+function updateFilterInfo(message) {
+    const element = document.getElementById('ar-filter-info');
+
+    if (element) {
+        element.textContent = message;
+    }
+}
+
+// =====================================================
+// COLOCACIÓN AR
+// =====================================================
+
+function createReticle() {
+    const geometry = new THREE.RingGeometry(0.08, 0.1, 32);
+    geometry.rotateX(-Math.PI / 2);
+
+    arReticle = new THREE.Mesh(
+        geometry,
+        new THREE.MeshBasicMaterial()
+    );
+
+    arReticle.matrixAutoUpdate = false;
+    arReticle.visible = false;
+
+    scene.add(arReticle);
+}
+
+function createARController() {
+    arController = renderer.xr.getController(0);
+    arController.addEventListener('select', onARSelect);
+    scene.add(arController);
+}
+
+function configureARSessionEvents() {
+    renderer.xr.addEventListener('sessionstart', () => {
+        isAR = true;
+        hitTestSource = null;
+        hitTestSourceRequested = false;
+
+        if (arModel) {
+            arModel.visible = false;
+        }
+
+        if (opacitySlider) {
+            opacitySlider.value = String(Math.round(opacityValue * 100));
+        }
+
+        if (opacityText) {
+            opacityText.textContent =
+                `${Math.round(opacityValue * 100)}%`;
+        }
+
+        if (arUI) {
+            arUI.style.display = 'block';
+        }
+    });
+
+    renderer.xr.addEventListener('sessionend', () => {
+        isAR = false;
+        hitTestSource = null;
+        hitTestSourceRequested = false;
+
+        if (arReticle) {
+            arReticle.visible = false;
+        }
+
+        if (arUI) {
+            arUI.style.display = 'none';
+        }
+
+        if (arModel) {
+            arModel.visible = true;
+        }
+    });
+}
+
+async function onARSelect() {
+    if (!isAR || !arReticle?.visible) return;
+
+    const position = new THREE.Vector3();
+    position.setFromMatrixPosition(arReticle.matrix);
+
+    // Si ya está cargado, el toque vuelve a colocarlo.
+    if (modelLoaded && arModel) {
+        arModel.position.copy(position);
+        arModel.visible = true;
+
+        fragments.core.update(true);
+        return;
+    }
+
+    if (modelLoading) return;
+
+    const url = container.dataset.url;
+
+    if (!url) {
+        showARError('No existe data-url en #viewer.');
+        return;
+    }
+
+    modelLoading = true;
+
+    try {
+        const response = await fetch(url + '?type=frag');
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP ${response.status}`);
+        }
+
+        const buffer = await response.arrayBuffer();
+
+        // No registrar manualmente un segundo modelo.
+        // El evento onItemSet asigna bimModel, bimModelId y arModel.
+        await fragments.core.load(buffer, { modelId: 'main' });
+
+        // En algunas versiones el evento de registro puede ejecutarse
+        // al resolver load; verificamos el registro por su clave real.
+        const registeredModel = fragments.list.get('main');
+
+        if (registeredModel && !bimModel) {
+            bimModel = registeredModel;
+            bimModelId = 'main';
+            arModel = registeredModel.object;
+
+            registeredModel.useCamera(camera);
+            scene.add(registeredModel.object);
+
+            arModel.scale.set(1, 1, 1);
+            arModel.visible = false;
+
+            modelLoaded = true;
+            modelLoading = false;
+
+            await prepareBimFilters(registeredModel);
+        }
+
+        if (!arModel) {
+            throw new Error(
+                'Fragments terminó la carga, pero no se encontró el modelo registrado.'
+            );
+        }
+
+        arModel.position.copy(position);
+        arModel.scale.set(1, 1, 1);
+        arModel.visible = true;
+
+        setModelOpacity(opacityValue);
+        fragments.core.update(true);
+    } catch (error) {
+        modelLoading = false;
+        showARError('No se pudo cargar o colocar el modelo BIM.', error);
+    }
+}
+
+// =====================================================
+// HIT TEST
+// =====================================================
+
+function updateAR(frame) {
+    if (!frame) return;
+
+    const referenceSpace = renderer.xr.getReferenceSpace();
+    const session = renderer.xr.getSession();
+
+    if (!referenceSpace || !session) return;
+
+    if (!hitTestSourceRequested) {
+        hitTestSourceRequested = true;
+
+        session.requestReferenceSpace('viewer')
+            .then(viewerSpace => session.requestHitTestSource({
+                space: viewerSpace
+            }))
+            .then(source => {
+                hitTestSource = source;
+            })
+            .catch(error => {
+                hitTestSourceRequested = false;
+                showARError('No se pudo iniciar el hit-test AR.', error);
+            });
+
+        session.addEventListener('end', () => {
+            hitTestSourceRequested = false;
+            hitTestSource = null;
+
+            if (arReticle) {
+                arReticle.visible = false;
+            }
+        }, { once: true });
+    }
+
+    if (!hitTestSource) return;
+
+    const results = frame.getHitTestResults(hitTestSource);
+
+    if (!results.length) {
+        arReticle.visible = false;
+        return;
+    }
+
+    const pose = results[0].getPose(referenceSpace);
+
+    if (!pose) {
+        arReticle.visible = false;
+        return;
+    }
+
+    arReticle.visible = true;
+    arReticle.matrix.fromArray(pose.transform.matrix);
+}
+
+// =====================================================
 // OPACIDAD
-// ==================================================
+// =====================================================
 
 function setModelOpacity(opacity) {
     const value = THREE.MathUtils.clamp(opacity, 0, 1);
@@ -738,7 +949,7 @@ function setModelOpacity(opacity) {
             ? object.material
             : [object.material];
 
-        for (const material of materials) {
+        materials.forEach(material => {
             if (!material.userData.opacityOriginal) {
                 material.userData.opacityOriginal = {
                     opacity: material.opacity,
@@ -753,148 +964,36 @@ function setModelOpacity(opacity) {
 
             const original = material.userData.opacityOriginal;
 
-            material.opacity = original.opacity * value;
-            material.transparent =
-                value < 1 ? true : original.transparent;
+            if (value >= 1) {
+                material.opacity = original.opacity;
+                material.transparent = original.transparent;
+                material.depthWrite = original.depthWrite;
+                material.depthTest = original.depthTest;
+                material.side = original.side;
+                material.alphaTest = original.alphaTest;
+                material.blending = original.blending;
+            } else {
+                material.opacity = original.opacity * value;
+                material.transparent = true;
+                material.depthWrite = original.depthWrite;
+                material.depthTest = original.depthTest;
+                material.side = original.side;
+                material.alphaTest = original.alphaTest;
+                material.blending = original.blending;
+            }
 
-            material.depthWrite = original.depthWrite;
-            material.depthTest = original.depthTest;
-            material.side = original.side;
-            material.alphaTest = original.alphaTest;
-            material.blending = original.blending;
             material.needsUpdate = true;
-        }
+        });
     });
 
-    if (fragments) fragments.core.update(true);
-}
-
-
-// ==================================================
-// CARGAR Y COLOCAR MODELO
-// ==================================================
-
-async function onARSelect() {
-    if (!isAR || !arReticle?.visible) return;
-
-    const position = new THREE.Vector3();
-    position.setFromMatrixPosition(arReticle.matrix);
-
-    if (modelLoaded && arModel) {
-        arModel.position.copy(position);
-        arModel.visible = true;
+    if (fragments) {
         fragments.core.update(true);
-        return;
-    }
-
-    if (modelLoading) return;
-
-    modelLoading = true;
-
-    try {
-        const url = container.dataset.url;
-
-        if (!url) {
-            throw new Error('Falta data-url en #viewer.');
-        }
-
-        const response = await fetch(`${url}?type=frag`);
-
-        if (!response.ok) {
-            throw new Error(`Error HTTP ${response.status}.`);
-        }
-
-        const buffer = await response.arrayBuffer();
-
-        // IMPORTANTE: usar el mismo ID estable en la carga.
-        await fragments.core.load(buffer, {
-            modelId: 'main'
-        });
-
-        // Esperar el registro hecho por onItemSet.
-        if (!modelLoaded || !arModel) {
-            throw new Error(
-                'No se detectó el modelo después de cargarlo.'
-            );
-        }
-
-        arModel.position.copy(position);
-        arModel.scale.set(1, 1, 1);
-        arModel.visible = true;
-
-        setModelOpacity(opacityValue);
-        fragments.core.update(true);
-
-    } catch (error) {
-        showARError('No se pudo cargar o colocar el modelo AR.', error);
-    } finally {
-        modelLoading = false;
     }
 }
 
-
-// ==================================================
-// HIT-TEST
-// ==================================================
-
-function updateAR(frame) {
-    if (!frame) return;
-
-    const referenceSpace = renderer.xr.getReferenceSpace();
-    const session = renderer.xr.getSession();
-
-    if (!referenceSpace || !session) return;
-
-    if (!hitTestSourceRequested) {
-        hitTestSourceRequested = true;
-
-        session.requestReferenceSpace('viewer')
-            .then(viewerSpace => {
-                return session.requestHitTestSource({
-                    space: viewerSpace
-                });
-            })
-            .then(source => {
-                hitTestSource = source;
-            })
-            .catch(error => {
-                hitTestSourceRequested = false;
-
-                showARError(
-                    'No se pudo crear el hit-test para detectar superficies.',
-                    error
-                );
-            });
-
-        session.addEventListener('end', () => {
-            hitTestSourceRequested = false;
-            hitTestSource = null;
-
-            if (arReticle) arReticle.visible = false;
-        }, { once: true });
-    }
-
-    if (!hitTestSource) return;
-
-    const results = frame.getHitTestResults(hitTestSource);
-
-    if (results.length === 0) {
-        arReticle.visible = false;
-        return;
-    }
-
-    const pose = results[0].getPose(referenceSpace);
-
-    if (pose) {
-        arReticle.visible = true;
-        arReticle.matrix.fromArray(pose.transform.matrix);
-    }
-}
-
-
-// ==================================================
-// REDIMENSIONAR
-// ==================================================
+// =====================================================
+// RESIZE Y ERRORES
+// =====================================================
 
 function onResize() {
     if (!container || !camera || !renderer) return;
@@ -902,18 +1001,22 @@ function onResize() {
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    if (width <= 0 || height <= 0) return;
+    if (!width || !height) return;
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
 }
 
+function showARError(message, error = null) {
+    console.error(message, error);
 
-// ==================================================
+    const details = error?.message ? `\n${error.message}` : '';
+    window.alert(message + details);
+}
+
+// =====================================================
 // INICIAR
-// ==================================================
+// =====================================================
 
-initViewer().catch(error => {
-    console.error('Error de inicialización:', error);
-});
+initViewer();
