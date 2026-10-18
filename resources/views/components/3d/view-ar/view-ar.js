@@ -2,7 +2,7 @@
 const container = document.getElementById('viewer');
 
 if (!container) {
-    alert('Error AR: no se encontró el elemento #viewer.');
+    alert('Error AR: no se encontró #viewer.');
     throw new Error('No se encontró #viewer');
 }
 
@@ -10,15 +10,15 @@ const arUI = document.getElementById('ar-ui-container');
 const opacitySlider = document.getElementById('ar-opacity');
 const opacityText = document.getElementById('ar-opacity-value');
 
-let components = null;
-let world = null;
-let fragments = null;
-let renderer = null;
-let scene = null;
-let camera = null;
-let arController = null;
-let arReticle = null;
-let arHider = null;
+let components;
+let world;
+let fragments;
+let renderer;
+let scene;
+let camera;
+let arController;
+let arReticle;
+let arHider;
 
 let hitTestSource = null;
 let hitTestSourceRequested = false;
@@ -33,17 +33,15 @@ let opacityValue = 1;
 
 let arPropertySets = new Map();
 let arActiveFilters = [];
-let propertyIndexLoading = false;
-let arSession = null;
+let filterEventsInitialized = false;
 let errorPanel = null;
-let lastErrorMessage = '';
 
 
-// --------------------------------------------------
-// ERRORES VISIBLES EN EL MÓVIL
-// --------------------------------------------------
+// ==================================================
+// ERRORES VISIBLES
+// ==================================================
 
-function showARError(message, error = null, useAlert = true) {
+function showARError(message, error = null) {
     const details = error
         ? (error.message || String(error))
         : '';
@@ -60,20 +58,33 @@ function showARError(message, error = null, useAlert = true) {
         if (!errorPanel) {
             errorPanel = document.createElement('div');
             errorPanel.id = 'ar-error-panel';
-            errorPanel.style.display = 'none';
+            errorPanel.style.cssText = `
+                position:fixed;
+                z-index:20000;
+                top:12px;
+                left:12px;
+                right:12px;
+                padding:14px;
+                color:white;
+                background:#842029;
+                border:1px solid #f5c2c7;
+                border-radius:8px;
+                font:14px/1.4 Arial,sans-serif;
+                overflow-wrap:anywhere;
+                pointer-events:auto;
+            `;
             document.body.appendChild(errorPanel);
         }
     }
 
     errorPanel.replaceChildren();
 
-    const title = document.createElement('strong');
-    title.textContent = 'Error del visor AR';
+    const heading = document.createElement('strong');
+    heading.textContent = 'Error del visor AR';
 
-    const text = document.createElement('pre');
-    text.style.whiteSpace = 'pre-wrap';
-    text.style.margin = '8px 0';
-    text.textContent = fullMessage;
+    const detail = document.createElement('pre');
+    detail.style.cssText = 'white-space:pre-wrap;margin:8px 0;';
+    detail.textContent = fullMessage;
 
     const close = document.createElement('button');
     close.type = 'button';
@@ -82,26 +93,15 @@ function showARError(message, error = null, useAlert = true) {
         errorPanel.style.display = 'none';
     });
 
-    errorPanel.append(title, text, close);
+    errorPanel.append(heading, detail, close);
     errorPanel.style.display = 'block';
 
-    if (useAlert && fullMessage !== lastErrorMessage) {
-        lastErrorMessage = fullMessage;
-
-        // La alerta permite leer el error en el móvil.
-        window.alert(fullMessage);
-    }
+    window.alert(fullMessage);
 }
 
-function showARMessage(message) {
-    console.info('[Visor AR]', message);
-}
-
-
-// Captura errores JavaScript no controlados.
 window.addEventListener('error', event => {
     showARError(
-        'Se produjo un error de JavaScript.',
+        'Se produjo un error JavaScript.',
         event.error || event.message
     );
 });
@@ -114,9 +114,9 @@ window.addEventListener('unhandledrejection', event => {
 });
 
 
-// --------------------------------------------------
-// INICIALIZACIÓN
-// --------------------------------------------------
+// ==================================================
+// INICIALIZACIÓN DEL VISOR
+// ==================================================
 
 async function initViewer() {
     try {
@@ -124,23 +124,21 @@ async function initViewer() {
             throw new Error('Three.js no está cargado.');
         }
 
-        if (!window.OBС && !window.OBC) {
-            throw new Error('That Open Components (OBC) no está cargado.');
+        if (!window.OBC) {
+            throw new Error('La librería OBC no está cargada.');
         }
 
         if (!window.ARButton) {
             throw new Error('ARButton no está cargado.');
         }
 
-        const OBC = window.OBC || window.OBС;
-
         if (!arUI) {
-            throw new Error(
-                'No se encontró #ar-ui-container en el HTML.'
-            );
+            throw new Error('No se encontró #ar-ui-container.');
         }
 
-        // El root de dom-overlay debe permanecer visible.
+        const OBC = window.OBC;
+
+        // La raíz del overlay debe permanecer disponible para WebXR.
         arUI.style.display = 'block';
         arUI.style.pointerEvents = 'none';
 
@@ -150,7 +148,6 @@ async function initViewer() {
         if (controls) controls.style.display = 'none';
         if (filterPanel) filterPanel.style.display = 'none';
 
-        // Escena.
         components = new OBC.Components();
 
         const worlds = components.get(OBC.Worlds);
@@ -162,7 +159,6 @@ async function initViewer() {
 
         scene = world.scene.three;
 
-        // Renderer.
         renderer = new THREE.WebGLRenderer({
             antialias: true,
             alpha: true
@@ -173,11 +169,10 @@ async function initViewer() {
             container.clientWidth,
             container.clientHeight
         );
-
         renderer.xr.enabled = true;
+
         container.appendChild(renderer.domElement);
 
-        // Cámara usada por Three.js y WebXR.
         camera = new THREE.PerspectiveCamera(
             70,
             container.clientWidth / container.clientHeight,
@@ -188,21 +183,20 @@ async function initViewer() {
         camera.position.set(10, 10, 10);
         camera.lookAt(0, 0, 0);
 
-        await components.init();
+        components.init();
 
-        // Fragments.
         fragments = components.get(OBC.FragmentsManager);
 
         try {
             arHider = components.get(OBC.Hider);
         } catch (error) {
             arHider = null;
-            console.warn('Hider no disponible:', error);
+            console.warn('OBC.Hider no disponible:', error);
         }
 
         await fragments.init('/engine/worker.mjs');
 
-        // Cada modelo cargado se incorpora a la escena.
+        // Registrar el modelo cuando FragmentsManager lo notifique.
         fragments.list.onItemSet.add(({ value: model }) => {
             prepareLoadedModel(model).catch(error => {
                 showARError(
@@ -212,7 +206,6 @@ async function initViewer() {
             });
         });
 
-        // Botón AR.
         const arButton = ARButton.createButton(renderer, {
             requiredFeatures: ['hit-test'],
             optionalFeatures: ['dom-overlay'],
@@ -221,11 +214,9 @@ async function initViewer() {
 
         document.body.appendChild(arButton);
 
-        // El overlay intercepta controles, no el resto de la escena.
+        // Evitar que los controles provoquen una selección del mundo AR.
         arUI.addEventListener('beforexrselect', event => {
-            if (event.target.closest(
-                '#ar-property-filter, #ar-controls'
-            )) {
+            if (event.target.closest('#ar-controls, #ar-property-filter')) {
                 event.preventDefault();
             }
         });
@@ -245,14 +236,11 @@ async function initViewer() {
         }
 
         // Retícula de hit-test.
-        const reticleGeometry = new THREE.RingGeometry(
-            0.08, 0.1, 32
-        );
-
-        reticleGeometry.rotateX(-Math.PI / 2);
+        const geometry = new THREE.RingGeometry(0.08, 0.1, 32);
+        geometry.rotateX(-Math.PI / 2);
 
         arReticle = new THREE.Mesh(
-            reticleGeometry,
+            geometry,
             new THREE.MeshBasicMaterial({
                 color: 0x00ff88,
                 side: THREE.DoubleSide
@@ -263,17 +251,14 @@ async function initViewer() {
         arReticle.visible = false;
         scene.add(arReticle);
 
-        // Controlador de selección AR.
         arController = renderer.xr.getController(0);
         arController.addEventListener('select', onARSelect);
         scene.add(arController);
 
-        // La sesión AR ya está iniciada.
         renderer.xr.addEventListener('sessionstart', () => {
             isAR = true;
             hitTestSource = null;
             hitTestSourceRequested = false;
-            arSession = renderer.xr.getSession();
 
             if (arModel) arModel.visible = false;
 
@@ -291,26 +276,21 @@ async function initViewer() {
                     `${Math.round(opacityValue * 100)}%`;
             }
 
-            showARMessage('Sesión AR iniciada.');
+            console.info('Sesión AR iniciada.');
         });
 
         renderer.xr.addEventListener('sessionend', () => {
             isAR = false;
-            arSession = null;
             hitTestSource = null;
             hitTestSourceRequested = false;
 
             if (arReticle) arReticle.visible = false;
-
             if (controls) controls.style.display = 'none';
             if (filterPanel) filterPanel.style.display = 'none';
 
             if (arModel) arModel.visible = true;
-
-            showARMessage('Sesión AR finalizada.');
         });
 
-        // Bucle de renderizado.
         renderer.setAnimationLoop((timestamp, frame) => {
             try {
                 updateAR(frame);
@@ -322,21 +302,17 @@ async function initViewer() {
                 renderer.render(scene, camera);
             } catch (error) {
                 renderer.setAnimationLoop(null);
-
-                showARError(
-                    'Error en el bucle de renderizado.',
-                    error
-                );
+                showARError('Error renderizando la escena AR.', error);
             }
         });
 
         window.addEventListener('resize', onResize);
 
-        showARMessage('Visor inicializado. Pulsa el botón AR.');
+        console.info('Visor inicializado.');
 
     } catch (error) {
         showARError(
-            'No se pudo inicializar el visor. Comprueba las dependencias, la ruta del worker y el navegador.',
+            'No se pudo inicializar el visor. Comprueba WebXR, las dependencias y la ruta del worker.',
             error
         );
 
@@ -345,11 +321,15 @@ async function initViewer() {
 }
 
 
-// --------------------------------------------------
-// PREPARAR MODELO CARGADO
-// --------------------------------------------------
+// ==================================================
+// PREPARACIÓN DEL MODELO
+// ==================================================
 
 async function prepareLoadedModel(model) {
+    if (!model) {
+        throw new Error('FragmentsManager notificó un modelo vacío.');
+    }
+
     model.useCamera(camera);
 
     if (model.object.parent !== scene) {
@@ -359,47 +339,48 @@ async function prepareLoadedModel(model) {
     arModelInstance = model;
     arModel = model.object;
 
+    // Usar siempre el identificador que devuelve Fragments.
+    arIndexModelId = model.modelId;
+
     arModel.scale.set(1, 1, 1);
     arModel.visible = false;
 
     modelLoaded = true;
     modelLoading = false;
-    arIndexModelId = model.modelId;
 
     fragments.core.update(true);
     setModelOpacity(opacityValue);
 
-    // Los filtros se construyen en segundo plano.
-    // Un fallo aquí no debe detener la cámara AR.
-    propertyIndexLoading = true;
-
+    // Un error del índice BIM no debe romper la cámara.
     try {
         arPropertySets = await buildARPropertyIndex(model);
+
         buildARPropertyUI();
         initARPropertyFilters();
         renderARActiveFilters();
 
-        showARMessage(
-            `Índice BIM preparado: ${arPropertySets.size} Property Sets.`
+        console.info(
+            'Índice BIM preparado:',
+            arPropertySets.size,
+            'Property Sets'
         );
     } catch (error) {
-        console.error('Error preparando los filtros BIM:', error);
+        console.error('Error preparando filtros BIM:', error);
 
         showARError(
-            'El modelo está cargado, pero no se pudieron preparar los filtros BIM.',
+            'El modelo está cargado, pero falló la lectura de sus propiedades BIM.',
             error
         );
-    } finally {
-        propertyIndexLoading = false;
     }
 }
 
 
-// --------------------------------------------------
-// ÍNDICE DE PROPERTY SETS
-// --------------------------------------------------
+// ==================================================
+// ÍNDICE BIM
+// ==================================================
 
 async function buildARPropertyIndex(model) {
+    // Consultar directamente la instancia recibida por onItemSet.
     const items = await model.getItems();
     const ids = Array.from(items.keys());
 
@@ -420,9 +401,9 @@ async function buildARPropertyIndex(model) {
     const propertySets = new Map();
 
     for (const item of data) {
-        const id = item._localId?.value;
+        const localId = item._localId?.value;
 
-        if (id === undefined || id === null) continue;
+        if (localId === undefined || localId === null) continue;
 
         const visited = new Set();
 
@@ -447,8 +428,8 @@ async function buildARPropertyIndex(model) {
 
                     if (
                         !name ||
-                        rawValue === null ||
                         rawValue === undefined ||
+                        rawValue === null ||
                         rawValue === ''
                     ) {
                         continue;
@@ -466,7 +447,7 @@ async function buildARPropertyIndex(model) {
                         values.set(value, new Set());
                     }
 
-                    values.get(value).add(id);
+                    values.get(value).add(localId);
                 }
             }
 
@@ -486,9 +467,9 @@ async function buildARPropertyIndex(model) {
 }
 
 
-// --------------------------------------------------
-// INTERFAZ DE FILTROS BIM
-// --------------------------------------------------
+// ==================================================
+// SELECTORES BIM
+// ==================================================
 
 function fillARSelect(select, placeholder, values) {
     if (!select) return;
@@ -517,7 +498,7 @@ function buildARPropertyUI() {
     const apply = document.getElementById('ar-apply-filter');
 
     if (!pset || !property || !value || !apply) {
-        console.warn('Faltan controles HTML para los filtros BIM.');
+        console.warn('Faltan controles HTML para filtros BIM.');
         return;
     }
 
@@ -534,18 +515,17 @@ function buildARPropertyUI() {
 }
 
 function initARPropertyFilters() {
+    if (filterEventsInitialized) return;
+
     const pset = document.getElementById('ar-pset');
     const property = document.getElementById('ar-property');
     const value = document.getElementById('ar-property-value');
     const apply = document.getElementById('ar-apply-filter');
     const clear = document.getElementById('ar-clear-filters');
 
-    if (!pset || !property || !value || !apply || !clear) {
-        return;
-    }
+    if (!pset || !property || !value || !apply || !clear) return;
 
-    if (pset.dataset.initialized === 'true') return;
-    pset.dataset.initialized = 'true';
+    filterEventsInitialized = true;
 
     pset.addEventListener('change', () => {
         const properties = arPropertySets.get(pset.value);
@@ -627,7 +607,7 @@ function renderARActiveFilters() {
 
     target.replaceChildren();
 
-    if (!arActiveFilters.length) {
+    if (arActiveFilters.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'small';
         empty.textContent = 'Sin filtros activos';
@@ -658,7 +638,7 @@ function renderARActiveFilters() {
             try {
                 await applyARPropertyFilters();
             } catch (error) {
-                showARError('No se pudo quitar el filtro.', error);
+                showARError('No se pudo eliminar el filtro.', error);
             }
         });
 
@@ -668,33 +648,33 @@ function renderARActiveFilters() {
 }
 
 
-// --------------------------------------------------
-// APLICAR FILTROS AL MODELO
-// --------------------------------------------------
+// ==================================================
+// APLICAR FILTROS
+// ==================================================
 
 async function applyARPropertyFilters() {
-    if (!arModelInstance || !fragments || !arIndexModelId) {
-        throw new Error('El modelo todavía no está preparado.');
+    if (!arModelInstance || !fragments) {
+        throw new Error('El modelo Fragments todavía no está preparado.');
     }
 
     if (!arHider) {
         throw new Error(
-            'OBC.Hider no está disponible en esta versión de la librería.'
+            'OBC.Hider no está disponible en la versión instalada.'
         );
     }
 
-    const allItems = await arModelInstance.getItems();
-    const allIds = new Set(allItems.keys());
+    const items = await arModelInstance.getItems();
+    const allIds = new Set(items.keys());
 
-    // Sin filtros: volver a mostrar todos los elementos.
     if (arActiveFilters.length === 0) {
+        // Mostrar todos los elementos del modelo.
         await arHider.set(true);
         fragments.core.update(true);
         return;
     }
 
-    // Los valores de la misma propiedad se combinan con OR.
-    // Las propiedades diferentes se combinan con AND.
+    // OR entre valores de una misma propiedad;
+    // AND entre propiedades diferentes.
     const groups = new Map();
 
     for (const filter of arActiveFilters) {
@@ -725,7 +705,11 @@ async function applyARPropertyFilters() {
         );
     }
 
-    // Ocultar todo y volver a mostrar únicamente las coincidencias.
+    // Usar el identificador real, nunca asumir que es "main".
+    if (!arIndexModelId) {
+        throw new Error('Fragments no proporcionó model.modelId.');
+    }
+
     await arHider.set(false);
 
     if (matchingIds.size > 0) {
@@ -735,16 +719,12 @@ async function applyARPropertyFilters() {
     }
 
     fragments.core.update(true);
-
-    showARMessage(
-        `Filtros aplicados. Elementos coincidentes: ${matchingIds.size}.`
-    );
 }
 
 
-// --------------------------------------------------
+// ==================================================
 // OPACIDAD
-// --------------------------------------------------
+// ==================================================
 
 function setModelOpacity(opacity) {
     const value = THREE.MathUtils.clamp(opacity, 0, 1);
@@ -758,7 +738,7 @@ function setModelOpacity(opacity) {
             ? object.material
             : [object.material];
 
-        materials.forEach(material => {
+        for (const material of materials) {
             if (!material.userData.opacityOriginal) {
                 material.userData.opacityOriginal = {
                     opacity: material.opacity,
@@ -783,16 +763,16 @@ function setModelOpacity(opacity) {
             material.alphaTest = original.alphaTest;
             material.blending = original.blending;
             material.needsUpdate = true;
-        });
+        }
     });
 
     if (fragments) fragments.core.update(true);
 }
 
 
-// --------------------------------------------------
-// SELECCIÓN Y CARGA DEL MODELO EN AR
-// --------------------------------------------------
+// ==================================================
+// CARGAR Y COLOCAR MODELO
+// ==================================================
 
 async function onARSelect() {
     if (!isAR || !arReticle?.visible) return;
@@ -821,21 +801,20 @@ async function onARSelect() {
         const response = await fetch(`${url}?type=frag`);
 
         if (!response.ok) {
-            throw new Error(
-                `Error HTTP ${response.status} al descargar el modelo.`
-            );
+            throw new Error(`Error HTTP ${response.status}.`);
         }
 
         const buffer = await response.arrayBuffer();
 
+        // IMPORTANTE: usar el mismo ID estable en la carga.
         await fragments.core.load(buffer, {
             modelId: 'main'
         });
 
-        // El evento onItemSet prepara arModel.
-        if (!arModel) {
+        // Esperar el registro hecho por onItemSet.
+        if (!modelLoaded || !arModel) {
             throw new Error(
-                'El modelo se descargó, pero no se detectó en FragmentsManager.'
+                'No se detectó el modelo después de cargarlo.'
             );
         }
 
@@ -847,19 +826,16 @@ async function onARSelect() {
         fragments.core.update(true);
 
     } catch (error) {
+        showARError('No se pudo cargar o colocar el modelo AR.', error);
+    } finally {
         modelLoading = false;
-
-        showARError(
-            'No se pudo cargar o colocar el modelo en AR.',
-            error
-        );
     }
 }
 
 
-// --------------------------------------------------
-// HIT-TEST: DETECTAR SUPERFICIES
-// --------------------------------------------------
+// ==================================================
+// HIT-TEST
+// ==================================================
 
 function updateAR(frame) {
     if (!frame) return;
@@ -885,7 +861,7 @@ function updateAR(frame) {
                 hitTestSourceRequested = false;
 
                 showARError(
-                    'No se pudo iniciar el hit-test. Comprueba los permisos y la compatibilidad AR del navegador.',
+                    'No se pudo crear el hit-test para detectar superficies.',
                     error
                 );
             });
@@ -902,7 +878,7 @@ function updateAR(frame) {
 
     const results = frame.getHitTestResults(hitTestSource);
 
-    if (!results.length) {
+    if (results.length === 0) {
         arReticle.visible = false;
         return;
     }
@@ -916,9 +892,9 @@ function updateAR(frame) {
 }
 
 
-// --------------------------------------------------
+// ==================================================
 // REDIMENSIONAR
-// --------------------------------------------------
+// ==================================================
 
 function onResize() {
     if (!container || !camera || !renderer) return;
@@ -930,16 +906,14 @@ function onResize() {
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-
     renderer.setSize(width, height);
 }
 
 
-// --------------------------------------------------
-// ARRANQUE
-// --------------------------------------------------
+// ==================================================
+// INICIAR
+// ==================================================
 
 initViewer().catch(error => {
-    // El error ya se mostró en initViewer.
-    console.error('Error final al iniciar el visor:', error);
+    console.error('Error de inicialización:', error);
 });
