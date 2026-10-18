@@ -265,16 +265,22 @@ function createFilterPanel() {
 // =====================================================
 
 async function prepareBimFilters(model) {
+    if (!model) {
+        throw new Error('No se recibió el modelo de Fragments.');
+    }
+
     modelCategories = new Map();
     modelProperties = new Map();
     categoryVisibility = new Map();
     activePropertyFilters = [];
 
-    const ids = await getAllModelIds(model);
-    allModelIds = ids.map(normalizeId);
+    // Usa la instancia recibida, no busques "main".
+    const ids = await model.getItemsIds();
+
+    allModelIds = [...ids];
 
     if (!allModelIds.length) {
-        updateFilterInfo('No se encontraron elementos BIM en el modelo.');
+        updateFilterInfo('No se encontraron elementos BIM.');
         return;
     }
 
@@ -337,9 +343,11 @@ async function prepareBimFilters(model) {
     renderCategoryList();
     renderPropertyKeys();
     renderPropertyFilters();
+
     updateFilterInfo(
-        `Modelo ${String(bimModelId)}: ${allModelIds.length} elementos, ` +
-            `${modelCategories.size} categorías y ${modelProperties.size} propiedades.`
+        `${allModelIds.length} elementos; ` +
+        `${modelCategories.size} categorías; ` +
+        `${modelProperties.size} propiedades.`
     );
 }
 
@@ -840,22 +848,6 @@ async function onARSelect() {
         // al resolver load; verificamos el registro por su clave real.
         // const registeredModel = fragments.list.get('main');
 
-        if (registeredModel && !bimModel) {
-            bimModel = registeredModel;
-            bimModelId = 'main';
-            arModel = registeredModel.object;
-
-            registeredModel.useCamera(camera);
-            scene.add(registeredModel.object);
-
-            arModel.scale.set(1, 1, 1);
-            arModel.visible = false;
-
-            modelLoaded = true;
-            modelLoading = false;
-
-            await prepareBimFilters(registeredModel);
-        }
 
         if (!arModel) {
             throw new Error(
