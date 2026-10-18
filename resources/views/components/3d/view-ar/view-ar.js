@@ -9,6 +9,10 @@ const arUI = document.getElementById('ar-ui-container');
 const opacitySlider = document.getElementById('ar-opacity');
 const opacityText = document.getElementById('ar-opacity-value');
 
+// =====================================================
+// VARIABLES AR
+// =====================================================
+
 let components;
 let world;
 let fragments;
@@ -25,23 +29,29 @@ let hitTestSource = null;
 let hitTestSourceRequested = false;
 
 let arModel = null;
-let bimModel = null;
-let bimModelId = null;
-
 let modelLoading = false;
 let modelLoaded = false;
 let isAR = false;
 let opacityValue = 1;
 
-let modelCategories = new Map();
-let modelProperties = new Map();
-let allModelIds = [];
+// =====================================================
+// VARIABLES DE FILTRADO: PATRÓN DEL VIEWER BIM
+// =====================================================
+
+// modelCategories[modelId] = Map(categoria, localIds)
+// modelProperties[modelId] = Map(propiedad, Map(valor, localIds))
+
+const modelCategories = {};
+const modelProperties = {};
+const categoryVisibility = {};
+
 let activePropertyFilters = [];
-let categoryVisibility = new Map();
-let filterUIReady = false;
+
+let allModelIds = {};
+let filterDataReady = false;
 
 // =====================================================
-// INICIALIZACIÓN
+// INICIALIZAR VIEWER AR
 // =====================================================
 
 async function initViewer() {
@@ -57,6 +67,10 @@ async function initViewer() {
 
         scene = world.scene.three;
 
+        // -------------------------------------------------
+        // RENDERER ORIGINAL DE AR
+        // -------------------------------------------------
+
         renderer = new THREE.WebGLRenderer({
             antialias: true,
             alpha: true
@@ -71,6 +85,10 @@ async function initViewer() {
         renderer.xr.enabled = true;
         container.appendChild(renderer.domElement);
 
+        // -------------------------------------------------
+        // CÁMARA ORIGINAL DE AR
+        // -------------------------------------------------
+
         camera = new THREE.PerspectiveCamera(
             70,
             container.clientWidth / container.clientHeight,
@@ -83,55 +101,63 @@ async function initViewer() {
 
         components.init();
 
+        // -------------------------------------------------
+        // FRAGMENTS Y HIDER
+        // -------------------------------------------------
+
         fragments = components.get(OBC.FragmentsManager);
         hider = components.get(OBC.Hider);
 
         await fragments.init('/engine/worker.mjs');
 
-        // Registrar el evento antes de cargar cualquier modelo.
-fragments.list.onItemSet.add(async ({ key, value: model }) => {
-    try {
-        console.log('Modelo registrado en Fragments:', key);
+        // -------------------------------------------------
+        // MODELO REGISTRADO
+        // -------------------------------------------------
 
-        model.useCamera(camera);
-        scene.add(model.object);
+        fragments.list.onItemSet.add(({ value: model }) => {
+            try {
+                console.log('Modelo registrado en fragments.list');
 
-        bimModel = model;
-        bimModelId = key;
-        arModel = model.object;
+                model.useCamera(camera);
+                scene.add(model.object);
 
-        arModel.scale.set(1, 1, 1);
-        arModel.visible = false;
+                arModel = model.object;
+                arModel.scale.set(1, 1, 1);
+                arModel.visible = false;
 
-        modelLoaded = true;
-        modelLoading = false;
+                modelLoaded = true;
+                modelLoading = false;
 
-        fragments.core.update(true);
-        setModelOpacity(opacityValue);
+                fragments.core.update(true);
+                setModelOpacity(opacityValue);
 
-        // Preparar los filtros sin asumir que el ID es "main".
-        await prepareBimFilters(model);
-
-        console.log('Filtros BIM preparados para:', bimModelId);
-    } catch (error) {
-        console.error('Error preparando filtros BIM:', error);
-
-        window.alert(
-            'Error preparando los filtros BIM:\n' +
-            (error?.stack || error?.message || String(error))
-        );
-    }
-});
+                // Importante: utilizar el registro real de modelos,
+                // como en el viewer BIM funcional.
+                prepareRegisteredModels().catch(error => {
+                    showARError(
+                        'Error preparando los filtros BIM.',
+                        error
+                    );
+                });
+            } catch (error) {
+                modelLoading = false;
+                showARError('Error registrando el modelo AR.', error);
+            }
+        });
 
         createARInterface();
         createReticle();
         createARController();
         configureARSessionEvents();
 
+        // -------------------------------------------------
+        // BUCLE AR ORIGINAL
+        // -------------------------------------------------
+
         renderer.setAnimationLoop((timestamp, frame) => {
             updateAR(frame);
 
-            if (isAR && bimModel) {
+            if (isAR && arModel) {
                 fragments.core.update();
             }
 
@@ -149,14 +175,16 @@ fragments.list.onItemSet.add(async ({ key, value: model }) => {
 }
 
 // =====================================================
-// INTERFAZ AR
+// INTERFAZ AR Y FILTROS
 // =====================================================
 
 function createARInterface() {
     const arButton = ARButton.createButton(renderer, {
         requiredFeatures: ['hit-test'],
         optionalFeatures: ['dom-overlay'],
-        domOverlay: { root: arUI || document.body }
+        domOverlay: {
+            root: arUI || document.body
+        }
     });
 
     document.body.appendChild(arButton);
@@ -183,54 +211,46 @@ function createFilterPanel() {
 
     const panel = document.createElement('div');
     panel.id = 'ar-bim-filters';
+
     panel.innerHTML = `
-<details>
-    <summary><strong>Filtros BIM</strong></summary>
+        <details>
+            <summary><strong>Filtros BIM</strong></summary>
 
-    <div class="ar-filter-section">
-        <label for="ar-category-search">Buscar categoría</label>
-        <input id="ar-category-search" type="search"
-            placeholder="Ej. IFCWALL">
+            <label for="ar-category-search">Buscar categoría</label>
+            <input id="ar-category-search" type="search"
+                   placeholder="Buscar categoría">
 
-        <div id="ar-category-list" class="ar-category-list">
-            Carga un modelo para ver las categorías.
-        </div>
-    </div>
+            <div id="ar-category-list"></div>
 
-    <hr>
+            <hr>
 
-    <div class="ar-filter-section">
-        <label for="ar-property-key">Propiedad</label>
-        <select id="ar-property-key">
-            <option value="">Selecciona una propiedad</option>
-        </select>
+            <label for="ar-property-key">Propiedad</label>
+            <select id="ar-property-key">
+                <option value="">Selecciona una propiedad</option>
+            </select>
 
-        <label for="ar-property-value">Valor</label>
-        <select id="ar-property-value" disabled>
-            <option value="">Selecciona un valor</option>
-        </select>
+            <label for="ar-property-value">Valor</label>
+            <select id="ar-property-value" disabled>
+                <option value="">Selecciona un valor</option>
+            </select>
 
-        <button type="button" id="ar-add-property-filter">
-            Añadir filtro
-        </button>
+            <button type="button" id="ar-add-property-filter">
+                Añadir filtro
+            </button>
 
-        <div id="ar-property-filters"></div>
-    </div>
+            <div id="ar-property-filters"></div>
 
-    <div id="ar-filter-info" aria-live="polite">
-        Sin filtros aplicados.
-    </div>
+            <p id="ar-filter-info">Esperando modelo BIM...</p>
 
-    <div class="ar-filter-actions">
-        <button type="button" id="ar-apply-filters">
-            Aplicar filtros
-        </button>
-        <button type="button" id="ar-clear-filters">
-            Limpiar filtros
-        </button>
-    </div>
-</details>
-`;
+            <button type="button" id="ar-apply-filters">
+                Aplicar filtros
+            </button>
+
+            <button type="button" id="ar-clear-filters">
+                Limpiar filtros
+            </button>
+        </details>
+    `;
 
     arUI.appendChild(panel);
 
@@ -244,47 +264,76 @@ function createFilterPanel() {
         .addEventListener('click', addPropertyFilter);
 
     document.getElementById('ar-apply-filters')
-        .addEventListener('click', () => {
-            applyAllFilters().catch(error => {
+        .addEventListener('click', async () => {
+            try {
+                await applyAllFilters();
+            } catch (error) {
                 showARError('No se pudieron aplicar los filtros.', error);
-            });
+            }
         });
 
     document.getElementById('ar-clear-filters')
-        .addEventListener('click', () => {
-            clearAllFilters().catch(error => {
+        .addEventListener('click', async () => {
+            try {
+                await clearAllFilters();
+            } catch (error) {
                 showARError('No se pudieron limpiar los filtros.', error);
-            });
+            }
         });
-
-    filterUIReady = true;
 }
 
 // =====================================================
-// PREPARAR CATEGORÍAS Y PROPIEDADES DEL MODELO
+// PROCESAR MODELOS USANDO fragments.list
 // =====================================================
 
-async function prepareBimFilters(model) {
-    if (!model) {
-        throw new Error('No se recibió el modelo de Fragments.');
+async function prepareRegisteredModels() {
+    filterDataReady = false;
+
+    for (const [modelId, model] of fragments.list) {
+        console.log('Procesando modelo registrado:', modelId);
+
+        // Se usan las funciones del patrón del viewer:
+        // model.getItems() y model.getItemsData().
+        modelCategories[model.modelId] =
+            await buildModelCategories(model);
+
+        modelProperties[model.modelId] =
+            await buildModelProperties(model);
+
+        const items = await model.getItems();
+        const ids = Array.from(items.keys());
+
+        allModelIds[model.modelId] = ids;
+
+        if (!categoryVisibility[model.modelId]) {
+            categoryVisibility[model.modelId] = new Map();
+        }
+
+        for (const category of modelCategories[model.modelId].keys()) {
+            categoryVisibility[model.modelId].set(category, true);
+        }
     }
 
-    modelCategories = new Map();
-    modelProperties = new Map();
-    categoryVisibility = new Map();
-    activePropertyFilters = [];
+    renderCategoryList();
+    renderPropertyKeys();
+    renderPropertyFilters();
 
-    // Usa la instancia recibida, no busques "main".
-    const ids = await model.getItemsIds();
+    filterDataReady = true;
 
-    allModelIds = [...ids];
+    updateFilterInfo('Filtros BIM preparados.');
+}
 
-    if (!allModelIds.length) {
-        updateFilterInfo('No se encontraron elementos BIM.');
-        return;
-    }
+// =====================================================
+// EXTRAER CATEGORÍAS: PATRÓN DEL VIEWER
+// =====================================================
 
-    const data = await model.getItemsData(allModelIds, {
+async function buildModelCategories(model) {
+    const categories = new Map();
+
+    const items = await model.getItems();
+    const ids = Array.from(items.keys());
+
+    const data = await model.getItemsData(ids, {
         attributesDefault: true,
         relations: {
             IsDefinedBy: {
@@ -298,95 +347,97 @@ async function prepareBimFilters(model) {
         }
     });
 
-    for (let i = 0; i < allModelIds.length; i++) {
-        const id = allModelIds[i];
-        const item = data[i];
+    for (let index = 0; index < ids.length; index++) {
+        const localId = ids[index];
+        const item = data[index];
 
         if (!item) continue;
 
-        const category = getCategoryName(item);
-
-        if (category) {
-            if (!modelCategories.has(category)) {
-                modelCategories.set(category, []);
-            }
-
-            modelCategories.get(category).push(id);
-        }
-
         const propertySets = extractPropertySets(item);
+        let category = null;
 
-        for (const [setName, properties] of propertySets) {
-            for (const property of properties) {
-                const key = `${setName}.${property.name}`;
-                const value = String(property.value ?? '(sin valor)');
+        // La categoría personalizada se obtiene del conjunto "Otra",
+        // propiedad "Categoría", como en el viewer funcional.
+        const otherProperties = propertySets.get('Otra') || [];
 
-                if (!modelProperties.has(key)) {
-                    modelProperties.set(key, new Map());
-                }
-
-                const valuesMap = modelProperties.get(key);
-
-                if (!valuesMap.has(value)) {
-                    valuesMap.set(value, []);
-                }
-
-                valuesMap.get(value).push(id);
+        for (const property of otherProperties) {
+            if (property.name === 'Categoría') {
+                category = String(property.value);
+                break;
             }
         }
+
+        // Si el elemento no tiene esa propiedad, no inventamos
+        // una categoría distinta para él.
+        if (!category) continue;
+
+        if (!categories.has(category)) {
+            categories.set(category, []);
+        }
+
+        categories.get(category).push(localId);
     }
 
-    for (const category of modelCategories.keys()) {
-        categoryVisibility.set(category, true);
-    }
-
-    renderCategoryList();
-    renderPropertyKeys();
-    renderPropertyFilters();
-
-    updateFilterInfo(
-        `${allModelIds.length} elementos; ` +
-        `${modelCategories.size} categorías; ` +
-        `${modelProperties.size} propiedades.`
-    );
-}
-
-async function getAllModelIds(model) {
-    // Método usado por versiones de Fragments que exponen todos los IDs.
-    if (typeof model.getItemsIds === 'function') {
-        return await model.getItemsIds();
-    }
-
-    // Alternativa para versiones con consulta por categorías.
-    if (typeof model.getItemsOfCategories === 'function') {
-        return await model.getItemsOfCategories([/.*/]);
-    }
-
-    throw new Error(
-        'La versión de Fragments no expone getItemsIds() ni getItemsOfCategories().'
-    );
-}
-
-function normalizeId(id) {
-    return id;
-}
-
-function getCategoryName(item) {
-    const value =
-        item?._category?.value ??
-            item?._category ??
-            item?.category?.value ??
-            item?.category;
-
-    if (typeof value === 'string') {
-        return value;
-    }
-
-    return null;
+    return categories;
 }
 
 // =====================================================
-// EXTRAER CONJUNTOS DE PROPIEDADES IFC
+// EXTRAER PROPIEDADES: PATRÓN DEL VIEWER
+// =====================================================
+
+async function buildModelProperties(model) {
+    const properties = new Map();
+
+    const items = await model.getItems();
+    const ids = Array.from(items.keys());
+
+    const data = await model.getItemsData(ids, {
+        attributesDefault: true,
+        relations: {
+            IsDefinedBy: {
+                attributes: true,
+                relations: true
+            },
+            IsTypedBy: {
+                attributes: true,
+                relations: true
+            }
+        }
+    });
+
+    for (let index = 0; index < ids.length; index++) {
+        const localId = ids[index];
+        const item = data[index];
+
+        if (!item) continue;
+
+        const propertySets = extractPropertySets(item);
+
+        for (const [setName, setProperties] of propertySets) {
+            for (const property of setProperties) {
+                const key = `${setName}.${property.name}`;
+                const value = String(property.value ?? '');
+
+                if (!properties.has(key)) {
+                    properties.set(key, new Map());
+                }
+
+                const values = properties.get(key);
+
+                if (!values.has(value)) {
+                    values.set(value, []);
+                }
+
+                values.get(value).push(localId);
+            }
+        }
+    }
+
+    return properties;
+}
+
+// =====================================================
+// EXTRAER PROPERTY SETS IFC
 // =====================================================
 
 function extractPropertySets(root) {
@@ -400,56 +451,55 @@ function extractPropertySets(root) {
         visited.add(node);
 
         if (Array.isArray(node)) {
-            for (const child of node) visit(child);
+            for (const child of node) {
+                visit(child);
+            }
             return;
         }
 
         const category = node?._category?.value;
-        const isPropertySet = category === 'IFCPROPERTYSET';
 
-        if (isPropertySet) {
-            const setName =
+        if (category === 'IFCPROPERTYSET') {
+            const setName = String(
                 node.Name?.value ??
-                    node.Name ??
-                    'Propiedades';
+                node.Name ??
+                'Propiedades'
+            );
 
             const properties = [];
-            const children = node.HasProperties ?? [];
+            const rawProperties = node.HasProperties ?? [];
 
-            const propertyNodes = Array.isArray(children)
-                ? children
-                : Object.values(children);
+            const propertyNodes = Array.isArray(rawProperties)
+                ? rawProperties
+                : Object.values(rawProperties);
 
             for (const property of propertyNodes) {
                 if (!property || typeof property !== 'object') continue;
 
                 const name =
                     property.Name?.value ??
-                        property.Name;
+                    property.Name;
 
-                const nominalValue = property.NominalValue;
-                let value = nominalValue?.value ?? nominalValue;
-
-                if (value === undefined || value === null) {
-                    value =
-                        property.Value?.value ??
-                            property.Value ??
-                            '';
-                }
+                const rawValue =
+                    property.NominalValue?.value ??
+                    property.NominalValue ??
+                    property.Value?.value ??
+                    property.Value ??
+                    '';
 
                 if (name !== undefined && name !== null) {
                     properties.push({
                         name: String(name),
-                        value: String(value ?? '')
+                        value: String(rawValue ?? '')
                     });
                 }
             }
 
-            if (!result.has(String(setName))) {
-                result.set(String(setName), []);
+            if (!result.has(setName)) {
+                result.set(setName, []);
             }
 
-            result.get(String(setName)).push(...properties);
+            result.get(setName).push(...properties);
         }
 
         for (const value of Object.values(node)) {
@@ -460,11 +510,12 @@ function extractPropertySets(root) {
     }
 
     visit(root);
+
     return result;
 }
 
 // =====================================================
-// INTERFAZ DE CATEGORÍAS
+// MOSTRAR CATEGORÍAS
 // =====================================================
 
 function renderCategoryList() {
@@ -473,47 +524,52 @@ function renderCategoryList() {
 
     if (!list) return;
 
-    const query = (search?.value ?? '').trim().toLowerCase();
     list.replaceChildren();
 
-    const categories = [...modelCategories.keys()]
-    .filter(category => category.toLowerCase().includes(query))
-    .sort();
+    const query = (search?.value || '').toLowerCase();
 
-    if (!categories.length) {
-        list.textContent = 'No hay categorías coincidentes.';
-        return;
+    for (const [modelId, categories] of Object.entries(modelCategories)) {
+        for (const [category, ids] of categories) {
+            if (!category.toLowerCase().includes(query)) continue;
+
+            const label = document.createElement('label');
+            label.className = 'ar-category-option';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked =
+                categoryVisibility[modelId]?.get(category) !== false;
+
+            checkbox.addEventListener('change', async () => {
+                categoryVisibility[modelId].set(
+                    category,
+                    checkbox.checked
+                );
+
+                try {
+                    await applyAllFilters();
+                } catch (error) {
+                    showARError('No se pudo filtrar la categoría.', error);
+                }
+            });
+
+            const text = document.createElement('span');
+            text.textContent = `${category} (${ids.length})`;
+
+            label.append(checkbox, text);
+            list.appendChild(label);
+        }
     }
 
-    for (const category of categories) {
-        const label = document.createElement('label');
-        label.className = 'ar-category-option';
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = categoryVisibility.get(category) !== false;
-
-        checkbox.addEventListener('change', async () => {
-            categoryVisibility.set(category, checkbox.checked);
-
-            try {
-                await applyAllFilters();
-            } catch (error) {
-                showARError('No se pudo filtrar la categoría.', error);
-            }
-        });
-
-        const text = document.createElement('span');
-        text.textContent =
-            `${category} (${modelCategories.get(category).length})`;
-
-        label.append(checkbox, text);
-        list.appendChild(label);
+    if (!list.children.length) {
+        list.textContent = filterDataReady
+            ? 'No se encontraron categorías.'
+            : 'Esperando los datos del modelo...';
     }
 }
 
 // =====================================================
-// INTERFAZ DE PROPIEDADES
+// MOSTRAR PROPIEDADES
 // =====================================================
 
 function renderPropertyKeys() {
@@ -522,12 +578,20 @@ function renderPropertyKeys() {
 
     select.replaceChildren();
 
-    const initial = document.createElement('option');
-    initial.value = '';
-    initial.textContent = 'Selecciona una propiedad';
-    select.appendChild(initial);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Selecciona una propiedad';
+    select.appendChild(placeholder);
 
-    for (const key of [...modelProperties.keys()].sort()) {
+    const keys = new Set();
+
+    for (const properties of Object.values(modelProperties)) {
+        for (const key of properties.keys()) {
+            keys.add(key);
+        }
+    }
+
+    for (const key of [...keys].sort()) {
         const option = document.createElement('option');
         option.value = key;
         option.textContent = key;
@@ -545,34 +609,39 @@ function renderPropertyValues() {
 
     valueSelect.replaceChildren();
 
-    const initial = document.createElement('option');
-    initial.value = '';
-    initial.textContent = 'Selecciona un valor';
-    valueSelect.appendChild(initial);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Selecciona un valor';
+    valueSelect.appendChild(placeholder);
 
     const key = keySelect.value;
-    const values = modelProperties.get(key);
+    const values = new Set();
 
-    if (!values) {
-        valueSelect.disabled = true;
-        return;
+    for (const properties of Object.values(modelProperties)) {
+        for (const value of (properties.get(key)?.keys() || [])) {
+            values.add(value);
+        }
     }
 
-    valueSelect.disabled = false;
-
-    for (const value of [...values.keys()].sort()) {
+    for (const value of [...values].sort()) {
         const option = document.createElement('option');
         option.value = value;
-        option.textContent = `${value} (${values.get(value).length})`;
+        option.textContent = value;
         valueSelect.appendChild(option);
     }
+
+    valueSelect.disabled = !key || values.size === 0;
 }
+
+// =====================================================
+// FILTROS DE PROPIEDADES
+// =====================================================
 
 function addPropertyFilter() {
     const key = document.getElementById('ar-property-key')?.value;
     const value = document.getElementById('ar-property-value')?.value;
 
-    if (!key || value === undefined || value === '') {
+    if (!key || value === '') {
         updateFilterInfo('Selecciona una propiedad y un valor.');
         return;
     }
@@ -594,11 +663,6 @@ function renderPropertyFilters() {
 
     container.replaceChildren();
 
-    if (!activePropertyFilters.length) {
-        container.textContent = 'No hay filtros de propiedades.';
-        return;
-    }
-
     for (const filter of activePropertyFilters) {
         const row = document.createElement('div');
         row.className = 'ar-property-filter';
@@ -606,17 +670,15 @@ function renderPropertyFilters() {
         const text = document.createElement('span');
         text.textContent = `${filter.key} = ${filter.value}`;
 
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.textContent = '×';
-        remove.setAttribute(
-            'aria-label',
-            `Quitar filtro ${filter.key} ${filter.value}`
-        );
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = '×';
 
-        remove.addEventListener('click', async () => {
+        button.addEventListener('click', async () => {
             activePropertyFilters = activePropertyFilters.filter(
-                item => !(item.key === filter.key && item.value === filter.value)
+                item =>
+                    item.key !== filter.key ||
+                    item.value !== filter.value
             );
 
             renderPropertyFilters();
@@ -628,32 +690,36 @@ function renderPropertyFilters() {
             }
         });
 
-        row.append(text, remove);
+        row.append(text, button);
         container.appendChild(row);
     }
 }
 
 // =====================================================
-// APLICAR FILTROS
+// OBTENER ELEMENTOS FILTRADOS
 // =====================================================
 
 async function getFilteredModelIds(model) {
+    const modelId = model.modelId;
+    const categories = modelCategories[modelId] || new Map();
+    const visibleCategories = categoryVisibility[modelId] || new Map();
+
+    const allIds = allModelIds[modelId] || [];
     const categoryIds = new Set();
 
-    for (const [category, ids] of modelCategories) {
-        if (categoryVisibility.get(category) !== false) {
-            for (const id of ids) categoryIds.add(id);
+    for (const [category, ids] of categories) {
+        if (visibleCategories.get(category) !== false) {
+            for (const id of ids) {
+                categoryIds.add(id);
+            }
         }
     }
 
-    // Si un elemento no tiene categoría reconocida, no se incluye
-    // cuando se está aplicando el filtro de categorías.
     let filtered = new Set(
-        allModelIds.filter(id => categoryIds.has(id))
+        allIds.filter(id => categoryIds.has(id))
     );
 
-    // Múltiples valores de una misma propiedad: OR.
-    // Propiedades diferentes: AND.
+    const properties = modelProperties[modelId] || new Map();
     const filtersByKey = new Map();
 
     for (const filter of activePropertyFilters) {
@@ -665,13 +731,11 @@ async function getFilteredModelIds(model) {
     }
 
     for (const [key, values] of filtersByKey) {
-        const propertyValues = modelProperties.get(key);
+        const propertyValues = properties.get(key);
         const matchingIds = new Set();
 
         for (const value of values) {
-            const ids = propertyValues?.get(value) ?? [];
-
-            for (const id of ids) {
+            for (const id of propertyValues?.get(value) || []) {
                 matchingIds.add(id);
             }
         }
@@ -684,61 +748,75 @@ async function getFilteredModelIds(model) {
     return [...filtered];
 }
 
+// =====================================================
+// APLICAR FILTROS: fragments.list COMO EN EL VIEWER
+// =====================================================
+
 async function applyAllFilters() {
-    if (!bimModel || !bimModelId || !hider) {
-        updateFilterInfo('Carga el modelo antes de aplicar filtros.');
+    if (!filterDataReady) {
+        updateFilterInfo('Espera a que termine la preparación del modelo.');
         return;
     }
 
-    const ids = await getFilteredModelIds(bimModel);
+    const modelIdMap = {};
+    let visibleCount = 0;
+    let totalCount = 0;
 
-    // La clave debe coincidir con la clave registrada en fragments.list.
-    const modelIdMap = {
-        [bimModelId]: ids
-    };
+    for (const [modelId, model] of fragments.list) {
+        const filteredIds = await getFilteredModelIds(model);
+
+        // Se utiliza la clave del registro fragments.list,
+        // no se presupone que el identificador sea "main".
+        modelIdMap[modelId] = filteredIds;
+
+        visibleCount += filteredIds.length;
+        totalCount += (allModelIds[model.modelId] || []).length;
+    }
 
     await hider.set(false);
     await hider.set(true, modelIdMap);
 
-    updateFilterInfo(
-        `Visibles: ${ids.length} de ${allModelIds.length} elementos.`
-    );
-
     fragments.core.update(true);
+
+    updateFilterInfo(`Visibles: ${visibleCount} de ${totalCount} elementos.`);
 }
 
 async function clearAllFilters() {
     activePropertyFilters = [];
 
-    for (const category of modelCategories.keys()) {
-        categoryVisibility.set(category, true);
+    for (const categories of Object.values(categoryVisibility)) {
+        for (const category of categories.keys()) {
+            categories.set(category, true);
+        }
     }
 
     renderCategoryList();
     renderPropertyFilters();
 
-    if (bimModel && hider) {
-        await hider.set(false);
-        await hider.set(true, {
-            [bimModelId]: allModelIds
-        });
+    const modelIdMap = {};
 
-        fragments.core.update(true);
+    for (const [modelId, model] of fragments.list) {
+        modelIdMap[modelId] = allModelIds[model.modelId] || [];
     }
+
+    await hider.set(false);
+    await hider.set(true, modelIdMap);
+
+    fragments.core.update(true);
 
     updateFilterInfo('Filtros limpiados.');
 }
 
 function updateFilterInfo(message) {
-    const element = document.getElementById('ar-filter-info');
+    const info = document.getElementById('ar-filter-info');
 
-    if (element) {
-        element.textContent = message;
+    if (info) {
+        info.textContent = message;
     }
 }
 
 // =====================================================
-// COLOCACIÓN AR
+// RETÍCULA Y CONTROLADOR AR
 // =====================================================
 
 function createReticle() {
@@ -758,13 +836,20 @@ function createReticle() {
 
 function createARController() {
     arController = renderer.xr.getController(0);
+
     arController.addEventListener('select', onARSelect);
+
     scene.add(arController);
 }
+
+// =====================================================
+// EVENTOS DE SESIÓN AR
+// =====================================================
 
 function configureARSessionEvents() {
     renderer.xr.addEventListener('sessionstart', () => {
         isAR = true;
+
         hitTestSource = null;
         hitTestSourceRequested = false;
 
@@ -788,6 +873,7 @@ function configureARSessionEvents() {
 
     renderer.xr.addEventListener('sessionend', () => {
         isAR = false;
+
         hitTestSource = null;
         hitTestSourceRequested = false;
 
@@ -805,13 +891,19 @@ function configureARSessionEvents() {
     });
 }
 
+// =====================================================
+// CARGAR Y COLOCAR MODELO: AR ORIGINAL
+// =====================================================
+
 async function onARSelect() {
-    if (!isAR || !arReticle?.visible) return;
+    if (!isAR || !arReticle || !arReticle.visible) {
+        return;
+    }
 
     const position = new THREE.Vector3();
     position.setFromMatrixPosition(arReticle.matrix);
 
-    // Si ya está cargado, el toque vuelve a colocarlo.
+    // Si ya está cargado, el toque lo recoloca.
     if (modelLoaded && arModel) {
         arModel.position.copy(position);
         arModel.visible = true;
@@ -820,7 +912,9 @@ async function onARSelect() {
         return;
     }
 
-    if (modelLoading) return;
+    if (modelLoading) {
+        return;
+    }
 
     const url = container.dataset.url;
 
@@ -840,18 +934,17 @@ async function onARSelect() {
 
         const buffer = await response.arrayBuffer();
 
-        // No registrar manualmente un segundo modelo.
-        // El evento onItemSet asigna bimModel, bimModelId y arModel.
-        await fragments.core.load(buffer, { modelId: 'main' });
+        // Conservamos la carga del AR que ya funcionaba.
+        await fragments.core.load(buffer, {
+            modelId: 'main'
+        });
 
-        // En algunas versiones el evento de registro puede ejecutarse
-        // al resolver load; verificamos el registro por su clave real.
-        // const registeredModel = fragments.list.get('main');
-
-
+        // La instancia del modelo se recibe mediante onItemSet.
+        // No se consulta fragments.list.get('main') ni se recrea
+        // manualmente el modelo.
         if (!arModel) {
             throw new Error(
-                'Fragments terminó la carga, pero no se encontró el modelo registrado.'
+                'La carga terminó, pero el evento de registro no asignó el objeto AR.'
             );
         }
 
@@ -863,12 +956,12 @@ async function onARSelect() {
         fragments.core.update(true);
     } catch (error) {
         modelLoading = false;
-        showARError('No se pudo cargar o colocar el modelo BIM.', error);
+        showARError('No se pudo cargar o colocar el modelo AR.', error);
     }
 }
 
 // =====================================================
-// HIT TEST
+// HIT TEST: AR ORIGINAL
 // =====================================================
 
 function updateAR(frame) {
@@ -883,15 +976,17 @@ function updateAR(frame) {
         hitTestSourceRequested = true;
 
         session.requestReferenceSpace('viewer')
-            .then(viewerSpace => session.requestHitTestSource({
-                space: viewerSpace
-            }))
+            .then(viewerSpace => {
+                return session.requestHitTestSource({
+                    space: viewerSpace
+                });
+            })
             .then(source => {
                 hitTestSource = source;
             })
             .catch(error => {
                 hitTestSourceRequested = false;
-                showARError('No se pudo iniciar el hit-test AR.', error);
+                showARError('Error creando Hit Test.', error);
             });
 
         session.addEventListener('end', () => {
@@ -925,7 +1020,7 @@ function updateAR(frame) {
 }
 
 // =====================================================
-// OPACIDAD
+// OPACIDAD: AR ORIGINAL
 // =====================================================
 
 function setModelOpacity(opacity) {
@@ -996,14 +1091,18 @@ function onResize() {
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+
     renderer.setSize(width, height);
 }
 
 function showARError(message, error = null) {
     console.error(message, error);
 
-    const details = error?.message ? `\n${error.message}` : '';
-    window.alert(message + details);
+    const detail = error?.stack || error?.message || '';
+
+    window.alert(
+        message + (detail ? '\n\n' + detail : '')
+    );
 }
 
 // =====================================================
