@@ -89,43 +89,39 @@ async function initViewer() {
         await fragments.init('/engine/worker.mjs');
 
         // Registrar el evento antes de cargar cualquier modelo.
-        fragments.list.onItemSet.add(async ({ key, value: model }) => {
-            try {
-                console.log('Modelo Fragments registrado:', key);
+fragments.list.onItemSet.add(async ({ key, value: model }) => {
+    try {
+        console.log('Modelo registrado en Fragments:', key);
 
-                model.useCamera(camera);
-                scene.add(model.object);
+        model.useCamera(camera);
+        scene.add(model.object);
 
-                // Guardamos por separado el objeto Three.js
-                // y el modelo BIM administrado por Fragments.
-                bimModel = model;
-                bimModelId = key;
-                arModel = model.object;
+        bimModel = model;
+        bimModelId = key;
+        arModel = model.object;
 
-                arModel.scale.set(1, 1, 1);
-                arModel.visible = false;
+        arModel.scale.set(1, 1, 1);
+        arModel.visible = false;
 
-                fragments.core.update(true);
+        modelLoaded = true;
+        modelLoading = false;
 
-                setModelOpacity(opacityValue);
+        fragments.core.update(true);
+        setModelOpacity(opacityValue);
 
-                modelLoaded = true;
-                modelLoading = false;
+        // Preparar los filtros sin asumir que el ID es "main".
+        await prepareBimFilters(model);
 
-                await prepareBimFilters(model);
+        console.log('Filtros BIM preparados para:', bimModelId);
+    } catch (error) {
+        console.error('Error preparando filtros BIM:', error);
 
-                console.log('Modelo BIM preparado:', key);
-} catch (error) {
-    console.error('Error preparando filtros BIM:', error);
-
-    window.alert(
-        'Error preparando filtros BIM:\n' +
-        (error?.stack || error?.message || String(error))
-    );
-}
-
-
-        });
+        window.alert(
+            'Error preparando los filtros BIM:\n' +
+            (error?.stack || error?.message || String(error))
+        );
+    }
+});
 
         createARInterface();
         createReticle();
@@ -188,53 +184,53 @@ function createFilterPanel() {
     const panel = document.createElement('div');
     panel.id = 'ar-bim-filters';
     panel.innerHTML = `
-        <details>
-            <summary><strong>Filtros BIM</strong></summary>
+<details>
+    <summary><strong>Filtros BIM</strong></summary>
 
-            <div class="ar-filter-section">
-                <label for="ar-category-search">Buscar categoría</label>
-                <input id="ar-category-search" type="search"
-                       placeholder="Ej. IFCWALL">
+    <div class="ar-filter-section">
+        <label for="ar-category-search">Buscar categoría</label>
+        <input id="ar-category-search" type="search"
+            placeholder="Ej. IFCWALL">
 
-                <div id="ar-category-list" class="ar-category-list">
-                    Carga un modelo para ver las categorías.
-                </div>
-            </div>
+        <div id="ar-category-list" class="ar-category-list">
+            Carga un modelo para ver las categorías.
+        </div>
+    </div>
 
-            <hr>
+    <hr>
 
-            <div class="ar-filter-section">
-                <label for="ar-property-key">Propiedad</label>
-                <select id="ar-property-key">
-                    <option value="">Selecciona una propiedad</option>
-                </select>
+    <div class="ar-filter-section">
+        <label for="ar-property-key">Propiedad</label>
+        <select id="ar-property-key">
+            <option value="">Selecciona una propiedad</option>
+        </select>
 
-                <label for="ar-property-value">Valor</label>
-                <select id="ar-property-value" disabled>
-                    <option value="">Selecciona un valor</option>
-                </select>
+        <label for="ar-property-value">Valor</label>
+        <select id="ar-property-value" disabled>
+            <option value="">Selecciona un valor</option>
+        </select>
 
-                <button type="button" id="ar-add-property-filter">
-                    Añadir filtro
-                </button>
+        <button type="button" id="ar-add-property-filter">
+            Añadir filtro
+        </button>
 
-                <div id="ar-property-filters"></div>
-            </div>
+        <div id="ar-property-filters"></div>
+    </div>
 
-            <div id="ar-filter-info" aria-live="polite">
-                Sin filtros aplicados.
-            </div>
+    <div id="ar-filter-info" aria-live="polite">
+        Sin filtros aplicados.
+    </div>
 
-            <div class="ar-filter-actions">
-                <button type="button" id="ar-apply-filters">
-                    Aplicar filtros
-                </button>
-                <button type="button" id="ar-clear-filters">
-                    Limpiar filtros
-                </button>
-            </div>
-        </details>
-    `;
+    <div class="ar-filter-actions">
+        <button type="button" id="ar-apply-filters">
+            Aplicar filtros
+        </button>
+        <button type="button" id="ar-clear-filters">
+            Limpiar filtros
+        </button>
+    </div>
+</details>
+`;
 
     arUI.appendChild(panel);
 
@@ -343,7 +339,7 @@ async function prepareBimFilters(model) {
     renderPropertyFilters();
     updateFilterInfo(
         `Modelo ${String(bimModelId)}: ${allModelIds.length} elementos, ` +
-        `${modelCategories.size} categorías y ${modelProperties.size} propiedades.`
+            `${modelCategories.size} categorías y ${modelProperties.size} propiedades.`
     );
 }
 
@@ -370,9 +366,9 @@ function normalizeId(id) {
 function getCategoryName(item) {
     const value =
         item?._category?.value ??
-        item?._category ??
-        item?.category?.value ??
-        item?.category;
+            item?._category ??
+            item?.category?.value ??
+            item?.category;
 
     if (typeof value === 'string') {
         return value;
@@ -406,8 +402,8 @@ function extractPropertySets(root) {
         if (isPropertySet) {
             const setName =
                 node.Name?.value ??
-                node.Name ??
-                'Propiedades';
+                    node.Name ??
+                    'Propiedades';
 
             const properties = [];
             const children = node.HasProperties ?? [];
@@ -421,7 +417,7 @@ function extractPropertySets(root) {
 
                 const name =
                     property.Name?.value ??
-                    property.Name;
+                        property.Name;
 
                 const nominalValue = property.NominalValue;
                 let value = nominalValue?.value ?? nominalValue;
@@ -429,8 +425,8 @@ function extractPropertySets(root) {
                 if (value === undefined || value === null) {
                     value =
                         property.Value?.value ??
-                        property.Value ??
-                        '';
+                            property.Value ??
+                            '';
                 }
 
                 if (name !== undefined && name !== null) {
@@ -473,8 +469,8 @@ function renderCategoryList() {
     list.replaceChildren();
 
     const categories = [...modelCategories.keys()]
-        .filter(category => category.toLowerCase().includes(query))
-        .sort();
+    .filter(category => category.toLowerCase().includes(query))
+    .sort();
 
     if (!categories.length) {
         list.textContent = 'No hay categorías coincidentes.';
@@ -842,7 +838,7 @@ async function onARSelect() {
 
         // En algunas versiones el evento de registro puede ejecutarse
         // al resolver load; verificamos el registro por su clave real.
-        const registeredModel = fragments.list.get('main');
+        // const registeredModel = fragments.list.get('main');
 
         if (registeredModel && !bimModel) {
             bimModel = registeredModel;
