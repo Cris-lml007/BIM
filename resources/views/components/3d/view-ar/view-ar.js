@@ -115,13 +115,16 @@ async function initViewer() {
                 await prepareBimFilters(model);
 
                 console.log('Modelo BIM preparado:', key);
-            } catch (error) {
-                modelLoading = false;
-                showARError(
-                    'El modelo se cargó, pero falló la preparación de los filtros BIM.',
-                    error
-                );
-            }
+} catch (error) {
+    console.error('Error preparando filtros BIM:', error);
+
+    window.alert(
+        'Error preparando filtros BIM:\n' +
+        (error?.stack || error?.message || String(error))
+    );
+}
+
+
         });
 
         createARInterface();
