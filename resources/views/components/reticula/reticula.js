@@ -66,6 +66,7 @@ function initializeArCubes() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local');
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // NOTA: NO se llama a setReferenceSpaceType → default 'local-floor',
     // igual que la app principal.
