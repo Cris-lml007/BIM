@@ -1,59 +1,39 @@
 <div>
 
     <style>
-        #viewer {
-            position: relative;
-            width: 100%;
-            height: 75vh;
-            min-height: 400px;
-            overflow: hidden;
-            background: transparent;
-        }
+#viewer {
+    position: relative;
+    width: 100%;
+    height: 75vh;
+    min-height: 400px;
+    overflow: hidden;
+}
 
-        #viewer canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+#viewer canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
 
-        #ar-ui-container {
-            position: fixed;
-            inset: 0;
-            z-index: 10;
-            pointer-events: none;
-        }
+#ar-ui-container {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+}
 
-        .ar-opacity {
-            position: absolute;
-            left: 50%;
-            bottom: 40px;
-            transform: translateX(-50%);
-
-            width: min(300px, calc(100% - 40px));
-
-            padding: 15px 20px;
-
-            background: rgba(17, 17, 17, 0.85);
-
-            border-radius: 12px;
-
-            color: white;
-
-            pointer-events: auto;
-        }
-
-        .ar-opacity label {
-            display: block;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        #ar-opacity {
-            display: block;
-            width: 100%;
-            cursor: pointer;
-        }
+.ar-opacity {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    transform: translateX(-50%);
+    width: min(300px, calc(100% - 40px));
+    padding: 15px 20px;
+    border-radius: 12px;
+    background: rgba(17, 17, 17, 0.85);
+    color: white;
+    pointer-events: auto;
+}
     </style>
 
 

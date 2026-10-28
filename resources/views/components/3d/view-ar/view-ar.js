@@ -1,6 +1,6 @@
 // =====================================================
 // THREE.JS + WEBXR + THAT OPEN COMPONENTS
-// VISOR AR CON RETÍCULA, HIT TEST Y OPACIDAD
+// VISOR AR CON HIT TEST Y FRAGMENTS
 // =====================================================
 
 
@@ -16,13 +16,11 @@ if (!container) {
 
 
 // =====================================================
-// UI DOM OVERLAY
+// UI
 // =====================================================
 
 const arUI = document.getElementById('ar-ui-container');
-
 const opacitySlider = document.getElementById('ar-opacity');
-
 const opacityText = document.getElementById('ar-opacity-value');
 
 
@@ -82,7 +80,7 @@ async function initViewer() {
 
 
     // =================================================
-    // WEBGL RENDERER
+    // RENDERER
     // =================================================
 
     renderer = new THREE.WebGLRenderer({
@@ -101,11 +99,15 @@ async function initViewer() {
 
     renderer.xr.enabled = true;
 
+    // IMPORTANTE:
+    // Utilizar el mismo espacio de referencia que el ejemplo.
+    renderer.xr.setReferenceSpaceType('local');
+
     container.appendChild(renderer.domElement);
 
 
     // =================================================
-    // CAMERA
+    // CÁMARA
     // =================================================
 
     camera = new THREE.PerspectiveCamera(
@@ -121,7 +123,7 @@ async function initViewer() {
 
 
     // =================================================
-    // INICIALIZAR COMPONENTES
+    // COMPONENTES
     // =================================================
 
     components.init();
@@ -137,67 +139,36 @@ async function initViewer() {
 
 
     // =================================================
-    // CARGA DE MODELOS FRAGMENTS
+    // MODELOS CARGADOS
     // =================================================
 
     fragments.list.onItemSet.add(({ value: model }) => {
 
-        console.log('[FRAGMENTS] Modelo recibido');
-
-        // ---------------------------------------------
-        // CÁMARA DEL MODELO
-        // ---------------------------------------------
+        console.log('[FRAGMENTS] Modelo cargado');
 
         model.useCamera(camera);
-
-
-        // ---------------------------------------------
-        // AGREGAR MODELO A LA ESCENA
-        // ---------------------------------------------
 
         scene.add(model.object);
 
         arModel = model.object;
 
-
-        // ---------------------------------------------
-        // TRANSFORMACIÓN INICIAL
-        // ---------------------------------------------
-
         arModel.scale.set(1, 1, 1);
 
         arModel.visible = false;
 
-
-        // ---------------------------------------------
-        // ESTADO DE CARGA
-        // ---------------------------------------------
-
         modelLoaded = true;
-
         modelLoading = false;
-
-
-        // ---------------------------------------------
-        // ACTUALIZAR FRAGMENTS
-        // ---------------------------------------------
 
         fragments.core.update(true);
 
-
-        // ---------------------------------------------
-        // APLICAR OPACIDAD
-        // ---------------------------------------------
-
         setModelOpacity(opacityValue);
-
 
         console.log('[FRAGMENTS] Modelo preparado');
     });
 
 
     // =================================================
-    // CREAR RETÍCULA
+    // RETÍCULA
     // =================================================
 
     createARReticle();
@@ -209,10 +180,7 @@ async function initViewer() {
 
     arController = renderer.xr.getController(0);
 
-    arController.addEventListener(
-        'select',
-        onARSelect
-    );
+    arController.addEventListener('select', onARSelect);
 
     scene.add(arController);
 
@@ -242,7 +210,7 @@ async function initViewer() {
 
 
     // =================================================
-    // SLIDER DE OPACIDAD
+    // OPACIDAD
     // =================================================
 
     if (opacitySlider) {
@@ -253,7 +221,6 @@ async function initViewer() {
                 Number(opacitySlider.value) / 100;
 
             if (opacityText) {
-
                 opacityText.textContent =
                     `${opacitySlider.value}%`;
             }
@@ -264,18 +231,13 @@ async function initViewer() {
 
 
     // =================================================
-    // INICIO DE SESIÓN AR
+    // SESIÓN AR
     // =================================================
 
     renderer.xr.addEventListener(
         'sessionstart',
         onARSessionStart
     );
-
-
-    // =================================================
-    // FIN DE SESIÓN AR
-    // =================================================
 
     renderer.xr.addEventListener(
         'sessionend',
@@ -289,83 +251,59 @@ async function initViewer() {
 
     renderer.setAnimationLoop((timestamp, frame) => {
 
-        // ---------------------------------------------
-        // ACTUALIZAR HIT TEST Y RETÍCULA
-        // ---------------------------------------------
-
-        updateAR(frame);
-
-
-        // ---------------------------------------------
-        // ACTUALIZAR FRAGMENTS EN AR
-        // ---------------------------------------------
-
-        if (isAR && arModel && modelLoaded) {
-
-            fragments.core.update();
+        if (isAR && frame) {
+            updateAR(frame);
         }
 
-
-        // ---------------------------------------------
-        // ACTUALIZAR MATRICES DE LA ESCENA
-        // ---------------------------------------------
-
-        scene.updateMatrixWorld(true);
-
-
-        // ---------------------------------------------
-        // RENDERIZAR
-        // ---------------------------------------------
+        if (isAR && arModel && modelLoaded) {
+            fragments.core.update();
+        }
 
         renderer.render(scene, camera);
     });
 
 
     // =================================================
-    // REDIMENSIONAMIENTO
+    // RESIZE
     // =================================================
 
     window.addEventListener('resize', onResize);
 
 
     // =================================================
-    // OCULTAR INTERFAZ FUERA DE AR
+    // OCULTAR UI
     // =================================================
 
     if (arUI) {
         arUI.style.display = 'none';
     }
 
-
-    console.log('[VISOR] Inicializado correctamente');
+    console.log('[VISOR] Inicializado');
 }
 
 
 // =====================================================
-// CREAR RETÍCULA AR
+// CREAR RETÍCULA
 // =====================================================
 
 function createARReticle() {
 
-    // ---------------------------------------------
-    // GEOMETRÍA
-    // ---------------------------------------------
+    const reticleGroup = new THREE.Group();
 
-    const geometry = new THREE.RingGeometry(
+
+    // =================================================
+    // ANILLO
+    // =================================================
+
+    const ringGeometry = new THREE.RingGeometry(
         0.12,
         0.16,
         48
     );
 
-    // El anillo se coloca horizontalmente.
-    geometry.rotateX(-Math.PI / 2);
+    ringGeometry.rotateX(-Math.PI / 2);
 
-
-    // ---------------------------------------------
-    // MATERIAL
-    // ---------------------------------------------
-
-    const material = new THREE.MeshBasicMaterial({
+    const ringMaterial = new THREE.MeshBasicMaterial({
         color: 0xff0000,
         side: THREE.DoubleSide,
         depthTest: false,
@@ -373,36 +311,66 @@ function createARReticle() {
         toneMapped: false
     });
 
-
-    // ---------------------------------------------
-    // MESH
-    // ---------------------------------------------
-
-    arReticle = new THREE.Mesh(
-        geometry,
-        material
+    const ring = new THREE.Mesh(
+        ringGeometry,
+        ringMaterial
     );
 
+    ring.renderOrder = 999;
 
-    // ---------------------------------------------
-    // CONFIGURACIÓN
-    // ---------------------------------------------
+    reticleGroup.add(ring);
 
-    arReticle.matrixAutoUpdate = true;
+
+    // =================================================
+    // CRUZ CENTRAL
+    // =================================================
+
+    const points = [
+        new THREE.Vector3(-0.20, 0, 0),
+        new THREE.Vector3( 0.20, 0, 0),
+
+        new THREE.Vector3(0, 0, -0.20),
+        new THREE.Vector3(0, 0,  0.20)
+    ];
+
+    const crossGeometry = new THREE.BufferGeometry()
+        .setFromPoints(points);
+
+    const crossMaterial = new THREE.LineBasicMaterial({
+        color: 0xff0000,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false
+    });
+
+    const cross = new THREE.LineSegments(
+        crossGeometry,
+        crossMaterial
+    );
+
+    cross.renderOrder = 1000;
+
+    reticleGroup.add(cross);
+
+
+    // =================================================
+    // CONFIGURACIÓN DEL GRUPO
+    // =================================================
+
+    arReticle = reticleGroup;
+
+    // La matriz se establece directamente desde WebXR.
+    arReticle.matrixAutoUpdate = false;
 
     arReticle.visible = false;
 
     arReticle.renderOrder = 999;
 
-    arReticle.frustumCulled = false;
-
-
-    // ---------------------------------------------
-    // AGREGAR A LA ESCENA
-    // ---------------------------------------------
+    arReticle.traverse((object) => {
+        object.frustumCulled = false;
+    });
 
     scene.add(arReticle);
-
 
     console.log('[AR] Retícula creada');
 }
@@ -424,52 +392,23 @@ function onARSessionStart() {
 
     hitTestSourceRequested = false;
 
-
-    // ---------------------------------------------
-    // OCULTAR MODELO HASTA COLOCARLO
-    // ---------------------------------------------
-
     if (arModel) {
-
         arModel.visible = false;
     }
 
-
-    // ---------------------------------------------
-    // RESTABLECER RETÍCULA
-    // ---------------------------------------------
-
     arReticle.visible = false;
 
-    arReticle.position.set(0, 0, 0);
-
-    arReticle.quaternion.identity();
-
-
-    // ---------------------------------------------
-    // SINCRONIZAR OPACIDAD
-    // ---------------------------------------------
+    if (arUI) {
+        arUI.style.display = 'block';
+    }
 
     if (opacitySlider) {
-
-        opacitySlider.value =
-            Math.round(opacityValue * 100);
+        opacitySlider.value = Math.round(opacityValue * 100);
     }
 
     if (opacityText) {
-
         opacityText.textContent =
             `${Math.round(opacityValue * 100)}%`;
-    }
-
-
-    // ---------------------------------------------
-    // MOSTRAR INTERFAZ
-    // ---------------------------------------------
-
-    if (arUI) {
-
-        arUI.style.display = 'block';
     }
 }
 
@@ -490,33 +429,15 @@ function onARSessionEnd() {
 
     hitTestSourceRequested = false;
 
-
-    // ---------------------------------------------
-    // OCULTAR RETÍCULA
-    // ---------------------------------------------
-
     if (arReticle) {
-
         arReticle.visible = false;
     }
 
-
-    // ---------------------------------------------
-    // OCULTAR INTERFAZ
-    // ---------------------------------------------
-
     if (arUI) {
-
         arUI.style.display = 'none';
     }
 
-
-    // ---------------------------------------------
-    // MOSTRAR MODELO FUERA DE AR
-    // ---------------------------------------------
-
     if (arModel) {
-
         arModel.visible = true;
     }
 }
@@ -532,11 +453,9 @@ async function updateAR(frame) {
         return;
     }
 
-
     const session = renderer.xr.getSession();
 
     const referenceSpace = renderer.xr.getReferenceSpace();
-
 
     if (!session || !referenceSpace) {
         return;
@@ -544,76 +463,49 @@ async function updateAR(frame) {
 
 
     // =================================================
-    // CREAR FUENTE DE HIT TEST
+    // SOLICITAR HIT TEST SOURCE
     // =================================================
 
     if (!hitTestSourceRequested) {
 
         hitTestSourceRequested = true;
 
-        console.log('[AR] Solicitando Hit Test...');
+        console.log('[AR] Solicitando Hit Test');
 
         try {
 
             const viewerSpace =
                 await session.requestReferenceSpace('viewer');
 
-
-            // -----------------------------------------
-            // COMPROBAR QUE LA SESIÓN SIGUE ACTIVA
-            // -----------------------------------------
-
             if (
                 !isAR ||
                 renderer.xr.getSession() !== session
             ) {
-
                 hitTestSourceRequested = false;
-
                 return;
             }
-
-
-            // -----------------------------------------
-            // SOLICITAR FUENTE DE HIT TEST
-            // -----------------------------------------
 
             const source =
                 await session.requestHitTestSource({
                     space: viewerSpace
                 });
 
-
-            // -----------------------------------------
-            // COMPROBAR SESIÓN NUEVAMENTE
-            // -----------------------------------------
-
             if (
                 !isAR ||
                 renderer.xr.getSession() !== session
             ) {
-
                 source.cancel();
-
                 hitTestSourceRequested = false;
-
                 return;
             }
 
-
             hitTestSource = source;
 
-            console.log(
-                '[AR] Hit Test inicializado correctamente'
-            );
-
+            console.log('[AR] Hit Test listo');
 
         } catch (error) {
 
-            console.error(
-                '[AR] Error creando Hit Test:',
-                error
-            );
+            console.error('[AR] Error en Hit Test:', error);
 
             hitTestSourceRequested = false;
 
@@ -632,16 +524,22 @@ async function updateAR(frame) {
 
 
     // =================================================
-    // OBTENER RESULTADOS
+    // COMPROBAR POSE DEL VISOR
     // =================================================
 
-    const results =
-        frame.getHitTestResults(hitTestSource);
+    const viewerPose = frame.getViewerPose(referenceSpace);
+
+    if (!viewerPose) {
+        arReticle.visible = false;
+        return;
+    }
 
 
-    // ---------------------------------------------
-    // NO SE DETECTÓ NINGUNA SUPERFICIE
-    // ---------------------------------------------
+    // =================================================
+    // RESULTADOS HIT TEST
+    // =================================================
+
+    const results = frame.getHitTestResults(hitTestSource);
 
     if (results.length === 0) {
 
@@ -652,15 +550,14 @@ async function updateAR(frame) {
 
 
     // =================================================
-    // OBTENER POSE
+    // POSE DE LA SUPERFICIE
     // =================================================
 
     const hit = results[0];
 
-    const pose = hit.getPose(referenceSpace);
+    const hitPose = hit.getPose(referenceSpace);
 
-
-    if (!pose) {
+    if (!hitPose) {
 
         arReticle.visible = false;
 
@@ -669,49 +566,21 @@ async function updateAR(frame) {
 
 
     // =================================================
-    // ACTUALIZAR POSICIÓN Y ORIENTACIÓN
+    // ACTUALIZAR MATRIZ DIRECTAMENTE
     // =================================================
 
-    const transform = new THREE.Matrix4();
-
-    transform.fromArray(
-        pose.transform.matrix
+    arReticle.matrix.fromArray(
+        hitPose.transform.matrix
     );
 
-
-    transform.decompose(
-        arReticle.position,
-        arReticle.quaternion,
-        arReticle.scale
-    );
-
-
-    // ---------------------------------------------
-    // ASEGURAR ESCALA NORMAL
-    // ---------------------------------------------
-
-    arReticle.scale.set(1, 1, 1);
-
-
-    // ---------------------------------------------
-    // MOSTRAR RETÍCULA
-    // ---------------------------------------------
+    arReticle.matrixWorldNeedsUpdate = true;
 
     arReticle.visible = true;
-
-
-    // ---------------------------------------------
-    // ACTUALIZAR MATRICES
-    // ---------------------------------------------
-
-    arReticle.updateMatrix();
-
-    arReticle.updateMatrixWorld(true);
 }
 
 
 // =====================================================
-// SELECT AR: TOCAR PANTALLA
+// SELECCIÓN AR
 // =====================================================
 
 async function onARSelect() {
@@ -720,30 +589,25 @@ async function onARSelect() {
         return;
     }
 
-
-    // =================================================
-    // COMPROBAR RETÍCULA
-    // =================================================
-
     if (!arReticle || !arReticle.visible) {
 
-        console.log(
-            '[AR] No hay una superficie detectada'
-        );
+        console.log('[AR] No hay superficie detectada');
 
         return;
     }
 
 
     // =================================================
-    // OBTENER POSICIÓN DE LA RETÍCULA
+    // POSICIÓN DE LA RETÍCULA
     // =================================================
 
-    const position = arReticle.position.clone();
+    const position = new THREE.Vector3();
+
+    position.setFromMatrixPosition(arReticle.matrix);
 
 
     // =================================================
-    // SI EL MODELO YA ESTÁ CARGADO
+    // RECOLOCAR MODELO EXISTENTE
     // =================================================
 
     if (modelLoaded && arModel) {
@@ -754,39 +618,32 @@ async function onARSelect() {
 
         fragments.core.update(true);
 
-        console.log('[AR] Modelo colocado');
+        console.log('[AR] Modelo recolocado');
 
         return;
     }
 
 
     // =================================================
-    // EVITAR CARGAS SIMULTÁNEAS
+    // EVITAR DOBLE CARGA
     // =================================================
 
     if (modelLoading) {
-
-        console.log('[AR] El modelo ya se está cargando');
-
         return;
     }
-
 
     modelLoading = true;
 
 
     // =================================================
-    // OBTENER URL DEL MODELO
+    // URL
     // =================================================
 
     const url = container.dataset.url;
 
-
     if (!url) {
 
-        console.error(
-            '[AR] No existe data-url en #viewer'
-        );
+        console.error('[AR] Falta data-url');
 
         modelLoading = false;
 
@@ -795,13 +652,12 @@ async function onARSelect() {
 
 
     // =================================================
-    // CARGAR FRAGMENTS
+    // CARGAR MODELO
     // =================================================
 
     try {
 
-        console.log('[AR] Cargando modelo...');
-
+        console.log('[AR] Cargando modelo');
 
         const separator = url.includes('?') ? '&' : '?';
 
@@ -809,20 +665,13 @@ async function onARSelect() {
             `${url}${separator}type=frag`
         );
 
-
         if (!response.ok) {
-
-            throw new Error(
-                `Error HTTP ${response.status}`
-            );
+            throw new Error(`HTTP ${response.status}`);
         }
-
 
         const buffer = await response.arrayBuffer();
 
-
         console.log('[AR] Fragment recibido');
-
 
         await fragments.core.load(
             buffer,
@@ -832,21 +681,10 @@ async function onARSelect() {
         );
 
 
-        // ---------------------------------------------
-        // COMPROBAR MODELO
-        // ---------------------------------------------
-
+        // El evento onItemSet configura arModel.
         if (!arModel) {
-
-            throw new Error(
-                'El modelo se cargó, pero no se encontró su objeto Three.js'
-            );
+            throw new Error('No se obtuvo el objeto del modelo');
         }
-
-
-        // ---------------------------------------------
-        // COLOCAR MODELO
-        // ---------------------------------------------
 
         arModel.position.copy(position);
 
@@ -854,32 +692,17 @@ async function onARSelect() {
 
         arModel.visible = true;
 
-
-        // ---------------------------------------------
-        // APLICAR OPACIDAD
-        // ---------------------------------------------
-
         setModelOpacity(opacityValue);
-
-
-        // ---------------------------------------------
-        // ACTUALIZAR FRAGMENTS
-        // ---------------------------------------------
 
         fragments.core.update(true);
 
-
         modelLoaded = true;
 
-        console.log('[AR] Modelo colocado correctamente');
-
+        console.log('[AR] Modelo colocado');
 
     } catch (error) {
 
-        console.error(
-            '[AR] Error cargando el modelo:',
-            error
-        );
+        console.error('[AR] Error cargando modelo:', error);
 
     } finally {
 
@@ -889,130 +712,72 @@ async function onARSelect() {
 
 
 // =====================================================
-// CAMBIAR OPACIDAD DEL MODELO
+// OPACIDAD
 // =====================================================
 
 function setModelOpacity(opacity) {
-
-    const value = THREE.MathUtils.clamp(
-        opacity,
-        0,
-        1
-    );
-
 
     if (!arModel) {
         return;
     }
 
-
-    // =================================================
-    // RECORRER OBJETOS
-    // =================================================
+    const value = THREE.MathUtils.clamp(opacity, 0, 1);
 
     arModel.traverse((object) => {
 
-        if (
-            !object.isMesh ||
-            !object.material
-        ) {
-
+        if (!object.isMesh || !object.material) {
             return;
         }
-
 
         const materials = Array.isArray(object.material)
             ? object.material
             : [object.material];
 
-
         materials.forEach((material) => {
-
-            // -----------------------------------------
-            // GUARDAR ESTADO ORIGINAL
-            // -----------------------------------------
 
             if (!material.userData.opacityOriginal) {
 
                 material.userData.opacityOriginal = {
-
                     opacity: material.opacity,
-
                     transparent: material.transparent,
-
                     depthWrite: material.depthWrite,
-
                     depthTest: material.depthTest,
-
                     side: material.side,
-
                     alphaTest: material.alphaTest,
-
                     blending: material.blending
                 };
             }
 
+            const original = material.userData.opacityOriginal;
 
-            const original =
-                material.userData.opacityOriginal;
+            material.opacity = original.opacity * value;
 
-
-            // -----------------------------------------
-            // OPACIDAD ORIGINAL
-            // -----------------------------------------
-
-            if (value >= 1) {
-
-                material.opacity = original.opacity;
-
-                material.transparent = original.transparent;
-
-                material.depthWrite = original.depthWrite;
-
-                material.depthTest = original.depthTest;
-
-                material.side = original.side;
-
-                material.alphaTest = original.alphaTest;
-
-                material.blending = original.blending;
-            }
-
-
-            // -----------------------------------------
-            // OPACIDAD REDUCIDA
-            // -----------------------------------------
-
-            else {
-
-                material.opacity =
-                    original.opacity * value;
+            if (value < 1) {
 
                 material.transparent = true;
 
                 material.depthWrite = original.depthWrite;
 
-                material.depthTest = original.depthTest;
+            } else {
 
-                material.side = original.side;
+                material.transparent = original.transparent;
 
-                material.alphaTest = original.alphaTest;
-
-                material.blending = original.blending;
+                material.depthWrite = original.depthWrite;
             }
 
+            material.depthTest = original.depthTest;
+
+            material.side = original.side;
+
+            material.alphaTest = original.alphaTest;
+
+            material.blending = original.blending;
 
             material.needsUpdate = true;
         });
     });
 
-
-    // =================================================
-    // ACTUALIZAR FRAGMENTS
-    // =================================================
-
     if (fragments) {
-
         fragments.core.update(true);
     }
 }
@@ -1028,37 +793,30 @@ function onResize() {
         return;
     }
 
-
     const width = container.clientWidth;
 
     const height = container.clientHeight;
 
-
-    if (width === 0 || height === 0) {
+    if (!width || !height) {
         return;
     }
-
 
     camera.aspect = width / height;
 
     camera.updateProjectionMatrix();
 
-
-    renderer.setSize(
-        width,
-        height
-    );
+    renderer.setSize(width, height);
 }
 
 
 // =====================================================
-// INICIAR VISOR
+// INICIAR
 // =====================================================
 
 initViewer().catch((error) => {
 
     console.error(
-        '[VISOR] No se pudo inicializar:',
+        '[VISOR] Error inicializando:',
         error
     );
 });
