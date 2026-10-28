@@ -5,6 +5,8 @@
             inset: 0;
             pointer-events: none;
             z-index: 1;
+            /* 🆕 NUEVO — variable dinámica con la altura real del FAB bar */
+            --ar-fab-height: 92px;
         }
 
         /* =====================================================
@@ -63,10 +65,12 @@
         .ar-floating-panel {
             position: absolute;
             left: 50%;
-            bottom: 92px;
+            /* ✏️ CAMBIADO — ya no es un valor fijo, se calcula desde
+               la altura real del FAB bar + un margen de seguridad */
+            bottom: calc(var(--ar-fab-height) + 14px);
             transform: translateX(-50%) translateY(16px);
             width: min(92vw, 380px);
-            max-height: 55vh;
+            max-height: 50vh;
             background: rgba(17, 17, 17, 0.92);
             border-radius: 14px;
             color: white;
@@ -85,6 +89,9 @@
             visibility: visible;
             transform: translateX(-50%) translateY(0);
             pointer-events: auto;
+            /* 🆕 NUEVO — por si queda algún solape residual,
+               el panel abierto siempre gana por encima del FAB bar */
+            z-index: 26;
         }
 
         .ar-panel-header {
@@ -104,13 +111,13 @@
             font-size: 16px;
             padding: 4px 8px;
             line-height: 1;
-            touch-action: manipulation; /* ✏️ CAMBIADO */
+            touch-action: manipulation;
         }
 
         .ar-panel-body {
             padding: 14px 16px;
             overflow-y: auto;
-            touch-action: pan-y; /* 🆕 NUEVO: permite scroll normal dentro del panel */
+            touch-action: pan-y;
         }
 
         /* =====================================================
@@ -126,13 +133,24 @@
             gap: 12px;
             pointer-events: auto;
             z-index: 25;
-            flex-wrap: wrap;
-            justify-content: center;
+            /* ✏️ CAMBIADO — ya NO hace wrap a 2 filas (eso rompía
+               el cálculo de posición del panel). Si no entra todo,
+               se desplaza horizontalmente con scroll. */
+            flex-wrap: nowrap;
+            overflow-x: auto;
             max-width: 95vw;
+            padding: 2px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #ar-fab-bar::-webkit-scrollbar {
+            display: none;
         }
 
         .ar-fab {
             position: relative;
+            flex-shrink: 0;
             width: 56px;
             height: 56px;
             border-radius: 50%;
@@ -145,7 +163,7 @@
             justify-content: center;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
             transition: background 0.2s ease, transform 0.15s ease;
-            touch-action: manipulation; /* ✏️ CAMBIADO */
+            touch-action: manipulation;
         }
 
         .ar-fab:active {
@@ -174,7 +192,6 @@
             border: 2px solid #111;
         }
 
-        /* 🆕 NUEVO — indicador de estado del hit-test */
         .ar-fab.ar-fab-locked {
             background: rgba(34, 197, 94, 0.25);
             border-color: rgba(34, 197, 94, 0.6);
@@ -192,7 +209,7 @@
             padding: 8px 12px;
             width: 100%;
             margin-bottom: 10px;
-            touch-action: manipulation; /* 🆕 NUEVO */
+            touch-action: manipulation;
         }
 
         .ar-filter-section select option {
@@ -211,7 +228,7 @@
             padding: 8px;
             border-radius: 6px;
             font-size: 12px;
-            touch-action: manipulation; /* 🆕 NUEVO */
+            touch-action: manipulation;
         }
 
         .ar-filter-chip {
@@ -228,7 +245,7 @@
             border: none;
             padding: 0;
             margin-left: 5px;
-            touch-action: manipulation; /* 🆕 NUEVO */
+            touch-action: manipulation;
         }
 
         .ar-filter-chip .ar-filter-remove:hover {
@@ -248,7 +265,7 @@
 
         .ar-category-item input {
             accent-color: #2563eb;
-            touch-action: manipulation; /* 🆕 NUEVO */
+            touch-action: manipulation;
         }
 
         .ar-category-item span:first-of-type {
@@ -344,7 +361,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             font-size: 11px;
-            touch-action: manipulation; /* ✏️ CAMBIADO */
+            touch-action: manipulation;
         }
 
         .ar-step-btn.active {
@@ -364,7 +381,7 @@
             width: 100%;
             padding: 10px;
             border-radius: 6px;
-            touch-action: manipulation; /* ✏️ CAMBIADO */
+            touch-action: manipulation;
         }
 
         .ar-position-reset-btn {
@@ -373,7 +390,6 @@
             color: #ef4444;
         }
 
-        /* 🆕 NUEVO */
         .ar-position-relocate-btn {
             background: rgba(34, 197, 94, 0.15);
             border: 1px solid rgba(34, 197, 94, 0.4);
@@ -387,7 +403,6 @@
             margin: 0;
         }
 
-        /* 🆕 NUEVO — badge de estado "bloqueado" en el hint */
         .ar-position-status {
             font-size: 11px;
             text-align: center;
@@ -513,7 +528,6 @@
 
                 <div class="ar-dpad-wrapper">
 
-                    <!-- 🆕 NUEVO — estado del hit-test -->
                     <p id="ar-position-status" class="ar-position-status searching">
                         🔍 Buscando superficie...
                     </p>
@@ -585,7 +599,6 @@
                             Volver al anclaje original
                         </button>
 
-                        <!-- 🆕 NUEVO -->
                         <button
                             type="button"
                             id="ar-relocate-model"

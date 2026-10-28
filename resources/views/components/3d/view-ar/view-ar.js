@@ -44,18 +44,119 @@ let arReticle;
 
 let hitTestSource = null;
 let hitTestSourceRequested = false;
+let hitTestEnabled = true;
 
 let arModel = null;
 
 let modelLoading = false;
 let modelLoaded = false;
+let modelPlaced = false;
 
 let isAR = false;
 
 let opacityValue = 1;
 
-// Notificación de "superficie detectada" (una vez por sesión AR)
 let surfaceFoundNotified = false;
+
+// =====================================================
+// 🆕 NUEVO — GUARDA GLOBAL ANTI-PROPAGACIÓN HACIA XR
+// =====================================================
+//
+// IMPORTANTE:
+// El evento 'select' de una sesión immersive-ar en Chrome
+// Android NO se genera mediante el flujo normal de eventos
+// DOM. Chrome sintetiza ese evento internamente a partir del
+// toque crudo sobre la capa de dom-overlay, de forma
+// independiente a que el botón pulsado haya hecho
+// stopPropagation()/preventDefault().
+//
+// Por eso la única forma confiable de evitar que un tap
+// sobre la UI mueva el modelo es con una bandera de estado
+// consultada DIRECTAMENTE dentro de onARSelect(), en vez de
+// intentar "frenar" el evento a nivel DOM.
+// =====================================================
+
+let uiPointerActive = false;
+let uiPointerReleaseTimer = null;
+
+function markUIPointerActive() {
+
+    uiPointerActive =
+        true;
+
+    if (uiPointerReleaseTimer) {
+
+        clearTimeout(
+            uiPointerReleaseTimer
+        );
+
+        uiPointerReleaseTimer =
+            null;
+    }
+}
+
+function markUIPointerInactiveSoon() {
+
+    if (uiPointerReleaseTimer) {
+
+        clearTimeout(
+            uiPointerReleaseTimer
+        );
+    }
+
+    // Pequeño margen (ms) porque el 'select' de XR puede
+    // sintetizarse unos instantes después del pointerup real.
+    uiPointerReleaseTimer =
+        setTimeout(() => {
+
+            uiPointerActive =
+                false;
+
+        }, 400);
+}
+
+function setupGlobalUIGuard() {
+
+    if (!arUI) {
+        return;
+    }
+
+    // Capture:true para enterarnos ANTES que cualquier otro
+    // listener, sin importar sobre qué control específico
+    // haya caído el toque dentro de la UI.
+    arUI.addEventListener(
+        'pointerdown',
+        markUIPointerActive,
+        true
+    );
+
+    arUI.addEventListener(
+        'pointerup',
+        markUIPointerInactiveSoon,
+        true
+    );
+
+    arUI.addEventListener(
+        'pointercancel',
+        markUIPointerInactiveSoon,
+        true
+    );
+
+    // Respaldo para navegadores/casos donde no llegue pointerup
+    arUI.addEventListener(
+        'touchend',
+        markUIPointerInactiveSoon,
+        true
+    );
+}
+
+
+// =====================================================
+// CORRECCIÓN DE POSICIÓN
+// =====================================================
+
+let positionStep = 0.03;
+let lastPlacedPosition = null;
 
 // =====================================================
 // PROPERTY SETS / FILTROS
@@ -71,7 +172,7 @@ let categoryVisibility = new Map();
 
 
 // =====================================================
-// TOASTS (notificaciones de estado)
+// TOASTS
 // =====================================================
 
 let toastCounter = 0;
@@ -114,6 +215,39 @@ function showToast(message, type = 'info', duration = 4000) {
 
 
 // =====================================================
+// 🆕 NUEVO — ALTURA DINÁMICA DEL FAB BAR
+// =====================================================
+//
+// El FAB bar ahora puede desplazarse con scroll horizontal
+// en vez de hacer wrap a 2 filas, pero su altura real puede
+// variar levemente por dispositivo/zoom. La medimos y la
+// exponemos como variable CSS para que los paneles flotantes
+// siempre se posicionen justo encima, sin solaparse.
+// =====================================================
+
+function updateFabBarHeightVar() {
+
+    const fabBar =
+        document.getElementById('ar-fab-bar');
+
+    if (!fabBar || !arUI) {
+        return;
+    }
+
+    const height =
+        fabBar.getBoundingClientRect().height;
+
+    if (height > 0) {
+
+        arUI.style.setProperty(
+            '--ar-fab-height',
+            `${height}px`
+        );
+    }
+}
+
+
+// =====================================================
 // PANELES FLOTANTES (FAB BAR)
 // =====================================================
 
@@ -140,7 +274,9 @@ function setupARPanels() {
 
     fabButtons.forEach(btn => {
 
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+
+            e.stopPropagation();
 
             const targetId =
                 `ar-panel-${btn.dataset.panel}`;
@@ -174,7 +310,8 @@ function setupARPanels() {
         .querySelectorAll('.ar-panel-close')
         .forEach(btn => {
 
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 closeAllPanels();
             });
         });
@@ -220,6 +357,413 @@ function updateFabBadges() {
         catBadge.style.display =
             hiddenCount > 0 ? 'flex' : 'none';
     }
+}
+
+
+// =====================================================
+// HABILITAR / DESHABILITAR HIT-TEST
+// =====================================================
+
+function disableHitTest() {
+
+    hitTestEnabled =
+        false;
+
+    if (
+        hitTestSource &&
+        typeof hitTestSource.cancel === 'function'
+    ) {
+
+        try {
+
+            hitTestSource.cancel();
+
+        } catch (error) {
+
+            console.warn(
+                '⚠️ No se pudo cancelar hitTestSource:',
+                error
+            );
+        }
+    }
+
+    hitTestSource =
+        null;
+
+    if (arReticle) {
+
+        arReticle.visible =
+            false;
+    }
+
+    modelPlaced =
+        true;
+
+    updatePositionStatusUI();
+
+    console.log(
+        '🔒 Hit-test desactivado (modelo colocado)'
+    );
+}
+
+
+function enableHitTest() {
+
+    hitTestEnabled =
+        true;
+
+    hitTestSource =
+        null;
+
+    hitTestSourceRequested =
+        false;
+
+    surfaceFoundNotified =
+        false;
+
+    modelPlaced =
+        false;
+
+    updatePositionStatusUI();
+
+    showToast(
+        '🔍 Buscando nueva superficie. Toca la pantalla para reubicar el modelo',
+        'info',
+        5000
+    );
+
+    console.log(
+        '🔓 Hit-test reactivado (modo reubicar)'
+    );
+}
+
+
+function updatePositionStatusUI() {
+
+    const statusEl =
+        document.getElementById(
+            'ar-position-status'
+        );
+
+    if (!statusEl) {
+        return;
+    }
+
+    if (modelPlaced) {
+
+        statusEl.textContent =
+            '🔒 Posición bloqueada (hit-test desactivado)';
+
+        statusEl.classList.remove(
+            'searching'
+        );
+
+    } else {
+
+        statusEl.textContent =
+            '🔍 Buscando superficie...';
+
+        statusEl.classList.add(
+            'searching'
+        );
+    }
+}
+
+
+// =====================================================
+// CORRECCIÓN DE POSICIÓN DEL MODELO
+// =====================================================
+
+function getCameraRelativeRight() {
+
+    const right =
+        new THREE.Vector3();
+
+    const up =
+        new THREE.Vector3();
+
+    const forward =
+        new THREE.Vector3();
+
+    camera.matrixWorld.extractBasis(
+        right,
+        up,
+        forward
+    );
+
+    right.y = 0;
+
+    if (right.lengthSq() < 0.0001) {
+
+        right.set(1, 0, 0);
+
+    } else {
+
+        right.normalize();
+    }
+
+    return right;
+}
+
+
+function nudgeModel(direction) {
+
+    if (!isAR) {
+        return;
+    }
+
+    if (
+        !arModel ||
+        !arModel.visible
+    ) {
+
+        showToast(
+            '⚠️ Coloca primero el modelo para poder ajustarlo',
+            'error'
+        );
+
+        return;
+    }
+
+    switch (direction) {
+
+        case 'up':
+
+            arModel.position.y +=
+                positionStep;
+
+            break;
+
+        case 'down':
+
+            arModel.position.y -=
+                positionStep;
+
+            break;
+
+        case 'left': {
+
+            const right =
+                getCameraRelativeRight();
+
+            arModel.position.addScaledVector(
+                right,
+                -positionStep
+            );
+
+            break;
+        }
+
+        case 'right': {
+
+            const right =
+                getCameraRelativeRight();
+
+            arModel.position.addScaledVector(
+                right,
+                positionStep
+            );
+
+            break;
+        }
+
+        default:
+            return;
+    }
+
+    if (fragments) {
+
+        fragments.core.update(
+            true
+        );
+    }
+}
+
+
+function resetModelPosition() {
+
+    if (
+        !arModel ||
+        !lastPlacedPosition
+    ) {
+
+        showToast(
+            '⚠️ No hay una posición de anclaje guardada',
+            'error'
+        );
+
+        return;
+    }
+
+    arModel.position.copy(
+        lastPlacedPosition
+    );
+
+    if (fragments) {
+
+        fragments.core.update(
+            true
+        );
+    }
+
+    showToast(
+        '↩️ Posición restablecida al anclaje original',
+        'info'
+    );
+}
+
+
+function setPositionStep(step) {
+
+    positionStep = step;
+
+    document
+        .querySelectorAll('.ar-step-btn')
+        .forEach(btn => {
+
+            btn.classList.toggle(
+                'active',
+                Number(btn.dataset.step) === step
+            );
+        });
+}
+
+
+function setupPositionCorrection() {
+
+    document
+        .querySelectorAll('.ar-dpad-btn[data-direction]')
+        .forEach(btn => {
+
+            let holdInterval = null;
+            let holdTimeout = null;
+
+            const startMoving = () => {
+
+                nudgeModel(btn.dataset.direction);
+
+                holdTimeout = setTimeout(() => {
+
+                    holdInterval = setInterval(() => {
+
+                        nudgeModel(
+                            btn.dataset.direction
+                        );
+
+                    }, 140);
+
+                }, 350);
+            };
+
+            const stopMoving = () => {
+
+                if (holdTimeout) {
+                    clearTimeout(holdTimeout);
+                    holdTimeout = null;
+                }
+
+                if (holdInterval) {
+                    clearInterval(holdInterval);
+                    holdInterval = null;
+                }
+            };
+
+            btn.addEventListener(
+                'pointerdown',
+                (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startMoving();
+                }
+            );
+
+            btn.addEventListener(
+                'pointerup',
+                (e) => {
+                    e.stopPropagation();
+                    stopMoving();
+                }
+            );
+
+            btn.addEventListener(
+                'pointerleave',
+                stopMoving
+            );
+
+            btn.addEventListener(
+                'pointercancel',
+                stopMoving
+            );
+
+            btn.addEventListener(
+                'contextmenu',
+                (e) => e.preventDefault()
+            );
+        });
+
+
+    const resetPositionBtn =
+        document.getElementById(
+            'ar-reset-position'
+        );
+
+    if (resetPositionBtn) {
+
+        resetPositionBtn.addEventListener(
+            'click',
+            (e) => {
+                e.stopPropagation();
+                resetModelPosition();
+            }
+        );
+    }
+
+
+    const relocateBtn =
+        document.getElementById(
+            'ar-relocate-model'
+        );
+
+    if (relocateBtn) {
+
+        relocateBtn.addEventListener(
+            'click',
+            (e) => {
+
+                e.stopPropagation();
+
+                if (!arModel || !modelLoaded) {
+
+                    showToast(
+                        '⚠️ Todavía no hay un modelo cargado',
+                        'error'
+                    );
+
+                    return;
+                }
+
+                closeAllPanels();
+
+                enableHitTest();
+            }
+        );
+    }
+
+
+    document
+        .querySelectorAll('.ar-step-btn')
+        .forEach(btn => {
+
+            btn.addEventListener(
+                'click',
+                (e) => {
+                    e.stopPropagation();
+                    setPositionStep(
+                        Number(btn.dataset.step)
+                    );
+                }
+            );
+        });
 }
 
 
@@ -285,10 +829,6 @@ async function initViewer() {
         container.clientHeight
     );
 
-
-    // -------------------------------------------------
-    // ACTIVAR WEBXR
-    // -------------------------------------------------
 
     renderer.xr.enabled =
         true;
@@ -455,7 +995,9 @@ async function initViewer() {
 
         opacitySlider.addEventListener(
             'input',
-            () => {
+            (e) => {
+
+                e.stopPropagation();
 
                 opacityValue =
                     Number(
@@ -493,6 +1035,32 @@ async function initViewer() {
 
 
     // =================================================
+    // CONFIGURAR CORRECCIÓN DE POSICIÓN
+    // =================================================
+
+    setupPositionCorrection();
+
+
+    // =================================================
+    // 🆕 NUEVO — GUARDA GLOBAL ANTI-PROPAGACIÓN
+    // =================================================
+
+    setupGlobalUIGuard();
+
+
+    // =================================================
+    // 🆕 NUEVO — MEDIR ALTURA DEL FAB BAR
+    // =================================================
+
+    updateFabBarHeightVar();
+
+    window.addEventListener(
+        'resize',
+        updateFabBarHeightVar
+    );
+
+
+    // =================================================
     // CONFIGURAR RESET DE FILTROS
     // =================================================
 
@@ -505,7 +1073,9 @@ async function initViewer() {
 
         resetFiltersBtn.addEventListener(
             'click',
-            async () => {
+            async (e) => {
+
+                e.stopPropagation();
 
                 await resetAllFilters();
 
@@ -603,8 +1173,25 @@ async function initViewer() {
                 false;
 
 
+            hitTestEnabled =
+                true;
+
+            modelPlaced =
+                false;
+
+            updatePositionStatusUI();
+
+
             surfaceFoundNotified =
                 false;
+
+
+            lastPlacedPosition =
+                null;
+
+
+            uiPointerActive =
+                false; // 🆕 NUEVO
 
 
             closeAllPanels();
@@ -642,6 +1229,13 @@ async function initViewer() {
             }
 
 
+            // 🆕 NUEVO — recalcular altura del FAB bar
+            // una vez que la UI es visible de nuevo
+            requestAnimationFrame(
+                updateFabBarHeightVar
+            );
+
+
             showToast(
                 '🟢 Sesión AR iniciada. Buscando superficie...',
                 'info',
@@ -676,8 +1270,20 @@ async function initViewer() {
                 false;
 
 
+            hitTestEnabled =
+                true;
+
+
+            modelPlaced =
+                false;
+
+
             surfaceFoundNotified =
                 false;
+
+
+            uiPointerActive =
+                false; // 🆕 NUEVO
 
 
             closeAllPanels();
@@ -1273,7 +1879,9 @@ function setupPropertyFilters() {
 
         btnApply.addEventListener(
             'click',
-            async () => {
+            async (e) => {
+
+                e.stopPropagation();
 
                 const key =
                     document.getElementById(
@@ -1341,7 +1949,9 @@ function setupPropertyFilters() {
 
         btnClear.addEventListener(
             'click',
-            async () => {
+            async (e) => {
+
+                e.stopPropagation();
 
                 activePropertyFilters = [];
 
@@ -1445,7 +2055,9 @@ function renderPropertyFilters() {
 
             button.addEventListener(
                 'click',
-                async () => {
+                async (e) => {
+
+                    e.stopPropagation();
 
                     const index =
                         Number(
@@ -1572,10 +2184,6 @@ function getFilteredModelIds() {
 
     let ids = new Set();
 
-    // -------------------------------------------------
-    // CATEGORÍAS
-    // -------------------------------------------------
-
     for (
         const [category, categoryIds]
         of modelCategories
@@ -1595,10 +2203,6 @@ function getFilteredModelIds() {
         }
     }
 
-
-    // -------------------------------------------------
-    // PROPERTY FILTERS
-    // -------------------------------------------------
 
     if (activePropertyFilters.length) {
 
@@ -1839,6 +2443,26 @@ async function onARSelect() {
     }
 
 
+    // 🆕 NUEVO — GUARDA PRINCIPAL ANTI-PROPAGACIÓN
+    // Si el dedo está (o acaba de estar) sobre algún
+    // control de la UI, ignoramos este 'select' por
+    // completo, sin importar si vino "sintetizado"
+    // por Chrome de forma independiente al DOM.
+    if (uiPointerActive) {
+
+        console.log(
+            '🚫 Select ignorado: interacción activa con la UI'
+        );
+
+        return;
+    }
+
+
+    if (!hitTestEnabled) {
+        return;
+    }
+
+
     if (
         !arReticle ||
         !arReticle.visible
@@ -1875,6 +2499,10 @@ async function onARSelect() {
             true;
 
 
+        lastPlacedPosition =
+            position.clone();
+
+
         console.log(
             '📍 Modelo colocado (ya estaba cargado)'
         );
@@ -1884,6 +2512,9 @@ async function onARSelect() {
             '📍 Modelo reposicionado',
             'success'
         );
+
+
+        disableHitTest();
 
 
         return;
@@ -2064,6 +2695,10 @@ async function onARSelect() {
                 true;
 
 
+            lastPlacedPosition =
+                position.clone();
+
+
             setModelOpacity(
                 opacityValue
             );
@@ -2079,6 +2714,9 @@ async function onARSelect() {
                 '📍 Modelo colocado sobre la superficie',
                 'success'
             );
+
+
+            disableHitTest();
         }
 
     } catch (error) {
@@ -2109,6 +2747,16 @@ async function onARSelect() {
 function updateAR(frame) {
 
     if (!frame) {
+        return;
+    }
+
+
+    if (!hitTestEnabled) {
+
+        if (arReticle) {
+            arReticle.visible = false;
+        }
+
         return;
     }
 
@@ -2147,6 +2795,15 @@ function updateAR(frame) {
             )
             .then(
                 (source) => {
+
+                    if (!hitTestEnabled) {
+
+                        try {
+                            source.cancel();
+                        } catch (e) {}
+
+                        return;
+                    }
 
                     hitTestSource =
                         source;
