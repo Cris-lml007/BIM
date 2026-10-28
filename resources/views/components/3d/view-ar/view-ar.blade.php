@@ -40,6 +40,28 @@
             width: 100%;
         }
 
+        /* Botón de colocación forzada */
+        .ar-force-btn {
+            width: 100%;
+            padding: 14px;
+            background: rgba(37, 99, 235, 0.95);
+            border: 1px solid rgba(59, 130, 246, 1);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s;
+        }
+
+        .ar-force-btn:hover,
+        .ar-force-btn:active {
+            background: rgba(29, 78, 216, 1);
+            transform: scale(0.98);
+        }
+
+        /* Filtros de properties */
         .ar-filter-section select {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -88,6 +110,7 @@
             color: #ef4444;
         }
 
+        /* Categorías */
         .ar-category-item {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 6px;
@@ -107,6 +130,12 @@
             font-size: 13px;
         }
 
+        .ar-categories-scroll {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Reset */
         .ar-reset-btn {
             width: 100%;
             padding: 10px;
@@ -121,11 +150,6 @@
         .ar-reset-btn:hover {
             background: rgba(239, 68, 68, 0.3);
         }
-
-        .ar-categories-scroll {
-            max-height: 200px;
-            overflow-y: auto;
-        }
     </style>
 
     <h1>AR</h1>
@@ -139,6 +163,15 @@
     <div id="ar-ui-container">
 
         <div class="ar-controls">
+
+            <!-- Colocación forzada -->
+            <button
+                type="button"
+                id="ar-force-place"
+                class="ar-force-btn">
+                <i class="bi bi-geo-alt-fill me-2"></i>
+                Colocar modelo aquí
+            </button>
 
             <!-- Opacidad -->
             <div class="ar-panel">
@@ -200,7 +233,7 @@
                 </div>
             </div>
 
-            <!-- Reset -->
+            <!-- Reset filtros -->
             <button
                 type="button"
                 id="ar-reset-filters"

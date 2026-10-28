@@ -224,7 +224,7 @@ async function initViewer() {
     // operación que consulte al Worker
     // (getItems, getItemsData...) se hace DESPUÉS,
     // una vez que el await fragments.core.load()
-    // haya resuelto completamente (ver onARSelect).
+    // haya resuelto completamente (ver loadAndPlaceModel).
     // =================================================
 
     fragments.list.onItemSet.add(
@@ -355,6 +355,27 @@ async function initViewer() {
                 setModelOpacity(
                     opacityValue
                 );
+            }
+        );
+    }
+
+
+    // =================================================
+    // BOTÓN DE COLOCACIÓN FORZADA
+    // =================================================
+
+    const forcePlaceBtn =
+        document.getElementById(
+            'ar-force-place'
+        );
+
+    if (forcePlaceBtn) {
+
+        forcePlaceBtn.addEventListener(
+            'click',
+            async () => {
+
+                await forcePlaceModel();
             }
         );
     }
@@ -1681,33 +1702,21 @@ function setModelOpacity(opacity) {
 
 
 // =====================================================
-// SELECT EN AR
+// CARGAR Y COLOCAR MODELO (lógica reutilizable)
+// =====================================================
+//
+// Esta función centraliza el flujo de:
+//   1. Descargar el .frag
+//   2. Cargarlo en fragments.core
+//   3. Esperar a que el Worker termine de registrarlo
+//   4. Construir properties/categorías
+//   5. Colocar el modelo en la posición indicada
+//
+// Es usada tanto por el tap sobre el reticle (hit-test)
+// como por el botón de colocación forzada.
 // =====================================================
 
-async function onARSelect() {
-
-    if (!isAR) {
-        return;
-    }
-
-
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
-
-        return;
-    }
-
-
-    const position =
-        new THREE.Vector3();
-
-
-    position.setFromMatrixPosition(
-        arReticle.matrix
-    );
-
+async function loadAndPlaceModel(position) {
 
     // =================================================
     // MODELO YA CARGADO → SOLO REPOSICIONAR
@@ -1930,6 +1939,120 @@ async function onARSelect() {
         modelLoading =
             false;
     }
+}
+
+
+// =====================================================
+// SELECT EN AR (tap sobre el reticle / hit-test)
+// =====================================================
+
+async function onARSelect() {
+
+    if (!isAR) {
+        return;
+    }
+
+
+    if (
+        !arReticle ||
+        !arReticle.visible
+    ) {
+
+        return;
+    }
+
+
+    const position =
+        new THREE.Vector3();
+
+
+    position.setFromMatrixPosition(
+        arReticle.matrix
+    );
+
+
+    await loadAndPlaceModel(
+        position
+    );
+}
+
+
+// =====================================================
+// COLOCAR MODELO FORZADO (sin hit-test)
+// =====================================================
+//
+// Coloca el modelo a una distancia fija frente a la
+// cámara, ignorando por completo el reticle y el
+// hit-test. Útil cuando ARCore no logra detectar
+// ninguna superficie (poca luz, suelo sin textura,
+// dispositivo con soporte limitado, etc).
+// =====================================================
+
+async function forcePlaceModel() {
+
+    if (!isAR) {
+
+        console.warn(
+            '⚠️ No estás en sesión AR'
+        );
+
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // CALCULAR POSICIÓN FRENTE A LA CÁMARA
+    // -------------------------------------------------
+
+    const distance = 1.5; // metros frente a la cámara
+
+    const cameraPosition =
+        new THREE.Vector3();
+
+    const cameraDirection =
+        new THREE.Vector3();
+
+
+    camera.getWorldPosition(
+        cameraPosition
+    );
+
+
+    camera.getWorldDirection(
+        cameraDirection
+    );
+
+
+    // -------------------------------------------------
+    // PROYECTAR HACIA ADELANTE
+    // -------------------------------------------------
+
+    const targetPosition =
+        cameraPosition
+            .clone()
+            .add(
+                cameraDirection.multiplyScalar(
+                    distance
+                )
+            );
+
+
+    // -------------------------------------------------
+    // BAJAR UN POCO PARA SIMULAR SUELO
+    // -------------------------------------------------
+
+    targetPosition.y -= 0.5;
+
+
+    console.log(
+        '📍 Colocando modelo forzadamente en:',
+        targetPosition
+    );
+
+
+    await loadAndPlaceModel(
+        targetPosition
+    );
 }
 
 
