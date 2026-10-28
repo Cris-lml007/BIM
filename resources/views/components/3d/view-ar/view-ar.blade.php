@@ -8,7 +8,7 @@
         }
 
         /* =====================================================
-           TOASTS (notificaciones de estado)
+           TOASTS
            ===================================================== */
 
         #ar-toast-container {
@@ -104,15 +104,17 @@
             font-size: 16px;
             padding: 4px 8px;
             line-height: 1;
+            touch-action: manipulation; /* ✏️ CAMBIADO */
         }
 
         .ar-panel-body {
             padding: 14px 16px;
             overflow-y: auto;
+            touch-action: pan-y; /* 🆕 NUEVO: permite scroll normal dentro del panel */
         }
 
         /* =====================================================
-           FAB BAR (barra de botones inferior)
+           FAB BAR
            ===================================================== */
 
         #ar-fab-bar {
@@ -143,6 +145,7 @@
             justify-content: center;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
             transition: background 0.2s ease, transform 0.15s ease;
+            touch-action: manipulation; /* ✏️ CAMBIADO */
         }
 
         .ar-fab:active {
@@ -171,9 +174,14 @@
             border: 2px solid #111;
         }
 
+        /* 🆕 NUEVO — indicador de estado del hit-test */
+        .ar-fab.ar-fab-locked {
+            background: rgba(34, 197, 94, 0.25);
+            border-color: rgba(34, 197, 94, 0.6);
+        }
+
         /* =====================================================
            CONTENIDO INTERNO DE LOS PANELES
-           (filtros, categorías, chips)
            ===================================================== */
 
         .ar-filter-section select {
@@ -184,6 +192,7 @@
             padding: 8px 12px;
             width: 100%;
             margin-bottom: 10px;
+            touch-action: manipulation; /* 🆕 NUEVO */
         }
 
         .ar-filter-section select option {
@@ -202,6 +211,7 @@
             padding: 8px;
             border-radius: 6px;
             font-size: 12px;
+            touch-action: manipulation; /* 🆕 NUEVO */
         }
 
         .ar-filter-chip {
@@ -218,6 +228,7 @@
             border: none;
             padding: 0;
             margin-left: 5px;
+            touch-action: manipulation; /* 🆕 NUEVO */
         }
 
         .ar-filter-chip .ar-filter-remove:hover {
@@ -237,6 +248,7 @@
 
         .ar-category-item input {
             accent-color: #2563eb;
+            touch-action: manipulation; /* 🆕 NUEVO */
         }
 
         .ar-category-item span:first-of-type {
@@ -249,7 +261,7 @@
         }
 
         /* =====================================================
-           🆕 NUEVO: CORRECCIÓN DE POSICIÓN (D-PAD)
+           CORRECCIÓN DE POSICIÓN (D-PAD)
            ===================================================== */
 
         .ar-dpad-wrapper {
@@ -332,6 +344,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             font-size: 11px;
+            touch-action: manipulation; /* ✏️ CAMBIADO */
         }
 
         .ar-step-btn.active {
@@ -339,13 +352,32 @@
             border-color: #2563eb;
         }
 
-        .ar-position-reset-btn {
+        .ar-position-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .ar-position-reset-btn,
+        .ar-position-relocate-btn {
             width: 100%;
             padding: 10px;
+            border-radius: 6px;
+            touch-action: manipulation; /* ✏️ CAMBIADO */
+        }
+
+        .ar-position-reset-btn {
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.4);
             color: #ef4444;
-            border-radius: 6px;
+        }
+
+        /* 🆕 NUEVO */
+        .ar-position-relocate-btn {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #22c55e;
         }
 
         .ar-position-hint {
@@ -353,6 +385,22 @@
             color: rgba(255, 255, 255, 0.5);
             text-align: center;
             margin: 0;
+        }
+
+        /* 🆕 NUEVO — badge de estado "bloqueado" en el hint */
+        .ar-position-status {
+            font-size: 11px;
+            text-align: center;
+            margin: 0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        .ar-position-status.searching {
+            background: rgba(37, 99, 235, 0.15);
+            color: #60a5fa;
         }
     </style>
 
@@ -364,16 +412,10 @@
 
     <div id="ar-ui-container">
 
-        <!-- ================================================= -->
         <!-- TOASTS -->
-        <!-- ================================================= -->
-
         <div id="ar-toast-container"></div>
 
-        <!-- ================================================= -->
         <!-- PANEL: OPACIDAD -->
-        <!-- ================================================= -->
-
         <div id="ar-panel-opacity" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-droplet-half me-2"></i>Opacidad</span>
@@ -391,7 +433,7 @@
                         max="100"
                         value="100"
                         step="1"
-                        style="flex: 1;"
+                        style="flex: 1; touch-action: manipulation;"
                     >
                     <span id="ar-opacity-value" style="min-width: 48px; text-align: right;">
                         100%
@@ -400,10 +442,7 @@
             </div>
         </div>
 
-        <!-- ================================================= -->
         <!-- PANEL: PROPIEDADES -->
-        <!-- ================================================= -->
-
         <div id="ar-panel-properties" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-funnel me-2"></i>Propiedades</span>
@@ -445,10 +484,7 @@
             </div>
         </div>
 
-        <!-- ================================================= -->
         <!-- PANEL: CATEGORÍAS -->
-        <!-- ================================================= -->
-
         <div id="ar-panel-categories" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-layers me-2"></i>Categorías IFC</span>
@@ -464,10 +500,7 @@
             </div>
         </div>
 
-        <!-- ================================================= -->
-        <!-- 🆕 NUEVO — PANEL: CORRECCIÓN DE POSICIÓN -->
-        <!-- ================================================= -->
-
+        <!-- PANEL: CORRECCIÓN DE POSICIÓN -->
         <div id="ar-panel-position" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-arrows-move me-2"></i>Ajustar posición</span>
@@ -479,6 +512,11 @@
             <div class="ar-panel-body">
 
                 <div class="ar-dpad-wrapper">
+
+                    <!-- 🆕 NUEVO — estado del hit-test -->
+                    <p id="ar-position-status" class="ar-position-status searching">
+                        🔍 Buscando superficie...
+                    </p>
 
                     <div class="ar-dpad">
 
@@ -526,43 +564,44 @@
                     </p>
 
                     <div class="ar-step-group">
-                        <button
-                            type="button"
-                            class="ar-step-btn"
-                            data-step="0.01">
+                        <button type="button" class="ar-step-btn" data-step="0.01">
                             Fino<br>1cm
                         </button>
-                        <button
-                            type="button"
-                            class="ar-step-btn active"
-                            data-step="0.03">
+                        <button type="button" class="ar-step-btn active" data-step="0.03">
                             Normal<br>3cm
                         </button>
-                        <button
-                            type="button"
-                            class="ar-step-btn"
-                            data-step="0.08">
+                        <button type="button" class="ar-step-btn" data-step="0.08">
                             Grueso<br>8cm
                         </button>
                     </div>
 
-                    <button
-                        type="button"
-                        id="ar-reset-position"
-                        class="ar-position-reset-btn">
-                        <i class="bi bi-arrow-counterclockwise me-2"></i>
-                        Volver al anclaje original
-                    </button>
+                    <div class="ar-position-actions">
+
+                        <button
+                            type="button"
+                            id="ar-reset-position"
+                            class="ar-position-reset-btn">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>
+                            Volver al anclaje original
+                        </button>
+
+                        <!-- 🆕 NUEVO -->
+                        <button
+                            type="button"
+                            id="ar-relocate-model"
+                            class="ar-position-relocate-btn">
+                            <i class="bi bi-geo-alt me-2"></i>
+                            Reubicar en otra superficie
+                        </button>
+
+                    </div>
 
                 </div>
 
             </div>
         </div>
 
-        <!-- ================================================= -->
         <!-- FAB BAR -->
-        <!-- ================================================= -->
-
         <div id="ar-fab-bar">
 
             <button type="button" class="ar-fab" data-panel="opacity" title="Opacidad">
@@ -579,7 +618,6 @@
                 <span class="ar-fab-badge" id="ar-fab-badge-properties">0</span>
             </button>
 
-            <!-- 🆕 NUEVO -->
             <button type="button" class="ar-fab" data-panel="position" title="Ajustar posición">
                 <i class="bi bi-arrows-move"></i>
             </button>

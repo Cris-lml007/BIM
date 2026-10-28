@@ -58,13 +58,6 @@ let opacityValue = 1;
 let surfaceFoundNotified = false;
 
 // =====================================================
-// 🆕 NUEVO — CORRECCIÓN DE POSICIÓN
-// =====================================================
-
-let positionStep = 0.03; // metros por pulsación (por defecto: "Normal")
-let lastPlacedPosition = null; // posición original del anclaje, para "reset"
-
-// =====================================================
 // PROPERTY SETS / FILTROS
 // =====================================================
 
@@ -227,288 +220,6 @@ function updateFabBadges() {
         catBadge.style.display =
             hiddenCount > 0 ? 'flex' : 'none';
     }
-}
-
-
-// =====================================================
-// 🆕 NUEVO — CORRECCIÓN DE POSICIÓN DEL MODELO
-// =====================================================
-
-// -------------------------------------------------
-// Obtiene el vector "derecha" relativo a la cámara,
-// proyectado sobre el plano horizontal (sin componente
-// vertical), para que izquierda/derecha se sientan
-// naturales sin importar la inclinación del teléfono.
-// -------------------------------------------------
-
-function getCameraRelativeRight() {
-
-    const right =
-        new THREE.Vector3();
-
-    const up =
-        new THREE.Vector3();
-
-    const forward =
-        new THREE.Vector3();
-
-    camera.matrixWorld.extractBasis(
-        right,
-        up,
-        forward
-    );
-
-    right.y = 0;
-
-    if (right.lengthSq() < 0.0001) {
-
-        // Cámara mirando casi recto hacia arriba/abajo:
-        // usamos un eje de respaldo para evitar NaN
-        right.set(1, 0, 0);
-
-    } else {
-
-        right.normalize();
-    }
-
-    return right;
-}
-
-
-function nudgeModel(direction) {
-
-    if (!isAR) {
-        return;
-    }
-
-    if (
-        !arModel ||
-        !arModel.visible
-    ) {
-
-        showToast(
-            '⚠️ Coloca primero el modelo para poder ajustarlo',
-            'error'
-        );
-
-        return;
-    }
-
-    switch (direction) {
-
-        case 'up':
-
-            arModel.position.y +=
-                positionStep;
-
-            break;
-
-        case 'down':
-
-            arModel.position.y -=
-                positionStep;
-
-            break;
-
-        case 'left': {
-
-            const right =
-                getCameraRelativeRight();
-
-            arModel.position.addScaledVector(
-                right,
-                -positionStep
-            );
-
-            break;
-        }
-
-        case 'right': {
-
-            const right =
-                getCameraRelativeRight();
-
-            arModel.position.addScaledVector(
-                right,
-                positionStep
-            );
-
-            break;
-        }
-
-        default:
-            return;
-    }
-
-    if (fragments) {
-
-        fragments.core.update(
-            true
-        );
-    }
-}
-
-
-function resetModelPosition() {
-
-    if (
-        !arModel ||
-        !lastPlacedPosition
-    ) {
-
-        showToast(
-            '⚠️ No hay una posición de anclaje guardada',
-            'error'
-        );
-
-        return;
-    }
-
-    arModel.position.copy(
-        lastPlacedPosition
-    );
-
-    if (fragments) {
-
-        fragments.core.update(
-            true
-        );
-    }
-
-    showToast(
-        '↩️ Posición restablecida al anclaje original',
-        'info'
-    );
-}
-
-
-function setPositionStep(step) {
-
-    positionStep = step;
-
-    document
-        .querySelectorAll('.ar-step-btn')
-        .forEach(btn => {
-
-            btn.classList.toggle(
-                'active',
-                Number(btn.dataset.step) === step
-            );
-        });
-}
-
-
-function setupPositionCorrection() {
-
-    // -------------------------------------------------
-    // D-PAD: tap simple + mantener presionado = repetir
-    // -------------------------------------------------
-
-    document
-        .querySelectorAll('.ar-dpad-btn[data-direction]')
-        .forEach(btn => {
-
-            let holdInterval = null;
-            let holdTimeout = null;
-
-            const startMoving = () => {
-
-                // Primer movimiento inmediato
-                nudgeModel(btn.dataset.direction);
-
-                // Tras un pequeño delay, empieza a repetir
-                holdTimeout = setTimeout(() => {
-
-                    holdInterval = setInterval(() => {
-
-                        nudgeModel(
-                            btn.dataset.direction
-                        );
-
-                    }, 140);
-
-                }, 350);
-            };
-
-            const stopMoving = () => {
-
-                if (holdTimeout) {
-                    clearTimeout(holdTimeout);
-                    holdTimeout = null;
-                }
-
-                if (holdInterval) {
-                    clearInterval(holdInterval);
-                    holdInterval = null;
-                }
-            };
-
-            btn.addEventListener(
-                'pointerdown',
-                (e) => {
-                    e.preventDefault();
-                    startMoving();
-                }
-            );
-
-            btn.addEventListener(
-                'pointerup',
-                stopMoving
-            );
-
-            btn.addEventListener(
-                'pointerleave',
-                stopMoving
-            );
-
-            btn.addEventListener(
-                'pointercancel',
-                stopMoving
-            );
-
-            btn.addEventListener(
-                'contextmenu',
-                (e) => e.preventDefault()
-            );
-        });
-
-
-    // -------------------------------------------------
-    // BOTÓN RESET DE POSICIÓN
-    // -------------------------------------------------
-
-    const resetPositionBtn =
-        document.getElementById(
-            'ar-reset-position'
-        );
-
-    if (resetPositionBtn) {
-
-        resetPositionBtn.addEventListener(
-            'click',
-            resetModelPosition
-        );
-    }
-
-
-    // -------------------------------------------------
-    // SELECTOR DE SENSIBILIDAD DEL PASO
-    // -------------------------------------------------
-
-    document
-        .querySelectorAll('.ar-step-btn')
-        .forEach(btn => {
-
-            btn.addEventListener(
-                'click',
-                () => {
-
-                    setPositionStep(
-                        Number(btn.dataset.step)
-                    );
-                }
-            );
-        });
 }
 
 
@@ -782,13 +493,6 @@ async function initViewer() {
 
 
     // =================================================
-    // 🆕 NUEVO — CONFIGURAR CORRECCIÓN DE POSICIÓN
-    // =================================================
-
-    setupPositionCorrection();
-
-
-    // =================================================
     // CONFIGURAR RESET DE FILTROS
     // =================================================
 
@@ -901,11 +605,6 @@ async function initViewer() {
 
             surfaceFoundNotified =
                 false;
-
-
-            // 🆕 NUEVO — limpiar ancla de referencia de la sesión anterior
-            lastPlacedPosition =
-                null;
 
 
             closeAllPanels();
@@ -2176,11 +1875,6 @@ async function onARSelect() {
             true;
 
 
-        // 🆕 NUEVO — guardar referencia del anclaje para "reset"
-        lastPlacedPosition =
-            position.clone();
-
-
         console.log(
             '📍 Modelo colocado (ya estaba cargado)'
         );
@@ -2368,11 +2062,6 @@ async function onARSelect() {
 
             arModel.visible =
                 true;
-
-
-            // 🆕 NUEVO — guardar referencia del anclaje para "reset"
-            lastPlacedPosition =
-                position.clone();
 
 
             setModelOpacity(
