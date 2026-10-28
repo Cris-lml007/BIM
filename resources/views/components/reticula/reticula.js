@@ -36,21 +36,22 @@ function initializeThreeCubes() {
     // RENDERER
     // --------------------------------------------------
 
-    const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true
-    });
+const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    powerPreference: 'high-performance'
+});
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.xr.enabled = true;
-    renderer.xr.setReferenceSpaceType('local');
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(container.clientWidth, container.clientHeight);
 
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local');
 
-    // Importante: no usar renderer.setClearColor() con opacidad
-    // 1 en esta escena transparente.
-    container.appendChild(renderer.domElement);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+
+container.appendChild(renderer.domElement);
 
     // --------------------------------------------------
     // ILUMINACIÓN
