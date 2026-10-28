@@ -1,9 +1,45 @@
-// ============================================
-// ESTADO GLOBAL
-// ============================================
-let container;
-let scene, camera, renderer;
-let components, fragments, hider;
+// ======================================================
+// CONTENEDOR
+// =====================================================
+
+const container =
+    document.getElementById('viewer');
+
+if (!container) {
+    throw new Error(
+        'No se encontró el elemento #viewer'
+    );
+}
+
+
+// =====================================================
+// UI DOM OVERLAY
+// =====================================================
+
+const arUI =
+    document.getElementById('ar-ui-container');
+
+const opacitySlider =
+    document.getElementById('ar-opacity');
+
+const opacityText =
+    document.getElementById('ar-opacity-value');
+
+
+// =====================================================
+// VARIABLES
+// =====================================================
+
+let components;
+let world;
+let fragments;
+let hider;
+
+let renderer;
+let scene;
+let camera;
+
+let arController;
 
 let arReticle = null;
 let hitTestSource = null;
