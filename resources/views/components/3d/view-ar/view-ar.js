@@ -33,6 +33,7 @@ const opacityText =
 let components;
 let world;
 let fragments;
+let hider;
 
 let renderer;
 let scene;
@@ -53,17 +54,17 @@ let isAR = false;
 
 let opacityValue = 1;
 
-let loadedModelId = null;
+// =====================================================
+// PROPERTY SETS / FILTROS
+// =====================================================
 
-// =====================================================
-// PROPERTY SETS - NUEVAS VARIABLES
-// =====================================================
+let loadedModelId = null;
 
 let modelProperties = new Map();
 let modelCategories = new Map();
+
 let activePropertyFilters = [];
 let categoryVisibility = new Map();
-let activeLevels = {};
 
 
 // =====================================================
@@ -109,7 +110,7 @@ async function initViewer() {
 
     // =================================================
     // WEBGL RENDERER
-    // =====================================================
+    // =================================================
 
     renderer =
         new THREE.WebGLRenderer({
@@ -144,7 +145,7 @@ async function initViewer() {
 
     // =================================================
     // CAMERA
-    // =====================================================
+    // =================================================
 
     camera =
         new THREE.PerspectiveCamera(
@@ -174,14 +175,24 @@ async function initViewer() {
 
     // =================================================
     // COMPONENTS
-    // =====================================================
+    // =================================================
 
     components.init();
 
 
     // =================================================
+    // HIDER
+    // =================================================
+
+    hider =
+        components.get(
+            OBC.Hider
+        );
+
+
+    // =================================================
     // FRAGMENTS
-    // =====================================================
+    // =================================================
 
     fragments =
         components.get(
@@ -195,82 +206,104 @@ async function initViewer() {
 
 
     // =================================================
-    // HIDER PARA FILTROS
-    // =====================================================
+    // CUANDO SE CARGA EL MODELO
+    // =================================================
+    //
+    // IMPORTANTE:
+    // Este listener se dispara de forma SÍNCRONA
+    // dentro de fragments.core.load(), en el momento
+    // exacto en que el modelo se registra en
+    // fragments.list.
+    //
+    // En ese instante el Worker (hilo aparte que
+    // procesa la geometría/datos) TODAVÍA puede no
+    // haber terminado de registrar el modelo.
+    //
+    // Por eso aquí SOLO hacemos operaciones síncronas
+    // (agregar a escena, cámara, etc). Cualquier
+    // operación que consulte al Worker
+    // (getItems, getItemsData...) se hace DESPUÉS,
+    // una vez que el await fragments.core.load()
+    // haya resuelto completamente (ver onARSelect).
+    // =================================================
 
-    const hider =
-        components.get(
-            OBC.Hider
-        );
+    fragments.list.onItemSet.add(
+        ({ value: model }) => {
+
+            console.log(
+                '🟢 onItemSet disparado, modelId:',
+                model.modelId
+            );
 
 
-// =====================================================
-// CUANDO SE CARGA EL MODELO (dentro de initViewer)
-// =====================================================
+            // -------------------------------------------------
+            // CÁMARA
+            // -------------------------------------------------
 
-// =====================================================
-// CUANDO SE CARGA EL MODELO
-// =====================================================
+            model.useCamera(
+                camera
+            );
 
-fragments.list.onItemSet.add(
-    async ({ value: model }) => {
 
-        console.log('===========================================');
-        console.log('🟢 onItemSet disparado');
-        console.log('model.modelId:', model.modelId);
-        console.log('model.id:', model.id);
-        console.log('model.object?.name:', model.object?.name);
-        console.log('fragments.list keys:', [...fragments.list.keys()]);
-        console.log('fragments.list size:', fragments.list.size);
-        console.log('===========================================');
+            // -------------------------------------------------
+            // AGREGAR MODELO A LA ESCENA
+            // -------------------------------------------------
 
-        try {
+            scene.add(
+                model.object
+            );
 
-            model.useCamera(camera);
 
-            scene.add(model.object);
+            arModel =
+                model.object;
 
-            arModel = model.object;
 
-            arModel.scale.set(1, 1, 1);
+            // -------------------------------------------------
+            // ESCALA
+            // -------------------------------------------------
 
-            arModel.visible = false;
+            arModel.scale.set(
+                1,
+                1,
+                1
+            );
+
+
+            // -------------------------------------------------
+            // OCULTO HASTA COLOCAR
+            // -------------------------------------------------
+
+            arModel.visible =
+                false;
+
 
             // -------------------------------------------------
             // GUARDAR EL MODELID REAL
             // -------------------------------------------------
 
-            loadedModelId = model.modelId;
+            loadedModelId =
+                model.modelId;
 
-            console.log('💾 loadedModelId guardado:', loadedModelId);
 
-            modelLoaded = true;
-            modelLoading = false;
+            modelLoaded =
+                true;
 
-            modelProperties = await buildModelProperties(model);
-            modelCategories = await buildModelCategories(model);
 
-            buildPropertyUI();
-            buildCategoryUI();
+            modelLoading =
+                false;
 
-            await fragments.core.update(true);
 
-            setModelOpacity(opacityValue);
-
-            console.log('✅ Modelo preparado con ID:', loadedModelId);
-
-        } catch (error) {
-
-            console.error('❌ Error procesando modelo cargado:', error);
-            modelLoading = false;
+            console.log(
+                '✅ Modelo registrado en escena:',
+                loadedModelId
+            );
         }
-    }
-);
+    );
 
 
     // =================================================
     // BOTÓN AR
-    // =====================================================
+    // =================================================
 
     const arButton =
         ARButton.createButton(
@@ -298,7 +331,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // CONFIGURAR SLIDER DE OPACIDAD
-    // =====================================================
+    // =================================================
 
     if (opacitySlider) {
 
@@ -312,20 +345,12 @@ fragments.list.onItemSet.add(
                     ) / 100;
 
 
-                // -------------------------------------------------
-                // ACTUALIZAR TEXTO
-                // -------------------------------------------------
-
                 if (opacityText) {
 
                     opacityText.textContent =
                         `${opacitySlider.value}%`;
                 }
 
-
-                // -------------------------------------------------
-                // CAMBIAR MODELO
-                // -------------------------------------------------
 
                 setModelOpacity(
                     opacityValue
@@ -337,17 +362,19 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // CONFIGURAR FILTROS DE PROPERTIES
-    // =====================================================
+    // =================================================
 
     setupPropertyFilters();
 
 
     // =================================================
     // CONFIGURAR RESET DE FILTROS
-    // =====================================================
+    // =================================================
 
     const resetFiltersBtn =
-        document.getElementById('ar-reset-filters');
+        document.getElementById(
+            'ar-reset-filters'
+        );
 
     if (resetFiltersBtn) {
 
@@ -363,7 +390,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // RETICLE
-    // =====================================================
+    // =================================================
 
     const reticleGeometry =
         new THREE.RingGeometry(
@@ -404,7 +431,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // CONTROLLER
-    // =====================================================
+    // =================================================
 
     arController =
         renderer.xr.getController(0);
@@ -423,7 +450,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // INICIO DE AR
-    // =====================================================
+    // =================================================
 
     renderer.xr.addEventListener(
         'sessionstart',
@@ -446,20 +473,12 @@ fragments.list.onItemSet.add(
                 false;
 
 
-            // -------------------------------------------------
-            // OCULTAR MODELO
-            // -------------------------------------------------
-
             if (arModel) {
 
                 arModel.visible =
                     false;
             }
 
-
-            // -------------------------------------------------
-            // SINCRONIZAR SLIDER
-            // -------------------------------------------------
 
             if (opacitySlider) {
 
@@ -479,10 +498,6 @@ fragments.list.onItemSet.add(
             }
 
 
-            // -------------------------------------------------
-            // MOSTRAR DOM OVERLAY
-            // -------------------------------------------------
-
             if (arUI) {
 
                 arUI.style.display =
@@ -494,7 +509,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // FIN DE AR
-    // =====================================================
+    // =================================================
 
     renderer.xr.addEventListener(
         'sessionend',
@@ -517,10 +532,6 @@ fragments.list.onItemSet.add(
                 false;
 
 
-            // -------------------------------------------------
-            // OCULTAR RETICLE
-            // -------------------------------------------------
-
             if (arReticle) {
 
                 arReticle.visible =
@@ -528,20 +539,12 @@ fragments.list.onItemSet.add(
             }
 
 
-            // -------------------------------------------------
-            // OCULTAR DOM OVERLAY
-            // -------------------------------------------------
-
             if (arUI) {
 
                 arUI.style.display =
                     'none';
             }
 
-
-            // -------------------------------------------------
-            // MOSTRAR MODELO
-            // -------------------------------------------------
 
             if (arModel) {
 
@@ -554,23 +557,15 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // ANIMATION LOOP
-    // =====================================================
+    // =================================================
 
     renderer.setAnimationLoop(
         (timestamp, frame) => {
-
-            // -------------------------------------------------
-            // HIT TEST
-            // -------------------------------------------------
 
             updateAR(
                 frame
             );
 
-
-            // -------------------------------------------------
-            // FRAGMENTS
-            // -------------------------------------------------
 
             if (
                 isAR &&
@@ -580,10 +575,6 @@ fragments.list.onItemSet.add(
                 fragments.core.update();
             }
 
-
-            // -------------------------------------------------
-            // RENDER
-            // -------------------------------------------------
 
             renderer.render(
                 scene,
@@ -595,7 +586,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // RESIZE
-    // =====================================================
+    // =================================================
 
     window.addEventListener(
         'resize',
@@ -605,7 +596,7 @@ fragments.list.onItemSet.add(
 
     // =================================================
     // OCULTAR UI FUERA DE AR
-    // =====================================================
+    // =================================================
 
     if (arUI) {
 
@@ -621,34 +612,38 @@ fragments.list.onItemSet.add(
 
 async function buildModelProperties(model) {
 
-    const items = await model.getItems();
+    const items =
+        await model.getItems();
 
-    const ids = Array.from(items.keys());
+    const ids =
+        Array.from(items.keys());
 
-    const data = await model.getItemsData(
-        ids,
-        {
-            attributesDefault: true,
+    const data =
+        await model.getItemsData(
+            ids,
+            {
+                attributesDefault: true,
 
-            relations: {
-                IsDefinedBy: {
-                    attributes: true,
-                    relations: true,
+                relations: {
+                    IsDefinedBy: {
+                        attributes: true,
+                        relations: true,
+                    },
+
+                    IsTypedBy: {
+                        attributes: true,
+                        relations: true,
+                    },
                 },
-
-                IsTypedBy: {
-                    attributes: true,
-                    relations: true,
-                },
-            },
-        }
-    );
+            }
+        );
 
     const properties = new Map();
 
     for (const item of data) {
 
-        const id = item._localId?.value;
+        const id =
+            item._localId?.value;
 
         if (id === undefined) {
             continue;
@@ -675,20 +670,25 @@ async function buildModelProperties(model) {
                     continue;
                 }
 
-                const key = property.name;
+                const key =
+                    property.name;
 
-                const value = String(property.value);
+                const value =
+                    String(property.value);
 
                 if (!properties.has(key)) {
+
                     properties.set(
                         key,
                         new Map()
                     );
                 }
 
-                const values = properties.get(key);
+                const values =
+                    properties.get(key);
 
                 if (!values.has(value)) {
+
                     values.set(
                         value,
                         []
@@ -712,36 +712,41 @@ async function buildModelProperties(model) {
 
 async function buildModelCategories(model) {
 
-    const items = await model.getItems();
+    const items =
+        await model.getItems();
 
-    const ids = Array.from(items.keys());
+    const ids =
+        Array.from(items.keys());
 
-    const data = await model.getItemsData(
-        ids,
-        {
-            attributesDefault: true,
+    const data =
+        await model.getItemsData(
+            ids,
+            {
+                attributesDefault: true,
 
-            relations: {
-                IsDefinedBy: {
-                    attributes: true,
-                    relations: true,
+                relations: {
+                    IsDefinedBy: {
+                        attributes: true,
+                        relations: true,
+                    },
+
+                    IsTypedBy: {
+                        attributes: true,
+                        relations: true,
+                    },
                 },
-
-                IsTypedBy: {
-                    attributes: true,
-                    relations: true,
-                },
-            },
-        }
-    );
+            }
+        );
 
     const categories = new Map();
 
     for (const item of data) {
 
-        const id = item._localId?.value;
+        const id =
+            item._localId?.value;
 
-        const category = item._category?.value;
+        const category =
+            item._category?.value;
 
         if (
             id === undefined ||
@@ -751,6 +756,7 @@ async function buildModelCategories(model) {
         }
 
         if (!categories.has(category)) {
+
             categories.set(
                 category,
                 []
@@ -870,6 +876,11 @@ function buildPropertyUI() {
         );
 
     if (!selectKey || !selectValue) {
+
+        console.warn(
+            '⚠️ No se encontraron los selects de property-key/value en el DOM'
+        );
+
         return;
     }
 
@@ -909,6 +920,11 @@ function buildPropertyUI() {
 
         selectKey.appendChild(option);
     }
+
+    console.log(
+        '🧩 buildPropertyUI: keys cargadas:',
+        sortedKeys.length
+    );
 }
 
 
@@ -919,15 +935,25 @@ function buildPropertyUI() {
 function buildCategoryUI() {
 
     const container =
-        document.getElementById('ar-categories-container');
+        document.getElementById(
+            'ar-categories-container'
+        );
 
     if (!container) {
+
+        console.warn(
+            '⚠️ No se encontró ar-categories-container en el DOM'
+        );
+
         return;
     }
 
     container.innerHTML = '';
 
-    for (const [groupName, categoryIds] of modelCategories) {
+    for (
+        const [groupName, categoryIds]
+        of modelCategories
+    ) {
 
         const group =
             document.createElement('div');
@@ -962,7 +988,6 @@ function buildCategoryUI() {
         container.appendChild(group);
     }
 
-    // Agregar eventos a los checkboxes
     container
         .querySelectorAll('.ar-category-toggle')
         .forEach(checkbox => {
@@ -981,6 +1006,11 @@ function buildCategoryUI() {
                 }
             );
         });
+
+    console.log(
+        '🧩 buildCategoryUI: categorías cargadas:',
+        modelCategories.size
+    );
 }
 
 
@@ -990,12 +1020,10 @@ function buildCategoryUI() {
 
 function setupPropertyFilters() {
 
-    // -------------------------------------------------
-    // SELECTOR DE CLAVE
-    // -------------------------------------------------
-
     const selectKey =
-        document.getElementById('ar-property-key');
+        document.getElementById(
+            'ar-property-key'
+        );
 
     if (selectKey) {
 
@@ -1063,12 +1091,10 @@ function setupPropertyFilters() {
     }
 
 
-    // -------------------------------------------------
-    // SELECTOR DE VALOR
-    // -------------------------------------------------
-
     const selectValue =
-        document.getElementById('ar-property-value');
+        document.getElementById(
+            'ar-property-value'
+        );
 
     if (selectValue) {
 
@@ -1087,12 +1113,10 @@ function setupPropertyFilters() {
     }
 
 
-    // -------------------------------------------------
-    // BOTÓN APLICAR
-    // -------------------------------------------------
-
     const btnApply =
-        document.getElementById('ar-apply-property');
+        document.getElementById(
+            'ar-apply-property'
+        );
 
     if (btnApply) {
 
@@ -1114,7 +1138,6 @@ function setupPropertyFilters() {
                     return;
                 }
 
-                // Evitar duplicados
                 const exists =
                     activePropertyFilters.some(
                         filter =>
@@ -1130,7 +1153,6 @@ function setupPropertyFilters() {
                     });
                 }
 
-                // Limpiar selección
                 document.getElementById(
                     'ar-property-key'
                 ).value = '';
@@ -1151,22 +1173,18 @@ function setupPropertyFilters() {
                     'ar-apply-property'
                 ).disabled = true;
 
-                // Actualizar lista
                 renderPropertyFilters();
 
-                // Aplicar filtros
                 await applyAllFilters();
             }
         );
     }
 
 
-    // -------------------------------------------------
-    // BOTÓN LIMPIAR
-    // -------------------------------------------------
-
     const btnClear =
-        document.getElementById('ar-clear-property');
+        document.getElementById(
+            'ar-clear-property'
+        );
 
     if (btnClear) {
 
@@ -1212,7 +1230,9 @@ function setupPropertyFilters() {
 function renderPropertyFilters() {
 
     const container =
-        document.getElementById('ar-property-filters');
+        document.getElementById(
+            'ar-property-filters'
+        );
 
     if (!container) {
         return;
@@ -1237,17 +1257,19 @@ function renderPropertyFilters() {
         index++
     ) {
 
-        const filter = activePropertyFilters[index];
+        const filter =
+            activePropertyFilters[index];
 
-        const item = document.createElement('div');
+        const item =
+            document.createElement('div');
 
         item.className =
             'ar-filter-chip';
 
         item.innerHTML = `
-<div class="d-flex align-items-center gap-1">
+<div class="d-flex align-items-center justify-content-between gap-1">
 
-    <span class="small">
+    <span class="small text-truncate">
         ${escapeHtml(filter.key)}:
         ${escapeHtml(filter.value)}
     </span>
@@ -1312,44 +1334,47 @@ async function toggleCategory(category, visible) {
 
 async function resetAllFilters() {
 
-    // Limpiar categorías
     categoryVisibility.clear();
 
-    // Limpiar properties
     activePropertyFilters = [];
 
-    // Resetear UI de categorías
     document
         .querySelectorAll('.ar-category-toggle')
         .forEach(cb => {
             cb.checked = true;
         });
 
-    // Resetear selects
-    document.getElementById(
-        'ar-property-key'
-    ).value = '';
+    const keyEl =
+        document.getElementById(
+            'ar-property-key'
+        );
 
-    document.getElementById(
-        'ar-property-value'
-    ).innerHTML = `
+    const valueEl =
+        document.getElementById(
+            'ar-property-value'
+        );
+
+    const applyEl =
+        document.getElementById(
+            'ar-apply-property'
+        );
+
+    if (keyEl) keyEl.value = '';
+
+    if (valueEl) {
+
+        valueEl.innerHTML = `
 <option value="">
     Seleccionar valor
 </option>
 `;
+        valueEl.disabled = true;
+    }
 
-    document.getElementById(
-        'ar-property-value'
-    ).disabled = true;
+    if (applyEl) applyEl.disabled = true;
 
-    document.getElementById(
-        'ar-apply-property'
-    ).disabled = true;
-
-    // Renderizar filtros
     renderPropertyFilters();
 
-    // Aplicar (mostrar todo)
     await applyAllFilters();
 }
 
@@ -1360,30 +1385,29 @@ async function resetAllFilters() {
 
 async function applyAllFilters() {
 
-    const hider =
-        components.get(
-            OBC.Hider
-        );
-
-    for (const [modelId, model] of fragments.list) {
-
-        const filteredIds =
-            getFilteredModelIds(model);
-
-        const modelIdMap = {
-            [modelId]: filteredIds
-        };
-
-        await hider.set(
-            true,
-            modelIdMap
-        );
+    if (
+        !fragments ||
+        !loadedModelId ||
+        !hider
+    ) {
+        return;
     }
 
-    // Actualizar fragments
-    if (fragments) {
-        fragments.core.update(true);
-    }
+    const filteredIds =
+        getFilteredModelIds();
+
+    const modelIdMap = {
+        [loadedModelId]: filteredIds
+    };
+
+    await hider.set(false);
+
+    await hider.set(
+        true,
+        modelIdMap
+    );
+
+    fragments.core.update(true);
 }
 
 
@@ -1391,12 +1415,18 @@ async function applyAllFilters() {
 // OBTENER IDS FILTRADOS
 // =====================================================
 
-function getFilteredModelIds(model) {
+function getFilteredModelIds() {
 
     let ids = new Set();
 
-    // Categorías
-    for (const [category, categoryIds] of modelCategories) {
+    // -------------------------------------------------
+    // CATEGORÍAS
+    // -------------------------------------------------
+
+    for (
+        const [category, categoryIds]
+        of modelCategories
+    ) {
 
         const visible =
             categoryVisibility.has(category)
@@ -1412,7 +1442,11 @@ function getFilteredModelIds(model) {
         }
     }
 
-    // Property filters
+
+    // -------------------------------------------------
+    // PROPERTY FILTERS
+    // -------------------------------------------------
+
     if (activePropertyFilters.length) {
 
         const filtersByKey = new Map();
@@ -1488,8 +1522,11 @@ function getFilteredModelIds(model) {
 
 function escapeHtml(value) {
 
-    const div = document.createElement('div');
+    const div =
+        document.createElement('div');
+
     div.textContent = value;
+
     return div.innerHTML;
 }
 
@@ -1500,26 +1537,145 @@ function escapeHtml(value) {
 
 function setModelOpacity(opacity) {
 
-    const value = THREE.MathUtils.clamp(opacity, 0, 1);
+    const value =
+        THREE.MathUtils.clamp(
+            opacity,
+            0,
+            1
+        );
+
 
     if (!arModel) {
-        console.warn('⚠️ setModelOpacity: arModel es null');
         return;
     }
 
-    arModel.traverse((object) => {
-        // ... tu código de materiales igual ...
-    });
 
-    console.log('🎨 setModelOpacity: fragments.list.has(main)?', fragments?.list?.has('main'));
-    console.log('🎨 setModelOpacity: loadedModelId actual:', loadedModelId);
-    console.log('🎨 setModelOpacity: keys disponibles:', fragments ? [...fragments.list.keys()] : 'fragments no existe');
+    arModel.traverse(
+        (object) => {
 
-    if (fragments && loadedModelId && fragments.list.has(loadedModelId)) {
-        fragments.core.update(true);
-        console.log('✅ update() ejecutado correctamente');
-    } else {
-        console.warn('⚠️ update() OMITIDO porque el modelId no coincide o no existe aún');
+            if (
+                !object.isMesh ||
+                !object.material
+            ) {
+
+                return;
+            }
+
+
+            const materials =
+                Array.isArray(
+                    object.material
+                )
+                    ? object.material
+                    : [object.material];
+
+
+            materials.forEach(
+                (material) => {
+
+                    if (
+                        !material.userData.opacityOriginal
+                    ) {
+
+                        material.userData.opacityOriginal = {
+
+                            opacity:
+                                material.opacity,
+
+                            transparent:
+                                material.transparent,
+
+                            depthWrite:
+                                material.depthWrite,
+
+                            depthTest:
+                                material.depthTest,
+
+                            side:
+                                material.side,
+
+                            alphaTest:
+                                material.alphaTest,
+
+                            blending:
+                                material.blending
+                        };
+                    }
+
+
+                    const original =
+                        material.userData.opacityOriginal;
+
+
+                    if (
+                        value >= 1
+                    ) {
+
+                        material.opacity =
+                            original.opacity;
+
+                        material.transparent =
+                            original.transparent;
+
+                        material.depthWrite =
+                            original.depthWrite;
+
+                        material.depthTest =
+                            original.depthTest;
+
+                        material.side =
+                            original.side;
+
+                        material.alphaTest =
+                            original.alphaTest;
+
+                        material.blending =
+                            original.blending;
+
+                    } else {
+
+                        material.opacity =
+                            original.opacity *
+                            value;
+
+                        material.transparent =
+                            true;
+
+                        material.depthWrite =
+                            original.depthWrite;
+
+                        material.depthTest =
+                            original.depthTest;
+
+                        material.side =
+                            original.side;
+
+                        material.alphaTest =
+                            original.alphaTest;
+
+                        material.blending =
+                            original.blending;
+                    }
+
+
+                    material.needsUpdate =
+                        true;
+                }
+            );
+        }
+    );
+
+
+    // =================================================
+    // ACTUALIZAR FRAGMENTS
+    // (solo si el modelo ya terminó de cargar)
+    // =================================================
+
+    if (fragments && modelLoaded) {
+
+        fragments.core.update(
+            true
+        );
     }
 }
 
@@ -1530,108 +1686,250 @@ function setModelOpacity(opacity) {
 
 async function onARSelect() {
 
-    if (!isAR) return;
-    if (!arReticle || !arReticle.visible) return;
-
-    const position = new THREE.Vector3();
-    position.setFromMatrixPosition(arReticle.matrix);
-
-    if (modelLoaded && arModel) {
-        arModel.position.copy(position);
-        arModel.visible = true;
-        console.log('📍 Modelo colocado (ya estaba cargado)');
+    if (!isAR) {
         return;
     }
+
+
+    if (
+        !arReticle ||
+        !arReticle.visible
+    ) {
+
+        return;
+    }
+
+
+    const position =
+        new THREE.Vector3();
+
+
+    position.setFromMatrixPosition(
+        arReticle.matrix
+    );
+
+
+    // =================================================
+    // MODELO YA CARGADO → SOLO REPOSICIONAR
+    // =================================================
+
+    if (
+        modelLoaded &&
+        arModel
+    ) {
+
+        arModel.position.copy(
+            position
+        );
+
+
+        arModel.visible =
+            true;
+
+
+        console.log(
+            '📍 Modelo colocado (ya estaba cargado)'
+        );
+
+
+        return;
+    }
+
 
     if (modelLoading) {
-        console.log('⏳ Ya está cargando, ignorando tap');
         return;
     }
 
-    modelLoading = true;
 
-    const url = container.dataset.url;
+    modelLoading =
+        true;
+
+
+    const url =
+        container.dataset.url;
+
 
     if (!url) {
-        console.error('❌ No existe data-url en #viewer');
-        modelLoading = false;
+
+        console.error(
+            '❌ No existe data-url en #viewer'
+        );
+
+
+        modelLoading =
+            false;
+
+
         return;
     }
+
+
+    // =================================================
+    // CARGAR IFC
+    // =================================================
 
     try {
 
-        console.log('📥 Iniciando carga desde:', url);
+        console.log(
+            '📥 Iniciando carga desde:',
+            url
+        );
 
-        const response = await fetch(url + '?type=frag');
+
+        const response =
+            await fetch(
+                url + '?type=frag'
+            );
+
 
         if (!response.ok) {
-            throw new Error(`Error HTTP ${response.status}`);
+
+            throw new Error(
+                `Error HTTP ${response.status}`
+            );
         }
 
-        const buffer = await response.arrayBuffer();
 
-        console.log('📦 Buffer recibido, tamaño:', buffer.byteLength);
+        const buffer =
+            await response.arrayBuffer();
 
-        console.log('🚀 Llamando fragments.core.load con modelId: "main"');
 
-        const loadResult = await fragments.core.load(buffer, {
-            modelId: 'main'
-        });
+        console.log(
+            '📦 Buffer recibido, tamaño:',
+            buffer.byteLength
+        );
 
-        console.log('✅ fragments.core.load resuelto');
-        console.log('loadResult:', loadResult);
-        console.log('fragments.list keys DESPUÉS de load:', [...fragments.list.keys()]);
 
         // -------------------------------------------------
-        // ESPERAR A QUE onItemSet TERMINE DE PROCESAR
+        // ESPERAR A QUE LOAD() RESUELVA COMPLETAMENTE
+        //
+        // Este await es la clave: garantiza que el Worker
+        // ya terminó de registrar el modelo antes de que
+        // intentemos hacer queries pesadas (getItems,
+        // getItemsData, etc).
         // -------------------------------------------------
 
-        await waitForModel();
+        await fragments.core.load(
+            buffer,
+            {
+                modelId: 'main'
+            }
+        );
 
-        console.log('🎯 waitForModel resuelto. loadedModelId:', loadedModelId);
+
+        console.log(
+            '✅ fragments.core.load resuelto completamente'
+        );
+
+
+        // -------------------------------------------------
+        // OBTENER EL MODELO YA REGISTRADO
+        // -------------------------------------------------
+
+        const model =
+            fragments.list.get('main');
+
+
+        if (!model) {
+
+            throw new Error(
+                'Modelo no encontrado en fragments.list después de load()'
+            );
+        }
+
+
+        // -------------------------------------------------
+        // CONSTRUIR PROPERTIES Y CATEGORÍAS
+        // (ahora sí es seguro consultar al Worker)
+        // -------------------------------------------------
+
+        console.log(
+            '🔍 Construyendo properties...'
+        );
+
+        modelProperties =
+            await buildModelProperties(model);
+
+        console.log(
+            '✅ Properties construidas:',
+            modelProperties.size
+        );
+
+
+        console.log(
+            '🔍 Construyendo categories...'
+        );
+
+        modelCategories =
+            await buildModelCategories(model);
+
+        console.log(
+            '✅ Categories construidas:',
+            modelCategories.size
+        );
+
+
+        // -------------------------------------------------
+        // CONSTRUIR UI DE FILTROS
+        // -------------------------------------------------
+
+        buildPropertyUI();
+        buildCategoryUI();
+
+
+        // -------------------------------------------------
+        // ACTUALIZAR FRAGMENTS
+        // -------------------------------------------------
+
+        await fragments.core.update(
+            true
+        );
+
+
+        // -------------------------------------------------
+        // COLOCAR MODELO
+        // -------------------------------------------------
 
         if (arModel) {
-            arModel.position.copy(position);
-            arModel.visible = true;
-            console.log('✅ Modelo colocado en AR con ID:', loadedModelId);
-        } else {
-            console.error('❌ arModel sigue null después de waitForModel');
+
+            arModel.position.copy(
+                position
+            );
+
+
+            arModel.scale.set(
+                1,
+                1,
+                1
+            );
+
+
+            arModel.visible =
+                true;
+
+
+            setModelOpacity(
+                opacityValue
+            );
+
+
+            console.log(
+                '✅ Modelo colocado en AR con ID:',
+                loadedModelId
+            );
         }
 
     } catch (error) {
 
-        console.error('❌ Error cargando IFC:', error);
-        console.error('Stack:', error.stack);
-        modelLoading = false;
+        console.error(
+            '❌ Error cargando IFC:',
+            error
+        );
+
+
+        modelLoading =
+            false;
     }
-}
-
-
-function waitForModel(timeout = 8000) {
-
-    return new Promise((resolve, reject) => {
-
-        const start = performance.now();
-
-        function check() {
-
-            if (arModel && modelLoaded) {
-                console.log('🔍 waitForModel: condición cumplida');
-                resolve();
-                return;
-            }
-
-            if (performance.now() - start > timeout) {
-                console.error('⏱️ waitForModel: TIMEOUT');
-                reject(new Error('Timeout esperando el modelo'));
-                return;
-            }
-
-            requestAnimationFrame(check);
-        }
-
-        check();
-    });
 }
 
 
@@ -1660,10 +1958,6 @@ function updateAR(frame) {
         return;
     }
 
-
-    // =================================================
-    // CREAR HIT TEST SOURCE
-    // =====================================================
 
     if (
         !hitTestSourceRequested
@@ -1725,10 +2019,6 @@ function updateAR(frame) {
             true;
     }
 
-
-    // =================================================
-    // RESULTADOS HIT TEST
-    // =====================================================
 
     if (hitTestSource) {
 

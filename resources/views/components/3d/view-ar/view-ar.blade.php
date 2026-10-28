@@ -13,10 +13,13 @@
             bottom: 40px;
             transform: translateX(-50%);
             width: 300px;
+            max-height: 70vh;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 15px;
             pointer-events: auto;
+            z-index: 10;
         }
 
         .ar-panel {
@@ -37,14 +40,7 @@
             width: 100%;
         }
 
-        /* Property Filters */
-        .ar-filter-section {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .ar-filter-section select,
-        .ar-filter-section input[type="text"] {
+        .ar-filter-section select {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
@@ -92,7 +88,6 @@
             color: #ef4444;
         }
 
-        /* Categories */
         .ar-category-item {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 6px;
@@ -112,7 +107,6 @@
             font-size: 13px;
         }
 
-        /* Reset button */
         .ar-reset-btn {
             width: 100%;
             padding: 10px;
@@ -126,6 +120,11 @@
 
         .ar-reset-btn:hover {
             background: rgba(239, 68, 68, 0.3);
+        }
+
+        .ar-categories-scroll {
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 
@@ -196,7 +195,7 @@
             <div class="ar-panel ar-filter-section">
                 <label>Categorías IFC</label>
 
-                <div id="ar-categories-container">
+                <div id="ar-categories-container" class="ar-categories-scroll">
                     <!-- Se llena dinámicamente -->
                 </div>
             </div>
