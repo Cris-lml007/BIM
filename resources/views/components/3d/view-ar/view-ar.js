@@ -1065,7 +1065,7 @@ async function updateAR(frame) {
 
     const results =
         frame.getHitTestResults(hitTestSource);
-
+console.log('[AR] Resultados:', results.length);
     if (results.length === 0) {
 
         arReticle.visible = false;
