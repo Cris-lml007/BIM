@@ -1,6 +1,11 @@
-// =====================================================
-// ESTADO
-// =====================================================
+// ======================================================
+// TEST AR: CUBOS SOBRE SUPERFICIES (WebXR + Three.js)
+// ------------------------------------------------------
+// Claves de esta versión (bugs corregidos del test previo):
+// 1. Overlay root separado y transparente (no tapa la cámara)
+// 2. scene.background = null durante la sesión AR
+// 3. Default reference space ('local-floor'), igual que la app principal
+// ======================================================
 
 let activeInstance = null;
 
@@ -14,26 +19,33 @@ function initializeArCubes() {
 
     container.dataset.initialized = 'true';
 
-    const startButton   = document.getElementById('start-ar');
-    const clearButton   = document.getElementById('clear-cubes');
-    const exitButton    = document.getElementById('exit-ar');
-    const overlay       = document.getElementById('ar-overlay');
-    const statusElement = document.getElementById('ar-status');
-    const countElement  = document.getElementById('cube-count');
-    const helpElement   = document.getElementById('ar-help');
+    // --------------------------------------------------
+    // DOM
+    // --------------------------------------------------
 
-    const NORMAL_BACKGROUND = new THREE.Color(0xe2e8f0);
+    const overlayRoot = document.getElementById('ar-cubes-overlay');
 
-    // =================================================
+    const startBtn  = document.getElementById('ar-cubes-start');
+    const exitBtn   = document.getElementById('ar-cubes-exit');
+    const frontBtn  = document.getElementById('ar-cubes-front');
+    const originBtn = document.getElementById('ar-cubes-origin');
+    const clearBtn  = document.getElementById('ar-cubes-clear');
+
+    const statusEl = document.getElementById('ar-cubes-status');
+    const countEl  = document.getElementById('ar-cubes-count');
+    const helpEl   = document.getElementById('ar-cubes-help');
+    const logEl    = document.getElementById('ar-cubes-log');
+
+    // --------------------------------------------------
     // ESCENA
-    // =================================================
+    // --------------------------------------------------
 
     const scene = new THREE.Scene();
 
-    // Fondo SOLO para el modo normal (fuera de AR).
-    // Al entrar en AR se pone en null para que el
-    // feed de la cámara sea visible.
-    scene.background = NORMAL_BACKGROUND;
+    // En escritorio: fondo sólido. En AR se cambia a null
+    // (OBLIGATORIO para ver el feed de la cámara real).
+    const DESKTOP_BG = new THREE.Color(0xe2e8f0);
+    scene.background = DESKTOP_BG;
 
     const camera = new THREE.PerspectiveCamera(
         70,
@@ -42,9 +54,8 @@ function initializeArCubes() {
         100
     );
 
-    // =================================================
-    // RENDERER
-    // =================================================
+    camera.position.set(0, 1.6, 3);
+    camera.lookAt(0, 0.8, 0);
 
     const renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -55,23 +66,21 @@ function initializeArCubes() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.xr.enabled = true;
-    renderer.xr.setReferenceSpaceType('local');
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // NOTA: NO se llama a setReferenceSpaceType → default 'local-floor',
+    // igual que la app principal.
 
     container.appendChild(renderer.domElement);
 
-    // =================================================
-    // LUCES
-    // =================================================
-
     scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 2));
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 3);
-    dirLight.position.set(3, 6, 4);
-    scene.add(dirLight);
+    const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+    sun.position.set(3, 6, 4);
+    scene.add(sun);
 
-    // =================================================
-    // RETÍCULO
-    // =================================================
+    // --------------------------------------------------
+    // RETÍCULO (depthTest: false → siempre visible)
+    // --------------------------------------------------
 
     const reticle = new THREE.Group();
 
@@ -86,7 +95,7 @@ function initializeArCubes() {
     ring.rotation.x = -Math.PI / 2;
     reticle.add(ring);
 
-    const centerDot = new THREE.Mesh(
+    const dot = new THREE.Mesh(
         new THREE.CircleGeometry(0.012, 24),
         new THREE.MeshBasicMaterial({
             color: 0x00ff88,
@@ -94,56 +103,45 @@ function initializeArCubes() {
             depthTest: false
         })
     );
-    centerDot.rotation.x = -Math.PI / 2;
-    centerDot.position.y = 0.001;
-    reticle.add(centerDot);
+    dot.rotation.x = -Math.PI / 2;
+    dot.position.y = 0.001;
+    reticle.add(dot);
 
     reticle.matrixAutoUpdate = false;
+    reticle.renderOrder = 999;
     reticle.visible = false;
     scene.add(reticle);
 
-    // =================================================
+    // --------------------------------------------------
     // CUBOS
-    // =================================================
+    // --------------------------------------------------
 
-    const cubes = [];
     const cubeGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+    const cubes = [];
 
     function updateCount() {
-        countElement.textContent = String(cubes.length);
+        if (countEl) countEl.textContent = String(cubes.length);
     }
 
-    function createCubeAt(matrixArray) {
+    function addCube(position, quaternion = null) {
+        const color = new THREE.Color().setHSL(Math.random(), 0.75, 0.55);
 
-        const cube = new THREE.Mesh(
-            cubeGeometry,
-            new THREE.MeshStandardMaterial({
-                color: new THREE.Color().setHSL(Math.random(), 0.75, 0.55),
-                roughness: 0.7
-            })
-        );
+        const material = new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.7,
+            emissive: color,        // visible aunque fallen las luces
+            emissiveIntensity: 0.35
+        });
 
-        const poseMatrix = new THREE.Matrix4().fromArray(matrixArray);
-
-        const position   = new THREE.Vector3();
-        const quaternion = new THREE.Quaternion();
-        const scaleVec   = new THREE.Vector3();
-
-        poseMatrix.decompose(position, quaternion, scaleVec);
-
+        const cube = new THREE.Mesh(cubeGeometry, material);
         cube.position.copy(position);
-        cube.quaternion.copy(quaternion);
-
-        // Elevar media altura para que repose sobre el plano
-        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
-        cube.position.addScaledVector(up, 0.075);
+        if (quaternion) cube.quaternion.copy(quaternion);
 
         scene.add(cube);
         cubes.push(cube);
-
         updateCount();
 
-        console.log('[AR] Cubo colocado en:', cube.position);
+        log(`Cubo en (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
     }
 
     function clearCubes() {
@@ -153,58 +151,77 @@ function initializeArCubes() {
         }
         cubes.length = 0;
         updateCount();
+        log('Cubos eliminados');
     }
 
-    clearButton.addEventListener('click', clearCubes);
+    // --------------------------------------------------
+    // LOG EN PANTALLA (últimas 5 líneas)
+    // --------------------------------------------------
 
-    // =================================================
-    // HIT TEST — estado
-    // =================================================
+    const logLines = [];
 
-    let session = null;
+    function log(message) {
+        console.log('[AR Cubes]', message);
+        logLines.push(`• ${message}`);
+        while (logLines.length > 5) logLines.shift();
+        if (logEl) logEl.innerHTML = logLines.map(l => `<div>${l}</div>`).join('');
+    }
+
+    let lastStatus = '';
+
+    function setStatus(text) {
+        if (text === lastStatus) return;
+        lastStatus = text;
+        if (statusEl) statusEl.textContent = text;
+    }
+
+    function setHelp(text) {
+        if (helpEl) helpEl.textContent = text;
+    }
+
+    // --------------------------------------------------
+    // HIT TEST
+    // --------------------------------------------------
+
     let hitTestSource = null;
     let hitTestRequested = false;
     let hasHit = false;
     let currentHitMatrix = null;
+    let everDetected = false;
     let disposed = false;
 
-    async function requestHitTestSource(xrSession) {
+    async function requestHitTest(session) {
         if (hitTestRequested) return;
         hitTestRequested = true;
 
         try {
-            const viewerSpace = await xrSession.requestReferenceSpace('viewer');
+            const viewerSpace = await session.requestReferenceSpace('viewer');
 
-            if (disposed || renderer.xr.getSession() !== xrSession) return;
+            if (disposed || renderer.xr.getSession() !== session) return;
 
-            hitTestSource = await xrSession.requestHitTestSource({
-                space: viewerSpace
-            });
+            hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
-            if (disposed || renderer.xr.getSession() !== xrSession) {
+            if (disposed || renderer.xr.getSession() !== session) {
                 hitTestSource?.cancel();
                 hitTestSource = null;
                 return;
             }
 
-            console.log('[AR] Hit Test inicializado');
-            statusElement.textContent = 'AR activo — buscando superficies';
-
+            log('Hit-test inicializado');
         } catch (error) {
-            console.error('[AR] No se pudo inicializar Hit Test:', error);
-            statusElement.textContent = 'Error al inicializar Hit Test';
+            log('ERROR hit-test: ' + error.message);
+            setStatus('Error al inicializar hit-test');
         }
     }
 
-    // =================================================
-    // INICIAR AR
-    // =================================================
+    // --------------------------------------------------
+    // SESIÓN
+    // --------------------------------------------------
 
     async function startAR() {
-
         if (!navigator.xr) {
-            statusElement.textContent = 'WebXR no disponible';
-            alert('WebXR no está disponible. Usa Chrome Android con HTTPS.');
+            setStatus('WebXR no disponible');
+            setHelp('Necesitás Chrome en Android con "Google Play Services for AR", vía HTTPS.');
             return;
         }
 
@@ -212,103 +229,143 @@ function initializeArCubes() {
             const supported = await navigator.xr.isSessionSupported('immersive-ar');
 
             if (!supported) {
-                alert('Este dispositivo o navegador no admite immersive-ar.');
+                setStatus('AR no compatible');
+                setHelp('Este dispositivo o navegador no admite immersive-ar.');
                 return;
             }
 
-            const xrSession = await navigator.xr.requestSession('immersive-ar', {
+            const session = await navigator.xr.requestSession('immersive-ar', {
                 requiredFeatures: ['hit-test'],
                 optionalFeatures: ['dom-overlay'],
-                // ⚠️ CLAVE: el overlay root es el div dedicado,
-                // transparente y SIN el canvas adentro.
-                domOverlay: { root: overlay }
+                domOverlay: { root: overlayRoot } // ← transparente, SIN el canvas
             });
 
-            await renderer.xr.setSession(xrSession);
-
-            console.log('[AR] Sesión iniciada');
+            await renderer.xr.setSession(session);
 
         } catch (error) {
-            console.error('[AR] Error al iniciar:', error);
-            alert('No se pudo iniciar AR: ' + error.message);
+            log('ERROR al iniciar: ' + error.message);
+            setStatus('No se pudo iniciar AR');
+            setHelp(error.message);
         }
     }
 
-    startButton.addEventListener('click', startAR);
+    // Los taps sobre botones del overlay TAMBIÉN disparan el evento
+    // 'select' de la sesión. Guard: ignorar selects justo después
+    // de tocar un botón (evita cubos fantasma al presionar la UI).
+    let lastUiTap = 0;
 
-    exitButton.addEventListener('click', () => {
-        renderer.xr.getSession()?.end();
-    });
+    function onSelect() {
+        if (performance.now() - lastUiTap < 300) return;
 
-    // =================================================
-    // SESSION START / END
-    // =================================================
+        if (!hasHit || !currentHitMatrix) {
+            log('Tap sin superficie detectada');
+            return;
+        }
+
+        placeCubeFromMatrix(currentHitMatrix);
+    }
+
+    function placeCubeFromMatrix(matrixArray) {
+        const m = new THREE.Matrix4().fromArray(matrixArray);
+        const position = new THREE.Vector3();
+        const quaternion = new THREE.Quaternion();
+        const scale = new THREE.Vector3();
+
+        m.decompose(position, quaternion, scale);
+
+        // Apoyar el cubo sobre el plano detectado
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
+        position.addScaledVector(up, 0.075);
+
+        addCube(position, quaternion);
+    }
+
+    // Prueba de render PURA: no depende del hit-test.
+    // Si este cubo se ve en AR, el pipeline cámara→canvas→compositor OK.
+    function placeCubeInFront() {
+        const camPos = new THREE.Vector3();
+        const camDir = new THREE.Vector3();
+        camera.getWorldPosition(camPos);
+        camera.getWorldDirection(camDir);
+
+        const p = camPos.clone().addScaledVector(camDir, 1.0);
+        p.y -= 0.2;
+
+        addCube(p);
+        log('"Frente a mí" colocado — ¿lo ves?');
+    }
+
+    // Con 'local-floor', el origen queda a nivel del piso
+    // donde arrancó la sesión. Útil para detectar "estoy
+    // parado dentro de la geometría".
+    function placeCubeAtOrigin() {
+        addCube(new THREE.Vector3(0, 0.075, 0));
+        log('Cubo en origen colocado — ¿lo ves?');
+    }
+
+    function endAR() {
+        const session = renderer.xr.getSession();
+        if (session) {
+            session.end().catch((e) => log('ERROR al cerrar: ' + e.message));
+        }
+    }
+
+    // --------------------------------------------------
+    // EVENTOS DE SESIÓN
+    // --------------------------------------------------
 
     renderer.xr.addEventListener('sessionstart', () => {
+        const session = renderer.xr.getSession();
 
-        // ⚠️ CLAVE: fondo transparente para ver la cámara real
+        // 📌 CLAVE: sin fondo, la cámara real se ve a través del canvas
         scene.background = null;
 
-        session = renderer.xr.getSession();
+        startBtn.style.display = 'none';
+        exitBtn.style.display = '';
 
         hasHit = false;
         currentHitMatrix = null;
+        everDetected = false;
         hitTestSource = null;
         hitTestRequested = false;
         reticle.visible = false;
 
-        overlay.style.display = 'block';
+        setStatus('AR activo — buscando superficies');
+        setHelp('Mové el teléfono lentamente sobre el suelo o una mesa.');
+        log('Sesión iniciada');
 
-        statusElement.textContent = 'AR activo — buscando superficies';
-        helpElement.textContent =
-            'Mueve el dispositivo lentamente sobre el suelo o una mesa.';
+        session.addEventListener('select', onSelect);
 
-        if (session) {
-            session.addEventListener('select', onSelect);
+        session.addEventListener('end', () => {
+            scene.background = DESKTOP_BG;
+            hitTestSource?.cancel();
+            hitTestSource = null;
+            hitTestRequested = false;
+            hasHit = false;
+            currentHitMatrix = null;
+            reticle.visible = false;
 
-            session.addEventListener('end', () => {
+            startBtn.style.display = '';
+            exitBtn.style.display = 'none';
 
-                // Restaurar fondo del modo normal
-                scene.background = NORMAL_BACKGROUND;
+            setStatus('Modo escritorio');
+            setHelp('Pulsá «Iniciar AR» para comenzar.');
+            log('Sesión finalizada');
+        }, { once: true });
 
-                hitTestSource?.cancel();
-                hitTestSource = null;
-                hitTestRequested = false;
-                hasHit = false;
-                currentHitMatrix = null;
-                reticle.visible = false;
-                session = null;
-
-                overlay.style.display = 'none';
-
-                statusElement.textContent = 'Modo normal';
-
-            }, { once: true });
-
-            requestHitTestSource(session);
-        }
+        requestHitTest(session);
     });
 
-    function onSelect() {
-        if (!hasHit || !currentHitMatrix) {
-            console.log('[AR] Todavía no hay superficie detectada');
-            return;
-        }
-        createCubeAt(currentHitMatrix);
-    }
-
-    // =================================================
-    // LOOP DE RENDER
-    // =================================================
+    // --------------------------------------------------
+    // LOOP
+    // --------------------------------------------------
 
     renderer.setAnimationLoop((timestamp, frame) => {
 
-        if (frame && session && hitTestSource) {
-
+        if (frame && hitTestSource) {
             const referenceSpace = renderer.xr.getReferenceSpace();
 
             if (referenceSpace) {
-
                 const results = frame.getHitTestResults(hitTestSource);
 
                 hasHit = false;
@@ -320,22 +377,22 @@ function initializeArCubes() {
 
                     if (pose) {
                         currentHitMatrix = Array.from(pose.transform.matrix);
-
                         reticle.matrix.fromArray(currentHitMatrix);
                         reticle.matrixWorldNeedsUpdate = true;
                         reticle.visible = true;
                         hasHit = true;
 
-                        statusElement.textContent = 'Superficie detectada ✅';
-                        helpElement.textContent =
-                            'Toca la pantalla para colocar un cubo.';
+                        if (!everDetected) {
+                            everDetected = true;
+                            log('Primera superficie detectada ✔');
+                        }
                     }
                 }
 
-                if (!hasHit) {
-                    statusElement.textContent = 'Buscando superficies…';
-                    helpElement.textContent =
-                        'Mueve el dispositivo lentamente sobre el suelo o una mesa.';
+                if (hasHit) {
+                    setStatus('Superficie detectada — tocá para colocar');
+                } else {
+                    setStatus('Buscando superficies…');
                 }
             }
         }
@@ -343,15 +400,30 @@ function initializeArCubes() {
         renderer.render(scene, camera);
     });
 
-    // =================================================
-    // RESPONSIVE
-    // =================================================
+    // --------------------------------------------------
+    // UI EVENTS
+    // --------------------------------------------------
+
+    startBtn.addEventListener('click', startAR);
+    exitBtn.addEventListener('click', endAR);
+    frontBtn.addEventListener('click', placeCubeInFront);
+    originBtn.addEventListener('click', placeCubeAtOrigin);
+    clearBtn.addEventListener('click', clearCubes);
+
+    for (const btn of [startBtn, exitBtn, frontBtn, originBtn, clearBtn]) {
+        btn.addEventListener('pointerdown', () => {
+            lastUiTap = performance.now();
+        });
+    }
+
+    // --------------------------------------------------
+    // RESIZE
+    // --------------------------------------------------
 
     function resize() {
         const width = container.clientWidth;
         const height = container.clientHeight;
         if (!width || !height) return;
-
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height);
@@ -360,20 +432,24 @@ function initializeArCubes() {
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
 
-    // =================================================
-    // LIMPIEZA (Livewire navigation)
-    // =================================================
+    // --------------------------------------------------
+    // DESTROY (navegación Livewire)
+    // --------------------------------------------------
 
     function destroy() {
         disposed = true;
 
-        renderer.xr.getSession()?.end().catch(() => {});
+        const session = renderer.xr.getSession();
+        if (session) session.end().catch(console.error);
 
         hitTestSource?.cancel();
         renderer.setAnimationLoop(null);
 
-        startButton.removeEventListener('click', startAR);
-        clearButton.removeEventListener('click', clearCubes);
+        startBtn.removeEventListener('click', startAR);
+        exitBtn.removeEventListener('click', endAR);
+        frontBtn.removeEventListener('click', placeCubeInFront);
+        originBtn.removeEventListener('click', placeCubeAtOrigin);
+        clearBtn.removeEventListener('click', clearCubes);
 
         resizeObserver.disconnect();
         clearCubes();
@@ -381,8 +457,8 @@ function initializeArCubes() {
         scene.remove(reticle);
         ring.geometry.dispose();
         ring.material.dispose();
-        centerDot.geometry.dispose();
-        centerDot.material.dispose();
+        dot.geometry.dispose();
+        dot.material.dispose();
         cubeGeometry.dispose();
 
         renderer.dispose();
@@ -393,10 +469,6 @@ function initializeArCubes() {
 
     activeInstance = { destroy };
 }
-
-// =====================================================
-// BOOTSTRAP (compatible con Livewire)
-// =====================================================
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeArCubes, { once: true });
