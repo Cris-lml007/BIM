@@ -1,7 +1,12 @@
+// =====================================================
+// ESTADO
+// =====================================================
+
 let activeInstance = null;
 
-function initializeThreeCubes() {
-    const container = document.getElementById('three-cubes-viewer');
+function initializeArCubes() {
+
+    const container = document.getElementById('ar-cubes-viewer');
 
     if (!container || container.dataset.initialized === 'true') {
         return;
@@ -9,21 +14,26 @@ function initializeThreeCubes() {
 
     container.dataset.initialized = 'true';
 
-    const startButton = document.getElementById('start-ar');
-    const clearButton = document.getElementById('clear-cubes');
+    const startButton   = document.getElementById('start-ar');
+    const clearButton   = document.getElementById('clear-cubes');
+    const exitButton    = document.getElementById('exit-ar');
+    const overlay       = document.getElementById('ar-overlay');
     const statusElement = document.getElementById('ar-status');
-    const countElement = document.getElementById('cube-count');
-    const helpElement = document.getElementById('ar-help');
+    const countElement  = document.getElementById('cube-count');
+    const helpElement   = document.getElementById('ar-help');
 
-    // --------------------------------------------------
+    const NORMAL_BACKGROUND = new THREE.Color(0xe2e8f0);
+
+    // =================================================
     // ESCENA
-    // --------------------------------------------------
+    // =================================================
 
     const scene = new THREE.Scene();
 
-    // Cámara transparente en AR: el entorno real se muestra
-    // a través del sistema WebXR del dispositivo.
-    scene.background = new THREE.Color(0xe2e8f0);
+    // Fondo SOLO para el modo normal (fuera de AR).
+    // Al entrar en AR se pone en null para que el
+    // feed de la cámara sea visible.
+    scene.background = NORMAL_BACKGROUND;
 
     const camera = new THREE.PerspectiveCamera(
         70,
@@ -32,42 +42,36 @@ function initializeThreeCubes() {
         100
     );
 
-    // --------------------------------------------------
+    // =================================================
     // RENDERER
-    // --------------------------------------------------
+    // =================================================
 
-const renderer = new THREE.WebGLRenderer({
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance'
-});
+    const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance'
+    });
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.xr.enabled = true;
+    renderer.xr.setReferenceSpaceType('local');
 
-renderer.xr.enabled = true;
-renderer.xr.setReferenceSpaceType('local');
+    container.appendChild(renderer.domElement);
 
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.NoToneMapping;
+    // =================================================
+    // LUCES
+    // =================================================
 
-container.appendChild(renderer.domElement);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 2));
 
-    // --------------------------------------------------
-    // ILUMINACIÓN
-    // --------------------------------------------------
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+    dirLight.position.set(3, 6, 4);
+    scene.add(dirLight);
 
-    scene.add(
-        new THREE.HemisphereLight(0xffffff, 0x8899aa, 2)
-    );
-
-    const light = new THREE.DirectionalLight(0xffffff, 3);
-    light.position.set(3, 6, 4);
-    scene.add(light);
-
-    // --------------------------------------------------
+    // =================================================
     // RETÍCULO
-    // --------------------------------------------------
+    // =================================================
 
     const reticle = new THREE.Group();
 
@@ -79,11 +83,10 @@ container.appendChild(renderer.domElement);
             depthTest: false
         })
     );
-
     ring.rotation.x = -Math.PI / 2;
     reticle.add(ring);
 
-    const center = new THREE.Mesh(
+    const centerDot = new THREE.Mesh(
         new THREE.CircleGeometry(0.012, 24),
         new THREE.MeshBasicMaterial({
             color: 0x00ff88,
@@ -91,20 +94,17 @@ container.appendChild(renderer.domElement);
             depthTest: false
         })
     );
+    centerDot.rotation.x = -Math.PI / 2;
+    centerDot.position.y = 0.001;
+    reticle.add(centerDot);
 
-    center.rotation.x = -Math.PI / 2;
-    center.position.y = 0.001;
-    reticle.add(center);
-
-    // La matriz viene directamente de la pose detectada por WebXR.
     reticle.matrixAutoUpdate = false;
     reticle.visible = false;
-
     scene.add(reticle);
 
-    // --------------------------------------------------
+    // =================================================
     // CUBOS
-    // --------------------------------------------------
+    // =================================================
 
     const cubes = [];
     const cubeGeometry = new THREE.BoxGeometry(0.15, 0.15, 0.15);
@@ -113,50 +113,37 @@ container.appendChild(renderer.domElement);
         countElement.textContent = String(cubes.length);
     }
 
-    function createCubeAt(matrix) {
+    function createCubeAt(matrixArray) {
+
         const cube = new THREE.Mesh(
             cubeGeometry,
             new THREE.MeshStandardMaterial({
-                color: new THREE.Color().setHSL(
-                    Math.random(),
-                    0.75,
-                    0.55
-                ),
+                color: new THREE.Color().setHSL(Math.random(), 0.75, 0.55),
                 roughness: 0.7
             })
         );
 
-        // El cubo se coloca sobre la superficie detectada.
-        // La matriz del retículo define posición y orientación.
-        const poseMatrix = new THREE.Matrix4().fromArray(matrix);
+        const poseMatrix = new THREE.Matrix4().fromArray(matrixArray);
 
-        const position = new THREE.Vector3();
+        const position   = new THREE.Vector3();
         const quaternion = new THREE.Quaternion();
-        const scale = new THREE.Vector3();
+        const scaleVec   = new THREE.Vector3();
 
-        poseMatrix.decompose(position, quaternion, scale);
+        poseMatrix.decompose(position, quaternion, scaleVec);
 
         cube.position.copy(position);
         cube.quaternion.copy(quaternion);
 
-        // Elevar media altura para que repose sobre el plano.
-        const up = new THREE.Vector3(0, 1, 0)
-            .applyQuaternion(quaternion);
-
+        // Elevar media altura para que repose sobre el plano
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
         cube.position.addScaledVector(up, 0.075);
-
-        cube.userData.baseY = cube.position.y;
 
         scene.add(cube);
         cubes.push(cube);
 
         updateCount();
 
-        console.log('[AR] Cubo colocado', {
-            x: cube.position.x,
-            y: cube.position.y,
-            z: cube.position.z
-        });
+        console.log('[AR] Cubo colocado en:', cube.position);
     }
 
     function clearCubes() {
@@ -164,36 +151,31 @@ container.appendChild(renderer.domElement);
             scene.remove(cube);
             cube.material.dispose();
         }
-
         cubes.length = 0;
         updateCount();
     }
 
     clearButton.addEventListener('click', clearCubes);
 
-    // --------------------------------------------------
-    // HIT TEST
-    // --------------------------------------------------
+    // =================================================
+    // HIT TEST — estado
+    // =================================================
 
+    let session = null;
     let hitTestSource = null;
     let hitTestRequested = false;
     let hasHit = false;
     let currentHitMatrix = null;
-    let session = null;
     let disposed = false;
 
     async function requestHitTestSource(xrSession) {
         if (hitTestRequested) return;
-
         hitTestRequested = true;
 
         try {
             const viewerSpace = await xrSession.requestReferenceSpace('viewer');
 
-            // Puede finalizar la sesión mientras esperamos el resultado.
-            if (disposed || renderer.xr.getSession() !== xrSession) {
-                return;
-            }
+            if (disposed || renderer.xr.getSession() !== xrSession) return;
 
             hitTestSource = await xrSession.requestHitTestSource({
                 space: viewerSpace
@@ -207,65 +189,66 @@ container.appendChild(renderer.domElement);
 
             console.log('[AR] Hit Test inicializado');
             statusElement.textContent = 'AR activo — buscando superficies';
+
         } catch (error) {
             console.error('[AR] No se pudo inicializar Hit Test:', error);
             statusElement.textContent = 'Error al inicializar Hit Test';
         }
     }
 
-    // --------------------------------------------------
-    // INICIAR Y TERMINAR AR
-    // --------------------------------------------------
+    // =================================================
+    // INICIAR AR
+    // =================================================
 
     async function startAR() {
+
         if (!navigator.xr) {
-            statusElement.textContent = 'WebXR no está disponible';
-            helpElement.textContent =
-                'Usa un navegador y dispositivo compatibles y accede mediante HTTPS.';
+            statusElement.textContent = 'WebXR no disponible';
+            alert('WebXR no está disponible. Usa Chrome Android con HTTPS.');
             return;
         }
 
         try {
-            const supported = await navigator.xr.isSessionSupported(
-                'immersive-ar'
-            );
+            const supported = await navigator.xr.isSessionSupported('immersive-ar');
 
             if (!supported) {
-                statusElement.textContent = 'AR no compatible';
-                helpElement.textContent =
-                    'Este dispositivo o navegador no admite immersive-ar.';
+                alert('Este dispositivo o navegador no admite immersive-ar.');
                 return;
             }
 
-            // La sesión se solicita desde el clic del usuario.
-            const xrSession = await navigator.xr.requestSession(
-                'immersive-ar',
-                {
-                    requiredFeatures: ['hit-test'],
-                    optionalFeatures: ['dom-overlay'],
-                    domOverlay: { root: container }
-                }
-            );
+            const xrSession = await navigator.xr.requestSession('immersive-ar', {
+                requiredFeatures: ['hit-test'],
+                optionalFeatures: ['dom-overlay'],
+                // ⚠️ CLAVE: el overlay root es el div dedicado,
+                // transparente y SIN el canvas adentro.
+                domOverlay: { root: overlay }
+            });
 
             await renderer.xr.setSession(xrSession);
 
             console.log('[AR] Sesión iniciada');
 
-            statusElement.textContent = 'AR activo — buscando superficies';
-            helpElement.textContent =
-                'Mueve el dispositivo lentamente para detectar una superficie.';
-
         } catch (error) {
             console.error('[AR] Error al iniciar:', error);
-
-            statusElement.textContent = 'No se pudo iniciar AR';
-            helpElement.textContent = error.message;
+            alert('No se pudo iniciar AR: ' + error.message);
         }
     }
 
     startButton.addEventListener('click', startAR);
 
+    exitButton.addEventListener('click', () => {
+        renderer.xr.getSession()?.end();
+    });
+
+    // =================================================
+    // SESSION START / END
+    // =================================================
+
     renderer.xr.addEventListener('sessionstart', () => {
+
+        // ⚠️ CLAVE: fondo transparente para ver la cámara real
+        scene.background = null;
+
         session = renderer.xr.getSession();
 
         hasHit = false;
@@ -274,12 +257,21 @@ container.appendChild(renderer.domElement);
         hitTestRequested = false;
         reticle.visible = false;
 
+        overlay.style.display = 'block';
+
+        statusElement.textContent = 'AR activo — buscando superficies';
+        helpElement.textContent =
+            'Mueve el dispositivo lentamente sobre el suelo o una mesa.';
+
         if (session) {
             session.addEventListener('select', onSelect);
 
             session.addEventListener('end', () => {
-                hitTestSource?.cancel();
 
+                // Restaurar fondo del modo normal
+                scene.background = NORMAL_BACKGROUND;
+
+                hitTestSource?.cancel();
                 hitTestSource = null;
                 hitTestRequested = false;
                 hasHit = false;
@@ -287,8 +279,10 @@ container.appendChild(renderer.domElement);
                 reticle.visible = false;
                 session = null;
 
+                overlay.style.display = 'none';
+
                 statusElement.textContent = 'Modo normal';
-                helpElement.textContent = 'Pulsa «Iniciar AR» para comenzar.';
+
             }, { once: true });
 
             requestHitTestSource(session);
@@ -297,24 +291,24 @@ container.appendChild(renderer.domElement);
 
     function onSelect() {
         if (!hasHit || !currentHitMatrix) {
-            console.log('[AR] Todavía no hay una superficie detectada');
+            console.log('[AR] Todavía no hay superficie detectada');
             return;
         }
-
         createCubeAt(currentHitMatrix);
     }
 
-    // --------------------------------------------------
-    // BUCLE DE ANIMACIÓN
-    // --------------------------------------------------
+    // =================================================
+    // LOOP DE RENDER
+    // =================================================
 
     renderer.setAnimationLoop((timestamp, frame) => {
-        // Todas las consultas a XRFrame se ejecutan de forma
-        // síncrona dentro del callback actual.
+
         if (frame && session && hitTestSource) {
+
             const referenceSpace = renderer.xr.getReferenceSpace();
 
             if (referenceSpace) {
+
                 const results = frame.getHitTestResults(hitTestSource);
 
                 hasHit = false;
@@ -325,16 +319,14 @@ container.appendChild(renderer.domElement);
                     const pose = results[0].getPose(referenceSpace);
 
                     if (pose) {
-                        currentHitMatrix = Array.from(
-                            pose.transform.matrix
-                        );
+                        currentHitMatrix = Array.from(pose.transform.matrix);
 
                         reticle.matrix.fromArray(currentHitMatrix);
                         reticle.matrixWorldNeedsUpdate = true;
                         reticle.visible = true;
                         hasHit = true;
 
-                        statusElement.textContent = 'Superficie detectada';
+                        statusElement.textContent = 'Superficie detectada ✅';
                         helpElement.textContent =
                             'Toca la pantalla para colocar un cubo.';
                     }
@@ -351,37 +343,31 @@ container.appendChild(renderer.domElement);
         renderer.render(scene, camera);
     });
 
-    // --------------------------------------------------
+    // =================================================
     // RESPONSIVE
-    // --------------------------------------------------
+    // =================================================
 
     function resize() {
         const width = container.clientWidth;
         const height = container.clientHeight;
-
         if (!width || !height) return;
 
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
-
         renderer.setSize(width, height);
     }
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
 
-    // --------------------------------------------------
-    // LIMPIEZA
-    // --------------------------------------------------
+    // =================================================
+    // LIMPIEZA (Livewire navigation)
+    // =================================================
 
     function destroy() {
         disposed = true;
 
-        const currentSession = renderer.xr.getSession();
-
-        if (currentSession) {
-            currentSession.end().catch(console.error);
-        }
+        renderer.xr.getSession()?.end().catch(() => {});
 
         hitTestSource?.cancel();
         renderer.setAnimationLoop(null);
@@ -395,8 +381,8 @@ container.appendChild(renderer.domElement);
         scene.remove(reticle);
         ring.geometry.dispose();
         ring.material.dispose();
-        center.geometry.dispose();
-        center.material.dispose();
+        centerDot.geometry.dispose();
+        centerDot.material.dispose();
         cubeGeometry.dispose();
 
         renderer.dispose();
@@ -408,19 +394,17 @@ container.appendChild(renderer.domElement);
     activeInstance = { destroy };
 }
 
-// --------------------------------------------------
-// INICIALIZACIÓN LIVEWIRE
-// --------------------------------------------------
+// =====================================================
+// BOOTSTRAP (compatible con Livewire)
+// =====================================================
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeThreeCubes, {
-        once: true
-    });
+    document.addEventListener('DOMContentLoaded', initializeArCubes, { once: true });
 } else {
-    initializeThreeCubes();
+    initializeArCubes();
 }
 
-document.addEventListener('livewire:navigated', initializeThreeCubes);
+document.addEventListener('livewire:navigated', initializeArCubes);
 
 document.addEventListener('livewire:navigating', () => {
     activeInstance?.destroy();
