@@ -89,3 +89,5 @@ Route::get('/attachments/{id}', function ($id) {
     return response()->file($path);
 
 })->name('attachments.show');
+
+Route::livewire('/test','reticula');
