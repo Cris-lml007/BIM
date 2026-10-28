@@ -1,248 +1,146 @@
 <div>
     <style>
-        #ar-ui-container {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 1;
-        }
+    #ar-viewer-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
 
-        .ar-controls {
-            position: absolute;
-            left: 50%;
-            bottom: 40px;
-            transform: translateX(-50%);
-            width: 300px;
-            max-height: 70vh;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            pointer-events: auto;
-            z-index: 10;
-        }
+#ar-ui-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 16px;
+    pointer-events: auto;
+    z-index: 10;
+}
 
-        .ar-panel {
-            background: rgba(17, 17, 17, 0.85);
-            border-radius: 12px;
-            padding: 15px 20px;
-            color: white;
-        }
+.ar-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: rgba(17, 24, 39, 0.85);
+    border-radius: 12px;
+    padding: 14px;
+}
 
-        .ar-panel label {
-            display: block;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
+.ar-force-btn {
+    width: 100%;
+    padding: 14px;
+    background: rgba(37, 99, 235, 0.95);
+    border: 1px solid rgba(59, 130, 246, 1);
+    color: white;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    transition: all 0.2s;
+}
+.ar-force-btn:hover, .ar-force-btn:active {
+    background: rgba(29, 78, 216, 1);
+    transform: scale(0.98);
+}
 
-        #ar-opacity {
-            width: 100%;
-        }
+.ar-slider-group, .ar-filters-panel, .ar-categories-panel {
+    color: white;
+}
 
-        /* Botón de colocación forzada */
-        .ar-force-btn {
-            width: 100%;
-            padding: 14px;
-            background: rgba(37, 99, 235, 0.95);
-            border: 1px solid rgba(59, 130, 246, 1);
-            color: white;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-            transition: all 0.2s;
-        }
+.ar-slider-group input[type="range"] {
+    width: 100%;
+}
 
-        .ar-force-btn:hover,
-        .ar-force-btn:active {
-            background: rgba(29, 78, 216, 1);
-            transform: scale(0.98);
-        }
+.ar-filters-panel select,
+.ar-filter-buttons button,
+#ar-reset-filters {
+    width: 100%;
+    padding: 10px;
+    margin-top: 6px;
+    border-radius: 8px;
+    border: none;
+}
 
-        /* Filtros de properties */
-        .ar-filter-section select {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            border-radius: 6px;
-            padding: 8px 12px;
-            width: 100%;
-            margin-bottom: 10px;
-        }
+.ar-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
 
-        .ar-filter-section select option {
-            background: #1a1a1a;
-            color: white;
-        }
+.ar-filter-chip {
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
 
-        .ar-filter-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
+.ar-filter-remove {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
 
-        .ar-filter-buttons button {
-            flex: 1;
-            padding: 8px;
-            border-radius: 6px;
-            font-size: 12px;
-        }
+#ar-categories-container {
+    max-height: 150px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
 
-        .ar-filter-chip {
-            background: rgba(37, 99, 235, 0.3);
-            border: 1px solid rgba(37, 99, 235, 0.5);
-            border-radius: 6px;
-            padding: 6px 10px;
-            margin-bottom: 6px;
-        }
-
-        .ar-filter-chip .ar-filter-remove {
-            color: white;
-            background: transparent;
-            border: none;
-            padding: 0;
-            margin-left: 5px;
-        }
-
-        .ar-filter-chip .ar-filter-remove:hover {
-            color: #ef4444;
-        }
-
-        /* Categorías */
-        .ar-category-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            margin-bottom: 6px;
-            transition: background 0.2s;
-        }
-
-        .ar-category-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .ar-category-item input {
-            accent-color: #2563eb;
-        }
-
-        .ar-category-item span:first-of-type {
-            font-size: 13px;
-        }
-
-        .ar-categories-scroll {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        /* Reset */
-        .ar-reset-btn {
-            width: 100%;
-            padding: 10px;
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            color: #ef4444;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .ar-reset-btn:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
+.ar-category-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 13px;
+}
     </style>
+    <div id="ar-viewer-container" data-url="{{ $attachmentUrl ?? route('dashboard.attachment.download', $attachment->id ?? 1) }}"></div>
 
-    <h1>AR</h1>
+<div id="ar-ui-container">
+    <div class="ar-controls">
+        <!-- NUEVO: botón de colocación forzada -->
+        <button type="button" id="ar-force-place" class="ar-force-btn">
+            <i class="bi bi-geo-alt-fill me-2"></i>
+            Colocar modelo aquí
+        </button>
 
-    <div id="viewer"
-         class="viewport"
-         data-url="{{ route('app.Attachment', 1) }}"
-         data-type="{{ $model->model->type }}">
-    </div>
-
-    <div id="ar-ui-container">
-
-        <div class="ar-controls">
-
-            <!-- Colocación forzada -->
-            <button
-                type="button"
-                id="ar-force-place"
-                class="ar-force-btn">
-                <i class="bi bi-geo-alt-fill me-2"></i>
-                Colocar modelo aquí
-            </button>
-
-            <!-- Opacidad -->
-            <div class="ar-panel">
-                <label>
-                    Opacidad:
-                    <span id="ar-opacity-value">100%</span>
-                </label>
-                <input
-                    type="range"
-                    id="ar-opacity"
-                    min="0"
-                    max="100"
-                    value="100"
-                    step="1"
-                >
-            </div>
-
-            <!-- Filtros de Properties -->
-            <div class="ar-panel ar-filter-section">
-                <label>Filtrar por Propiedades</label>
-
-                <select id="ar-property-key">
-                    <option value="">Seleccionar propiedad</option>
-                </select>
-
-                <select id="ar-property-value" disabled>
-                    <option value="">Seleccionar valor</option>
-                </select>
-
-                <div class="ar-filter-buttons">
-                    <button
-                        type="button"
-                        id="ar-apply-property"
-                        class="btn btn-primary btn-sm"
-                        disabled>
-                        Aplicar
-                    </button>
-                    <button
-                        type="button"
-                        id="ar-clear-property"
-                        class="btn btn-secondary btn-sm">
-                        Limpiar
-                    </button>
-                </div>
-
-                <div id="ar-property-filters" class="mt-3">
-                    <div class="small text-white-50">
-                        Sin filtros activos
-                    </div>
-                </div>
-            </div>
-
-            <!-- Categorías -->
-            <div class="ar-panel ar-filter-section">
-                <label>Categorías IFC</label>
-
-                <div id="ar-categories-container" class="ar-categories-scroll">
-                    <!-- Se llena dinámicamente -->
-                </div>
-            </div>
-
-            <!-- Reset filtros -->
-            <button
-                type="button"
-                id="ar-reset-filters"
-                class="ar-reset-btn">
-                <i class="bi bi-arrow-counterclockwise me-2"></i>
-                Reiniciar Filtros
-            </button>
-
+        <div class="ar-slider-group">
+            <label for="ar-opacity">Opacidad del modelo</label>
+            <input type="range" id="ar-opacity" min="0" max="1" step="0.05" value="1">
         </div>
 
+        <div class="ar-filters-panel">
+            <h4>Filtrar por propiedad</h4>
+            <select id="ar-property-key">
+                <option value="">Selecciona una propiedad...</option>
+            </select>
+            <select id="ar-property-value" disabled>
+                <option value="">Selecciona un valor...</option>
+            </select>
+            <div class="ar-filter-buttons">
+                <button type="button" id="ar-apply-property" disabled>Aplicar</button>
+                <button type="button" id="ar-clear-property">Limpiar</button>
+            </div>
+            <div id="ar-property-filters" class="ar-chips-container"></div>
+        </div>
+
+        <div class="ar-categories-panel">
+            <h4>Categorías IFC</h4>
+            <div id="ar-categories-container"></div>
+        </div>
+
+        <button type="button" id="ar-reset-filters">Reset de filtros</button>
     </div>
+</div>
 </div>

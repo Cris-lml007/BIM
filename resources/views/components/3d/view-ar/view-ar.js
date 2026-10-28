@@ -1,2257 +1,740 @@
-// =====================================================
-// CONTENEDOR
-// =====================================================
+// ============================================
+// ESTADO GLOBAL
+// ============================================
+let container;
+let scene, camera, renderer;
+let components, fragments, hider;
 
-const container =
-    document.getElementById('viewer');
-
-if (!container) {
-    throw new Error(
-        'No se encontró el elemento #viewer'
-    );
-}
-
-
-// =====================================================
-// UI DOM OVERLAY
-// =====================================================
-
-const arUI =
-    document.getElementById('ar-ui-container');
-
-const opacitySlider =
-    document.getElementById('ar-opacity');
-
-const opacityText =
-    document.getElementById('ar-opacity-value');
-
-
-// =====================================================
-// VARIABLES
-// =====================================================
-
-let components;
-let world;
-let fragments;
-let hider;
-
-let renderer;
-let scene;
-let camera;
-
-let arController;
-let arReticle;
-
+let arReticle = null;
 let hitTestSource = null;
 let hitTestSourceRequested = false;
 
-let arModel = null;
-
-let modelLoading = false;
+let arModel = null;            // objeto geométrico real del modelo (hijo del contenedor)
+let arModelContainer = null;   // NUEVO: contenedor que se mueve/escala en AR
 let modelLoaded = false;
-
-let isAR = false;
-
-let opacityValue = 1;
-
-// =====================================================
-// PROPERTY SETS / FILTROS
-// =====================================================
-
+let modelLoading = false;
 let loadedModelId = null;
 
 let modelProperties = new Map();
 let modelCategories = new Map();
-
 let activePropertyFilters = [];
 let categoryVisibility = new Map();
 
+let opacityValue = 1;
+let isAR = false;
 
-// =====================================================
-// INICIALIZAR VISOR
-// =====================================================
+const DESIRED_MAX_SIZE = 2; // metros — tamaño máximo deseado del modelo en AR (modo "maqueta")
 
+// ============================================
+// INIT PRINCIPAL
+// ============================================
 async function initViewer() {
-
-    // =================================================
-    // THAT OPEN
-    // =================================================
-
-    components =
-        new OBC.Components();
-
-
-    const worlds =
-        components.get(
-            OBC.Worlds
-        );
-
-
-    world =
-        worlds.create();
-
-
-    world.scene =
-        new OBC.SimpleScene(
-            components
-        );
-
-
-    world.scene.setup();
-
-
-    world.scene.three.background =
-        null;
-
-
-    scene =
-        world.scene.three;
-
-
-    // =================================================
-    // WEBGL RENDERER
-    // =================================================
-
-    renderer =
-        new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true
-        });
-
-
-    renderer.setPixelRatio(
-        window.devicePixelRatio
-    );
-
-
-    renderer.setSize(
-        container.clientWidth,
-        container.clientHeight
-    );
-
-
-    // -------------------------------------------------
-    // ACTIVAR WEBXR
-    // -------------------------------------------------
-
-    renderer.xr.enabled =
-        true;
-
-
-    container.appendChild(
-        renderer.domElement
-    );
-
-
-    // =================================================
-    // CAMERA
-    // =================================================
-
-    camera =
-        new THREE.PerspectiveCamera(
-            70,
-
-            container.clientWidth /
-            container.clientHeight,
-
-            0.01,
-            1000
-        );
-
-
-    camera.position.set(
-        10,
-        10,
-        10
-    );
-
-
-    camera.lookAt(
-        0,
-        0,
-        0
-    );
-
-
-    // =================================================
-    // COMPONENTS
-    // =================================================
-
-    components.init();
-
-
-    // =================================================
-    // HIDER
-    // =================================================
-
-    hider =
-        components.get(
-            OBC.Hider
-        );
-
-
-    // =================================================
-    // FRAGMENTS
-    // =================================================
-
-    fragments =
-        components.get(
-            OBC.FragmentsManager
-        );
-
-
-    fragments.init(
-        '/engine/worker.mjs'
-    );
-
-
-    // =================================================
-    // CUANDO SE CARGA EL MODELO
-    // =================================================
-    //
-    // IMPORTANTE:
-    // Este listener se dispara de forma SÍNCRONA
-    // dentro de fragments.core.load(), en el momento
-    // exacto en que el modelo se registra en
-    // fragments.list.
-    //
-    // En ese instante el Worker (hilo aparte que
-    // procesa la geometría/datos) TODAVÍA puede no
-    // haber terminado de registrar el modelo.
-    //
-    // Por eso aquí SOLO hacemos operaciones síncronas
-    // (agregar a escena, cámara, etc). Cualquier
-    // operación que consulte al Worker
-    // (getItems, getItemsData...) se hace DESPUÉS,
-    // una vez que el await fragments.core.load()
-    // haya resuelto completamente (ver loadAndPlaceModel).
-    // =================================================
-
-    fragments.list.onItemSet.add(
-        ({ value: model }) => {
-
-            console.log(
-                '🟢 onItemSet disparado, modelId:',
-                model.modelId
-            );
-
-
-            // -------------------------------------------------
-            // CÁMARA
-            // -------------------------------------------------
-
-            model.useCamera(
-                camera
-            );
-
-
-            // -------------------------------------------------
-            // AGREGAR MODELO A LA ESCENA
-            // -------------------------------------------------
-
-            scene.add(
-                model.object
-            );
-
-
-            arModel =
-                model.object;
-
-
-            // -------------------------------------------------
-            // ESCALA
-            // -------------------------------------------------
-
-            arModel.scale.set(
-                1,
-                1,
-                1
-            );
-
-
-            // -------------------------------------------------
-            // OCULTO HASTA COLOCAR
-            // -------------------------------------------------
-
-            arModel.visible =
-                false;
-
-
-            // -------------------------------------------------
-            // GUARDAR EL MODELID REAL
-            // -------------------------------------------------
-
-            loadedModelId =
-                model.modelId;
-
-
-            modelLoaded =
-                true;
-
-
-            modelLoading =
-                false;
-
-
-            console.log(
-                '✅ Modelo registrado en escena:',
-                loadedModelId
-            );
-        }
-    );
-
-
-    // =================================================
-    // BOTÓN AR
-    // =================================================
-
-    const arButton =
-        ARButton.createButton(
-            renderer,
-            {
-                requiredFeatures: [
-                    'hit-test'
-                ],
-
-                optionalFeatures: [
-                    'dom-overlay'
-                ],
-
-                domOverlay: {
-                    root: arUI
-                }
-            }
-        );
-
-
-    document.body.appendChild(
-        arButton
-    );
-
-
-    // =================================================
-    // CONFIGURAR SLIDER DE OPACIDAD
-    // =================================================
-
-    if (opacitySlider) {
-
-        opacitySlider.addEventListener(
-            'input',
-            () => {
-
-                opacityValue =
-                    Number(
-                        opacitySlider.value
-                    ) / 100;
-
-
-                if (opacityText) {
-
-                    opacityText.textContent =
-                        `${opacitySlider.value}%`;
-                }
-
-
-                setModelOpacity(
-                    opacityValue
-                );
-            }
-        );
+    container = document.getElementById('ar-viewer-container');
+    if (!container) {
+        console.error('❌ No se encontró #ar-viewer-container');
+        return;
     }
 
+    // --- Escena, cámara, renderer ---
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.01,
+        1000
+    );
 
-    // =================================================
-    // BOTÓN DE COLOCACIÓN FORZADA
-    // =================================================
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
 
-    const forcePlaceBtn =
-        document.getElementById(
-            'ar-force-place'
-        );
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+    light.position.set(0.5, 1, 0.25);
+    scene.add(light);
 
-    if (forcePlaceBtn) {
+    // --- Botón AR (WebXR) ---
+    const arButton = ARButton.createButton(renderer, {
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay', 'light-estimation'],
+        domOverlay: { root: document.getElementById('ar-ui-container') }
+    });
+    document.body.appendChild(arButton);
 
-        forcePlaceBtn.addEventListener(
-            'click',
-            async () => {
+    // --- Reticle (indicador de superficie detectada) ---
+    const reticleGeometry = new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2);
+    const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0x2563eb });
+    arReticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
+    arReticle.matrixAutoUpdate = false;
+    arReticle.visible = false;
+    scene.add(arReticle);
 
-                await forcePlaceModel();
-            }
-        );
-    }
+    // --- Controller táctil (tap en pantalla durante sesión AR) ---
+    const controller = renderer.xr.getController(0);
+    controller.addEventListener('select', onARSelect);
+    scene.add(controller);
 
+    renderer.xr.addEventListener('sessionstart', onARSessionStart);
+    renderer.xr.addEventListener('sessionend', onARSessionEnd);
 
-    // =================================================
-    // CONFIGURAR FILTROS DE PROPERTIES
-    // =================================================
+    // ============================================
+    // ThatOpen Engine — FragmentsManager
+    // ============================================
+    components = new OBC.Components();
 
+    fragments = components.get(OBC.FragmentsManager);
+
+    // ⚠️ AJUSTA ESTA RUTA si en tu proyecto el worker.mjs está en otra ubicación/CDN
+    const workerUrl = '/vendor/thatopen/worker.mjs';
+    await fragments.init(workerUrl);
+
+    hider = components.get(OBC.Hider);
+
+    // --- Listener de carga de modelo (SOLO operaciones síncronas) ---
+    fragments.list.onItemSet.add(({ value: model }) => {
+        console.log('🟢 onItemSet disparado, modelId:', model.modelId);
+
+        model.useCamera(camera);
+        arModel = model.object;
+
+        // NUEVO: contenedor para centrar/escalar sin tocar la geometría interna
+        arModelContainer = new THREE.Group();
+        arModelContainer.visible = false;
+        scene.add(arModelContainer);
+        arModelContainer.add(arModel);
+
+        loadedModelId = model.modelId;
+        modelLoaded = true;
+        modelLoading = false;
+
+        console.log('✅ Modelo registrado en escena:', model.modelId);
+    });
+
+    // --- UI: opacidad, force-place, filtros ---
+    setupOpacitySlider();
+    setupForcePlaceButton();
     setupPropertyFilters();
 
+    renderer.setAnimationLoop(render);
 
-    // =================================================
-    // CONFIGURAR RESET DE FILTROS
-    // =================================================
-
-    const resetFiltersBtn =
-        document.getElementById(
-            'ar-reset-filters'
-        );
-
-    if (resetFiltersBtn) {
-
-        resetFiltersBtn.addEventListener(
-            'click',
-            async () => {
-
-                await resetAllFilters();
-            }
-        );
-    }
-
-
-    // =================================================
-    // RETICLE
-    // =================================================
-
-    const reticleGeometry =
-        new THREE.RingGeometry(
-            0.08,
-            0.1,
-            32
-        );
-
-
-    reticleGeometry.rotateX(
-        -Math.PI / 2
-    );
-
-
-    const reticleMaterial =
-        new THREE.MeshBasicMaterial();
-
-
-    arReticle =
-        new THREE.Mesh(
-            reticleGeometry,
-            reticleMaterial
-        );
-
-
-    arReticle.matrixAutoUpdate =
-        false;
-
-
-    arReticle.visible =
-        false;
-
-
-    scene.add(
-        arReticle
-    );
-
-
-    // =================================================
-    // CONTROLLER
-    // =================================================
-
-    arController =
-        renderer.xr.getController(0);
-
-
-    arController.addEventListener(
-        'select',
-        onARSelect
-    );
-
-
-    scene.add(
-        arController
-    );
-
-
-    // =================================================
-    // INICIO DE AR
-    // =================================================
-
-    renderer.xr.addEventListener(
-        'sessionstart',
-        () => {
-
-            console.log(
-                'AR iniciado'
-            );
-
-
-            isAR =
-                true;
-
-
-            hitTestSource =
-                null;
-
-
-            hitTestSourceRequested =
-                false;
-
-
-            if (arModel) {
-
-                arModel.visible =
-                    false;
-            }
-
-
-            if (opacitySlider) {
-
-                opacitySlider.value =
-                    Math.round(
-                        opacityValue * 100
-                    );
-            }
-
-
-            if (opacityText) {
-
-                opacityText.textContent =
-                    `${Math.round(
-                        opacityValue * 100
-                    )}%`;
-            }
-
-
-            if (arUI) {
-
-                arUI.style.display =
-                    'block';
-            }
-        }
-    );
-
-
-    // =================================================
-    // FIN DE AR
-    // =================================================
-
-    renderer.xr.addEventListener(
-        'sessionend',
-        () => {
-
-            console.log(
-                'AR finalizado'
-            );
-
-
-            isAR =
-                false;
-
-
-            hitTestSource =
-                null;
-
-
-            hitTestSourceRequested =
-                false;
-
-
-            if (arReticle) {
-
-                arReticle.visible =
-                    false;
-            }
-
-
-            if (arUI) {
-
-                arUI.style.display =
-                    'none';
-            }
-
-
-            if (arModel) {
-
-                arModel.visible =
-                    true;
-            }
-        }
-    );
-
-
-    // =================================================
-    // ANIMATION LOOP
-    // =================================================
-
-    renderer.setAnimationLoop(
-        (timestamp, frame) => {
-
-            updateAR(
-                frame
-            );
-
-
-            if (
-                isAR &&
-                arModel
-            ) {
-
-                fragments.core.update();
-            }
-
-
-            renderer.render(
-                scene,
-                camera
-            );
-        }
-    );
-
-
-    // =================================================
-    // RESIZE
-    // =================================================
-
-    window.addEventListener(
-        'resize',
-        onResize
-    );
-
-
-    // =================================================
-    // OCULTAR UI FUERA DE AR
-    // =================================================
-
-    if (arUI) {
-
-        arUI.style.display =
-            'none';
-    }
+    window.addEventListener('resize', onWindowResize);
 }
 
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
-// =====================================================
-// CONSTRUIR PROPERTIES DEL MODELO
-// =====================================================
+// ============================================
+// SESIÓN AR — hit-test lifecycle
+// ============================================
+function onARSessionStart() {
+    isAR = true;
+    console.log('AR iniciado');
+}
 
-async function buildModelProperties(model) {
+function onARSessionEnd() {
+    isAR = false;
+    hitTestSource = null;
+    hitTestSourceRequested = false;
+    if (arReticle) arReticle.visible = false;
+    console.log('AR finalizado');
+}
 
-    const items =
-        await model.getItems();
+// ============================================
+// LOOP DE RENDER (hit-test + reticle)
+// ============================================
+function render(timestamp, frame) {
+    if (frame) {
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        const session = renderer.xr.getSession();
 
-    const ids =
-        Array.from(items.keys());
-
-    const data =
-        await model.getItemsData(
-            ids,
-            {
-                attributesDefault: true,
-
-                relations: {
-                    IsDefinedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
-
-                    IsTypedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
-                },
-            }
-        );
-
-    const properties = new Map();
-
-    for (const item of data) {
-
-        const id =
-            item._localId?.value;
-
-        if (id === undefined) {
-            continue;
+        if (!hitTestSourceRequested) {
+            session.requestReferenceSpace('viewer').then((viewerSpace) => {
+                session.requestHitTestSource({ space: viewerSpace }).then((source) => {
+                    hitTestSource = source;
+                });
+            });
+            session.addEventListener('end', () => {
+                hitTestSourceRequested = false;
+                hitTestSource = null;
+            });
+            hitTestSourceRequested = true;
         }
 
-        const propertySets =
-            extractPropertySets(item);
-
-        for (
-            const [, propertyList]
-            of propertySets
-        ) {
-
-            for (
-                const property
-                of propertyList
-            ) {
-
-                if (
-                    property.value === null ||
-                    property.value === undefined ||
-                    property.value === ''
-                ) {
-                    continue;
-                }
-
-                const key =
-                    property.name;
-
-                const value =
-                    String(property.value);
-
-                if (!properties.has(key)) {
-
-                    properties.set(
-                        key,
-                        new Map()
-                    );
-                }
-
-                const values =
-                    properties.get(key);
-
-                if (!values.has(value)) {
-
-                    values.set(
-                        value,
-                        []
-                    );
-                }
-
-                values
-                    .get(value)
-                    .push(id);
+        if (hitTestSource) {
+            const hitTestResults = frame.getHitTestResults(hitTestSource);
+            if (hitTestResults.length > 0) {
+                const hit = hitTestResults[0];
+                const pose = hit.getPose(referenceSpace);
+                arReticle.visible = true;
+                arReticle.matrix.fromArray(pose.transform.matrix);
+            } else {
+                arReticle.visible = false;
             }
         }
     }
 
-    return properties;
+    renderer.render(scene, camera);
 }
 
+// ============================================
+// SELECCIÓN POR TAP (hit-test normal)
+// ============================================
+async function onARSelect() {
+    if (!isAR) return;
+    if (!arReticle || !arReticle.visible) return;
 
-// =====================================================
-// CONSTRUIR CATEGORÍAS DEL MODELO
-// =====================================================
+    const position = new THREE.Vector3();
+    position.setFromMatrixPosition(arReticle.matrix);
 
-async function buildModelCategories(model) {
-
-    const items =
-        await model.getItems();
-
-    const ids =
-        Array.from(items.keys());
-
-    const data =
-        await model.getItemsData(
-            ids,
-            {
-                attributesDefault: true,
-
-                relations: {
-                    IsDefinedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
-
-                    IsTypedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
-                },
-            }
-        );
-
-    const categories = new Map();
-
-    for (const item of data) {
-
-        const id =
-            item._localId?.value;
-
-        const category =
-            item._category?.value;
-
-        if (
-            id === undefined ||
-            !category
-        ) {
-            continue;
-        }
-
-        if (!categories.has(category)) {
-
-            categories.set(
-                category,
-                []
-            );
-        }
-
-        categories
-            .get(category)
-            .push(id);
-    }
-
-    return categories;
+    await loadAndPlaceModel(position);
 }
 
-
-// =====================================================
-// EXTRAER PROPERTY SETS
-// =====================================================
-
-function extractPropertySets(data) {
-
-    const propertySets = new Map();
-    const visited = new Set();
-
-    function traverse(node) {
-
-        if (
-            !node ||
-            typeof node !== 'object'
-        ) {
-            return;
-        }
-
-        if (visited.has(node)) {
-            return;
-        }
-
-        visited.add(node);
-
-        if (
-            node._category?.value === 'IFCPROPERTYSET'
-        ) {
-
-            const setName =
-                node.Name?.value ?? 'Sin nombre';
-
-            if (!propertySets.has(setName)) {
-                propertySets.set(setName, []);
-            }
-
-            const properties =
-                node.HasProperties ?? [];
-
-            for (const property of properties) {
-
-                const name =
-                    property.Name?.value;
-
-                if (!name) {
-                    continue;
-                }
-
-                propertySets
-                    .get(setName)
-                    .push({
-                        name,
-                        value:
-                            property.NominalValue?.value ??
-                            null,
-                        type:
-                            property.NominalValue?.type ??
-                            null
-                    });
-            }
-        }
-
-        for (const key of Object.keys(node)) {
-
-            const value = node[key];
-
-            if (Array.isArray(value)) {
-
-                for (const child of value) {
-                    traverse(child);
-                }
-
-            } else if (
-                value &&
-                typeof value === 'object'
-            ) {
-
-                traverse(value);
-            }
-        }
-    }
-
-    traverse(data);
-
-    return propertySets;
-}
-
-
-// =====================================================
-// CONSTRUIR UI DE PROPERTIES
-// =====================================================
-
-function buildPropertyUI() {
-
-    const selectKey =
-        document.getElementById(
-            'ar-property-key'
-        );
-
-    const selectValue =
-        document.getElementById(
-            'ar-property-value'
-        );
-
-    if (!selectKey || !selectValue) {
-
-        console.warn(
-            '⚠️ No se encontraron los selects de property-key/value en el DOM'
-        );
-
+// ============================================
+// COLOCACIÓN FORZADA (sin depender del hit-test)
+// ============================================
+async function forcePlaceModel() {
+    if (!isAR) {
+        console.warn('⚠️ No estás en sesión AR');
         return;
     }
 
-    selectKey.innerHTML = `
-<option value="">
-    Seleccionar propiedad
-</option>
-`;
+    const distance = 1.5; // metros frente a la cámara — ajustar si es necesario
+    const cameraPosition = new THREE.Vector3();
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldPosition(cameraPosition);
+    camera.getWorldDirection(cameraDirection);
 
-    selectValue.innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
+    const targetPosition = cameraPosition.clone().add(cameraDirection.multiplyScalar(distance));
+    targetPosition.y -= 0.5; // simular "suelo" — ajustar si es necesario
 
-    selectValue.disabled = true;
+    console.log('📍 Colocando modelo forzadamente en:', targetPosition);
 
-    const allKeys = new Set();
-
-    for (const key of modelProperties.keys()) {
-        allKeys.add(key);
-    }
-
-    const sortedKeys =
-        Array.from(allKeys)
-            .sort((a, b) =>
-                a.localeCompare(b)
-            );
-
-    for (const key of sortedKeys) {
-
-        const option =
-            document.createElement('option');
-
-        option.value = key;
-        option.textContent = key;
-
-        selectKey.appendChild(option);
-    }
-
-    console.log(
-        '🧩 buildPropertyUI: keys cargadas:',
-        sortedKeys.length
-    );
+    await loadAndPlaceModel(targetPosition);
 }
 
-
-// =====================================================
-// CONSTRUIR UI DE CATEGORÍAS
-// =====================================================
-
-function buildCategoryUI() {
-
-    const container =
-        document.getElementById(
-            'ar-categories-container'
-        );
-
-    if (!container) {
-
-        console.warn(
-            '⚠️ No se encontró ar-categories-container en el DOM'
-        );
-
-        return;
-    }
-
-    container.innerHTML = '';
-
-    for (
-        const [groupName, categoryIds]
-        of modelCategories
-    ) {
-
-        const group =
-            document.createElement('div');
-
-        group.className =
-            'ar-category-item';
-
-        group.innerHTML = `
-<div class="d-flex align-items-center gap-2 p-2">
-
-    <input
-        type="checkbox"
-        checked
-        class="form-check-input ar-category-toggle m-0"
-        data-category="${escapeHtml(groupName)}"
-    >
-
-    <span
-        class="text-truncate flex-grow-1"
-        title="${escapeHtml(groupName)}"
-    >
-        ${escapeHtml(groupName)}
-    </span>
-
-    <span class="badge bg-secondary">
-        ${categoryIds.length}
-    </span>
-
-</div>
-`;
-
-        container.appendChild(group);
-    }
-
-    container
-        .querySelectorAll('.ar-category-toggle')
-        .forEach(checkbox => {
-
-            checkbox.addEventListener(
-                'change',
-                async (e) => {
-
-                    const category =
-                        e.target.dataset.category;
-
-                    await toggleCategory(
-                        category,
-                        e.target.checked
-                    );
-                }
-            );
+function setupForcePlaceButton() {
+    const forcePlaceBtn = document.getElementById('ar-force-place');
+    if (forcePlaceBtn) {
+        forcePlaceBtn.addEventListener('click', async () => {
+            await forcePlaceModel();
         });
-
-    console.log(
-        '🧩 buildCategoryUI: categorías cargadas:',
-        modelCategories.size
-    );
-}
-
-
-// =====================================================
-// CONFIGURAR FILTROS DE PROPERTIES
-// =====================================================
-
-function setupPropertyFilters() {
-
-    const selectKey =
-        document.getElementById(
-            'ar-property-key'
-        );
-
-    if (selectKey) {
-
-        selectKey.addEventListener(
-            'change',
-            function () {
-
-                const key = this.value;
-
-                const selectValue =
-                    document.getElementById(
-                        'ar-property-value'
-                    );
-
-                const btnApply =
-                    document.getElementById(
-                        'ar-apply-property'
-                    );
-
-                selectValue.innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
-
-                selectValue.disabled = true;
-                btnApply.disabled = true;
-
-                if (!key) {
-                    return;
-                }
-
-                const allValues = new Set();
-
-                const values =
-                    modelProperties.get(key);
-
-                if (values) {
-                    for (const value of values.keys()) {
-                        allValues.add(value);
-                    }
-                }
-
-                const sortedValues =
-                    Array.from(allValues)
-                        .sort((a, b) =>
-                            a.localeCompare(b)
-                        );
-
-                for (const value of sortedValues) {
-
-                    const option =
-                        document.createElement('option');
-
-                    option.value = value;
-                    option.textContent = value;
-
-                    selectValue.appendChild(option);
-                }
-
-                selectValue.disabled =
-                    sortedValues.length === 0;
-            }
-        );
-    }
-
-
-    const selectValue =
-        document.getElementById(
-            'ar-property-value'
-        );
-
-    if (selectValue) {
-
-        selectValue.addEventListener(
-            'change',
-            function () {
-
-                const btnApply =
-                    document.getElementById(
-                        'ar-apply-property'
-                    );
-
-                btnApply.disabled = !this.value;
-            }
-        );
-    }
-
-
-    const btnApply =
-        document.getElementById(
-            'ar-apply-property'
-        );
-
-    if (btnApply) {
-
-        btnApply.addEventListener(
-            'click',
-            async () => {
-
-                const key =
-                    document.getElementById(
-                        'ar-property-key'
-                    ).value;
-
-                const value =
-                    document.getElementById(
-                        'ar-property-value'
-                    ).value;
-
-                if (!key || !value) {
-                    return;
-                }
-
-                const exists =
-                    activePropertyFilters.some(
-                        filter =>
-                            filter.key === key &&
-                            filter.value === value
-                    );
-
-                if (!exists) {
-
-                    activePropertyFilters.push({
-                        key,
-                        value
-                    });
-                }
-
-                document.getElementById(
-                    'ar-property-key'
-                ).value = '';
-
-                document.getElementById(
-                    'ar-property-value'
-                ).innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
-
-                document.getElementById(
-                    'ar-property-value'
-                ).disabled = true;
-
-                document.getElementById(
-                    'ar-apply-property'
-                ).disabled = true;
-
-                renderPropertyFilters();
-
-                await applyAllFilters();
-            }
-        );
-    }
-
-
-    const btnClear =
-        document.getElementById(
-            'ar-clear-property'
-        );
-
-    if (btnClear) {
-
-        btnClear.addEventListener(
-            'click',
-            async () => {
-
-                activePropertyFilters = [];
-
-                document.getElementById(
-                    'ar-property-key'
-                ).value = '';
-
-                document.getElementById(
-                    'ar-property-value'
-                ).innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
-
-                document.getElementById(
-                    'ar-property-value'
-                ).disabled = true;
-
-                document.getElementById(
-                    'ar-apply-property'
-                ).disabled = true;
-
-                renderPropertyFilters();
-
-                await applyAllFilters();
-            }
-        );
     }
 }
 
-
-// =====================================================
-// RENDERIZAR FILTROS ACTIVOS
-// =====================================================
-
-function renderPropertyFilters() {
-
-    const container =
-        document.getElementById(
-            'ar-property-filters'
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = '';
-
-    if (!activePropertyFilters.length) {
-
-        container.innerHTML = `
-<div class="small text-white-50">
-    Sin filtros activos
-</div>
-`;
-
-        return;
-    }
-
-    for (
-        let index = 0;
-        index < activePropertyFilters.length;
-        index++
-    ) {
-
-        const filter =
-            activePropertyFilters[index];
-
-        const item =
-            document.createElement('div');
-
-        item.className =
-            'ar-filter-chip';
-
-        item.innerHTML = `
-<div class="d-flex align-items-center justify-content-between gap-1">
-
-    <span class="small text-truncate">
-        ${escapeHtml(filter.key)}:
-        ${escapeHtml(filter.value)}
-    </span>
-
-    <button
-        type="button"
-        class="btn btn-sm p-0 ar-filter-remove"
-        data-index="${index}"
-        style="line-height: 1;">
-        <i class="bi bi-x"></i>
-    </button>
-
-</div>
-`;
-
-        container.appendChild(item);
-    }
-
-    container
-        .querySelectorAll('.ar-filter-remove')
-        .forEach(button => {
-
-            button.addEventListener(
-                'click',
-                async () => {
-
-                    const index =
-                        Number(
-                            button.dataset.index
-                        );
-
-                    activePropertyFilters
-                        .splice(index, 1);
-
-                    renderPropertyFilters();
-
-                    await applyAllFilters();
-                }
-            );
-        });
-}
-
-
-// =====================================================
-// TOGGLE CATEGORÍA
-// =====================================================
-
-async function toggleCategory(category, visible) {
-
-    categoryVisibility.set(
-        category,
-        visible
-    );
-
-    await applyAllFilters();
-}
-
-
-// =====================================================
-// RESETEAR TODOS LOS FILTROS
-// =====================================================
-
-async function resetAllFilters() {
-
-    categoryVisibility.clear();
-
-    activePropertyFilters = [];
-
-    document
-        .querySelectorAll('.ar-category-toggle')
-        .forEach(cb => {
-            cb.checked = true;
-        });
-
-    const keyEl =
-        document.getElementById(
-            'ar-property-key'
-        );
-
-    const valueEl =
-        document.getElementById(
-            'ar-property-value'
-        );
-
-    const applyEl =
-        document.getElementById(
-            'ar-apply-property'
-        );
-
-    if (keyEl) keyEl.value = '';
-
-    if (valueEl) {
-
-        valueEl.innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
-        valueEl.disabled = true;
-    }
-
-    if (applyEl) applyEl.disabled = true;
-
-    renderPropertyFilters();
-
-    await applyAllFilters();
-}
-
-
-// =====================================================
-// APLICAR TODOS LOS FILTROS
-// =====================================================
-
-async function applyAllFilters() {
-
-    if (
-        !fragments ||
-        !loadedModelId ||
-        !hider
-    ) {
-        return;
-    }
-
-    const filteredIds =
-        getFilteredModelIds();
-
-    const modelIdMap = {
-        [loadedModelId]: filteredIds
-    };
-
-    await hider.set(false);
-
-    await hider.set(
-        true,
-        modelIdMap
-    );
-
-    fragments.core.update(true);
-}
-
-
-// =====================================================
-// OBTENER IDS FILTRADOS
-// =====================================================
-
-function getFilteredModelIds() {
-
-    let ids = new Set();
-
-    // -------------------------------------------------
-    // CATEGORÍAS
-    // -------------------------------------------------
-
-    for (
-        const [category, categoryIds]
-        of modelCategories
-    ) {
-
-        const visible =
-            categoryVisibility.has(category)
-                ? categoryVisibility.get(category)
-                : true;
-
-        if (!visible) {
-            continue;
-        }
-
-        for (const id of categoryIds) {
-            ids.add(id);
-        }
-    }
-
-
-    // -------------------------------------------------
-    // PROPERTY FILTERS
-    // -------------------------------------------------
-
-    if (activePropertyFilters.length) {
-
-        const filtersByKey = new Map();
-
-        for (
-            const filter
-            of activePropertyFilters
-        ) {
-
-            if (!filtersByKey.has(filter.key)) {
-                filtersByKey.set(
-                    filter.key,
-                    []
-                );
-            }
-
-            filtersByKey
-                .get(filter.key)
-                .push(filter.value);
-        }
-
-        for (
-            const [key, values]
-            of filtersByKey
-        ) {
-
-            const propertyValues =
-                modelProperties.get(key);
-
-            if (!propertyValues) {
-                return new Set();
-            }
-
-            const groupIds = new Set();
-
-            for (const value of values) {
-
-                const propertyIds =
-                    propertyValues.get(value);
-
-                if (!propertyIds) {
-                    continue;
-                }
-
-                for (const id of propertyIds) {
-                    groupIds.add(id);
-                }
-            }
-
-            if (!groupIds.size) {
-                return new Set();
-            }
-
-            ids = new Set(
-                [...ids].filter(
-                    id => groupIds.has(id)
-                )
-            );
-
-            if (!ids.size) {
-                return ids;
-            }
-        }
-    }
-
-    return ids;
-}
-
-
-// =====================================================
-// ESCAPAR HTML
-// =====================================================
-
-function escapeHtml(value) {
-
-    const div =
-        document.createElement('div');
-
-    div.textContent = value;
-
-    return div.innerHTML;
-}
-
-
-// =====================================================
-// CAMBIAR OPACIDAD DEL MODELO
-// =====================================================
-
-function setModelOpacity(opacity) {
-
-    const value =
-        THREE.MathUtils.clamp(
-            opacity,
-            0,
-            1
-        );
-
-
-    if (!arModel) {
-        return;
-    }
-
-
-    arModel.traverse(
-        (object) => {
-
-            if (
-                !object.isMesh ||
-                !object.material
-            ) {
-
-                return;
-            }
-
-
-            const materials =
-                Array.isArray(
-                    object.material
-                )
-                    ? object.material
-                    : [object.material];
-
-
-            materials.forEach(
-                (material) => {
-
-                    if (
-                        !material.userData.opacityOriginal
-                    ) {
-
-                        material.userData.opacityOriginal = {
-
-                            opacity:
-                                material.opacity,
-
-                            transparent:
-                                material.transparent,
-
-                            depthWrite:
-                                material.depthWrite,
-
-                            depthTest:
-                                material.depthTest,
-
-                            side:
-                                material.side,
-
-                            alphaTest:
-                                material.alphaTest,
-
-                            blending:
-                                material.blending
-                        };
-                    }
-
-
-                    const original =
-                        material.userData.opacityOriginal;
-
-
-                    if (
-                        value >= 1
-                    ) {
-
-                        material.opacity =
-                            original.opacity;
-
-                        material.transparent =
-                            original.transparent;
-
-                        material.depthWrite =
-                            original.depthWrite;
-
-                        material.depthTest =
-                            original.depthTest;
-
-                        material.side =
-                            original.side;
-
-                        material.alphaTest =
-                            original.alphaTest;
-
-                        material.blending =
-                            original.blending;
-
-                    } else {
-
-                        material.opacity =
-                            original.opacity *
-                            value;
-
-                        material.transparent =
-                            true;
-
-                        material.depthWrite =
-                            original.depthWrite;
-
-                        material.depthTest =
-                            original.depthTest;
-
-                        material.side =
-                            original.side;
-
-                        material.alphaTest =
-                            original.alphaTest;
-
-                        material.blending =
-                            original.blending;
-                    }
-
-
-                    material.needsUpdate =
-                        true;
-                }
-            );
-        }
-    );
-
-
-    // =================================================
-    // ACTUALIZAR FRAGMENTS
-    // (solo si el modelo ya terminó de cargar)
-    // =================================================
-
-    if (fragments && modelLoaded) {
-
-        fragments.core.update(
-            true
-        );
-    }
-}
-
-
-// =====================================================
-// CARGAR Y COLOCAR MODELO (lógica reutilizable)
-// =====================================================
-//
-// Esta función centraliza el flujo de:
-//   1. Descargar el .frag
-//   2. Cargarlo en fragments.core
-//   3. Esperar a que el Worker termine de registrarlo
-//   4. Construir properties/categorías
-//   5. Colocar el modelo en la posición indicada
-//
-// Es usada tanto por el tap sobre el reticle (hit-test)
-// como por el botón de colocación forzada.
-// =====================================================
-
+// ============================================
+// CARGA + COLOCACIÓN DEL MODELO (FIX: centrado + autoescala)
+// ============================================
 async function loadAndPlaceModel(position) {
-
-    // =================================================
-    // MODELO YA CARGADO → SOLO REPOSICIONAR
-    // =================================================
-
-    if (
-        modelLoaded &&
-        arModel
-    ) {
-
-        arModel.position.copy(
-            position
-        );
-
-
-        arModel.visible =
-            true;
-if (arModel) {
-    arModel.position.copy(position);
-    arModel.scale.set(1, 1, 1);
-    arModel.visible = true;
-    setModelOpacity(opacityValue);
-
-    // 🔍 DEBUG TEMPORAL
-    const box = new THREE.Box3().setFromObject(arModel);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    console.log('📍 Posición destino:', position);
-    console.log('📦 Bounding box size:', size);
-    console.log('📦 Bounding box center:', center);
-    console.log('👁️ arModel.visible:', arModel.visible);
-    console.log('🎨 opacityValue:', opacityValue);
-    console.log('📐 arModel.scale:', arModel.scale);
-    console.log('🧩 arModel.children.length:', arModel.children.length);
-}
-
-
-        console.log(
-            '📍 Modelo colocado (ya estaba cargado)'
-        );
-
-
+    // Si ya está cargado, solo reposicionamos el CONTENEDOR (no el modelo crudo)
+    if (modelLoaded && arModel && arModelContainer) {
+        arModelContainer.position.copy(position);
+        arModelContainer.visible = true;
+        console.log('📍 Modelo colocado (ya estaba cargado)');
         return;
     }
 
+    if (modelLoading) return;
+    modelLoading = true;
 
-    if (modelLoading) {
-        return;
-    }
-
-
-    modelLoading =
-        true;
-
-
-    const url =
-        container.dataset.url;
-
-
+    const url = container.dataset.url;
     if (!url) {
-
-        console.error(
-            '❌ No existe data-url en #viewer'
-        );
-
-
-        modelLoading =
-            false;
-
-
+        console.error('❌ container.dataset.url no está definido');
+        modelLoading = false;
         return;
     }
-
-
-    // =================================================
-    // CARGAR IFC
-    // =================================================
 
     try {
+        console.log('📥 Iniciando carga desde:', url);
+        const response = await fetch(url + '?type=frag');
+        if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+        const buffer = await response.arrayBuffer();
+        console.log('📦 Buffer recibido, tamaño:', buffer.byteLength);
 
-        console.log(
-            '📥 Iniciando carga desde:',
-            url
-        );
+        await fragments.core.load(buffer, { modelId: 'main' });
+        console.log('✅ fragments.core.load resuelto completamente');
 
+        const model = fragments.list.get('main');
+        if (!model) throw new Error('Modelo no encontrado en fragments.list después de load()');
 
-        const response =
-            await fetch(
-                url + '?type=frag'
-            );
+        console.log('🔍 Construyendo properties...');
+        modelProperties = await buildModelProperties(model);
+        console.log('✅ Properties construidas:', modelProperties.size);
 
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Error HTTP ${response.status}`
-            );
-        }
-
-
-        const buffer =
-            await response.arrayBuffer();
-
-
-        console.log(
-            '📦 Buffer recibido, tamaño:',
-            buffer.byteLength
-        );
-
-
-        // -------------------------------------------------
-        // ESPERAR A QUE LOAD() RESUELVA COMPLETAMENTE
-        //
-        // Este await es la clave: garantiza que el Worker
-        // ya terminó de registrar el modelo antes de que
-        // intentemos hacer queries pesadas (getItems,
-        // getItemsData, etc).
-        // -------------------------------------------------
-
-        await fragments.core.load(
-            buffer,
-            {
-                modelId: 'main'
-            }
-        );
-
-
-        console.log(
-            '✅ fragments.core.load resuelto completamente'
-        );
-
-
-        // -------------------------------------------------
-        // OBTENER EL MODELO YA REGISTRADO
-        // -------------------------------------------------
-
-        const model =
-            fragments.list.get('main');
-
-
-        if (!model) {
-
-            throw new Error(
-                'Modelo no encontrado en fragments.list después de load()'
-            );
-        }
-
-
-        // -------------------------------------------------
-        // CONSTRUIR PROPERTIES Y CATEGORÍAS
-        // (ahora sí es seguro consultar al Worker)
-        // -------------------------------------------------
-
-        console.log(
-            '🔍 Construyendo properties...'
-        );
-
-        modelProperties =
-            await buildModelProperties(model);
-
-        console.log(
-            '✅ Properties construidas:',
-            modelProperties.size
-        );
-
-
-        console.log(
-            '🔍 Construyendo categories...'
-        );
-
-        modelCategories =
-            await buildModelCategories(model);
-
-        console.log(
-            '✅ Categories construidas:',
-            modelCategories.size
-        );
-
-
-        // -------------------------------------------------
-        // CONSTRUIR UI DE FILTROS
-        // -------------------------------------------------
+        console.log('🔍 Construyendo categories...');
+        modelCategories = await buildModelCategories(model);
+        console.log('✅ Categories construidas:', modelCategories.size);
 
         buildPropertyUI();
         buildCategoryUI();
 
+        await fragments.core.update(true);
 
-        // -------------------------------------------------
-        // ACTUALIZAR FRAGMENTS
-        // -------------------------------------------------
+        // ================================================
+        // NUEVO: CENTRADO DEL MODELO + AUTOESCALA A "MAQUETA"
+        // ================================================
+        const box = new THREE.Box3().setFromObject(arModel);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
 
-        await fragments.core.update(
-            true
-        );
+        console.log('📦 Tamaño real del modelo (antes de centrar):', size);
+        console.log('📦 Centro real del modelo (antes de centrar):', center);
 
-
-        // -------------------------------------------------
-        // COLOCAR MODELO
-        // -------------------------------------------------
-
-        if (arModel) {
-
-            arModel.position.copy(
-                position
-            );
-
-
-            arModel.scale.set(
-                1,
-                1,
-                1
-            );
-
-
-            arModel.visible =
-                true;
-
-
-            setModelOpacity(
-                opacityValue
-            );
-
-
-            console.log(
-                '✅ Modelo colocado en AR con ID:',
-                loadedModelId
-            );
+        if (!arModel.userData.recentered) {
+            // Desplazamos la geometría DENTRO del contenedor para que
+            // el centro del modelo quede en el origen local (0,0,0)
+            arModel.position.sub(center);
+            arModel.userData.recentered = true;
+            arModel.userData.originalSize = size.clone();
+            console.log('✅ Modelo recentrado. Offset aplicado:', center);
         }
 
+        const maxDimension = Math.max(size.x, size.y, size.z);
+        let autoScale = 1;
+        if (maxDimension > DESIRED_MAX_SIZE) {
+            autoScale = DESIRED_MAX_SIZE / maxDimension;
+        }
+        console.log('📐 Dimensión máxima:', maxDimension, '→ autoScale aplicado:', autoScale);
+        // ================================================
+        // FIN DEL FIX
+        // ================================================
+
+        // Deshabilitar frustum culling (evita recortes raros tras centrar)
+        arModel.traverse((obj) => {
+            if (obj.isMesh) obj.frustumCulled = false;
+        });
+
+        if (arModelContainer) {
+            arModelContainer.position.copy(position);
+            arModelContainer.scale.set(autoScale, autoScale, autoScale);
+            arModelContainer.visible = true;
+            setModelOpacity(opacityValue);
+        }
+
+        console.log('✅ Modelo colocado en AR con ID:', loadedModelId);
     } catch (error) {
-
-        console.error(
-            '❌ Error cargando IFC:',
-            error
-        );
-
-
-        modelLoading =
-            false;
+        console.error('❌ Error cargando IFC:', error);
+        modelLoading = false;
     }
 }
 
-
-// =====================================================
-// SELECT EN AR (tap sobre el reticle / hit-test)
-// =====================================================
-
-async function onARSelect() {
-
-    if (!isAR) {
-        return;
-    }
-
-
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
-
-        return;
-    }
-
-
-    const position =
-        new THREE.Vector3();
-
-
-    position.setFromMatrixPosition(
-        arReticle.matrix
-    );
-
-
-    await loadAndPlaceModel(
-        position
-    );
-}
-
-
-// =====================================================
-// COLOCAR MODELO FORZADO (sin hit-test)
-// =====================================================
-//
-// Coloca el modelo a una distancia fija frente a la
-// cámara, ignorando por completo el reticle y el
-// hit-test. Útil cuando ARCore no logra detectar
-// ninguna superficie (poca luz, suelo sin textura,
-// dispositivo con soporte limitado, etc).
-// =====================================================
-
-async function forcePlaceModel() {
-
-    if (!isAR) {
-
-        console.warn(
-            '⚠️ No estás en sesión AR'
-        );
-
-        return;
-    }
-
-
-    // -------------------------------------------------
-    // CALCULAR POSICIÓN FRENTE A LA CÁMARA
-    // -------------------------------------------------
-
-    const distance = 1.5; // metros frente a la cámara
-
-    const cameraPosition =
-        new THREE.Vector3();
-
-    const cameraDirection =
-        new THREE.Vector3();
-
-
-    camera.getWorldPosition(
-        cameraPosition
-    );
-
-
-    camera.getWorldDirection(
-        cameraDirection
-    );
-
-
-    // -------------------------------------------------
-    // PROYECTAR HACIA ADELANTE
-    // -------------------------------------------------
-
-    const targetPosition =
-        cameraPosition
-            .clone()
-            .add(
-                cameraDirection.multiplyScalar(
-                    distance
-                )
-            );
-
-
-    // -------------------------------------------------
-    // BAJAR UN POCO PARA SIMULAR SUELO
-    // -------------------------------------------------
-
-    targetPosition.y -= 0.5;
-
-
-    console.log(
-        '📍 Colocando modelo forzadamente en:',
-        targetPosition
-    );
-
-
-    await loadAndPlaceModel(
-        targetPosition
-    );
-}
-
-
-// =====================================================
-// HIT TEST
-// =====================================================
-
-function updateAR(frame) {
-
-    if (!frame) {
-        return;
-    }
-
-
-    const referenceSpace =
-        renderer.xr.getReferenceSpace();
-
-
-    const session =
-        renderer.xr.getSession();
-
-
-    if (!referenceSpace ||
-        !session) {
-
-        return;
-    }
-
-
-    if (
-        !hitTestSourceRequested
-    ) {
-
-        session
-            .requestReferenceSpace(
-                'viewer'
-            )
-            .then(
-                (viewerSpace) => {
-
-                    return session
-                        .requestHitTestSource({
-                            space: viewerSpace
-                        });
-                }
-            )
-            .then(
-                (source) => {
-
-                    hitTestSource =
-                        source;
-                }
-            )
-            .catch(
-                (error) => {
-
-                    console.error(
-                        'Error creando Hit Test:',
-                        error
-                    );
-                }
-            );
-
-
-        session.addEventListener(
-            'end',
-            () => {
-
-                hitTestSourceRequested =
-                    false;
-
-
-                hitTestSource =
-                    null;
-
-
-                if (arReticle) {
-
-                    arReticle.visible =
-                        false;
-                }
-            }
-        );
-
-
-        hitTestSourceRequested =
-            true;
-    }
-
-
-    if (hitTestSource) {
-
-        const hitTestResults =
-            frame.getHitTestResults(
-                hitTestSource
-            );
-
-
-        if (
-            hitTestResults.length
-        ) {
-
-            const hit =
-                hitTestResults[0];
-
-
-            const pose =
-                hit.getPose(
-                    referenceSpace
-                );
-
-
-            if (pose) {
-
-                arReticle.visible =
-                    true;
-
-
-                arReticle.matrix.fromArray(
-                    pose.transform.matrix
-                );
+// ============================================
+// OPACIDAD
+// ============================================
+function setModelOpacity(opacity) {
+    opacityValue = opacity;
+    if (!arModel) return;
+
+    arModel.traverse((obj) => {
+        if (!obj.isMesh || !obj.material) return;
+
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+
+        materials.forEach((material) => {
+            if (!material.userData.opacityOriginal) {
+                material.userData.opacityOriginal = {
+                    opacity: material.opacity,
+                    transparent: material.transparent,
+                    depthWrite: material.depthWrite,
+                    depthTest: material.depthTest,
+                    side: material.side,
+                    alphaTest: material.alphaTest,
+                    blending: material.blending
+                };
             }
 
+            const original = material.userData.opacityOriginal;
+
+            if (opacity >= 1) {
+                material.opacity = original.opacity;
+                material.transparent = original.transparent;
+                material.depthWrite = original.depthWrite;
+                material.depthTest = original.depthTest;
+                material.side = original.side;
+                material.alphaTest = original.alphaTest;
+                material.blending = original.blending;
+            } else {
+                material.opacity = opacity;
+                material.transparent = true;
+                material.depthWrite = false;
+                material.depthTest = true;
+                material.side = THREE.DoubleSide;
+                material.blending = THREE.NormalBlending;
+            }
+
+            material.needsUpdate = true;
+        });
+    });
+
+    if (fragments && modelLoaded) {
+        fragments.core.update(true);
+    }
+}
+
+function setupOpacitySlider() {
+    const opacitySlider = document.getElementById('ar-opacity');
+    if (!opacitySlider) return;
+
+    opacitySlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        setModelOpacity(value);
+    });
+}
+
+// ============================================
+// EXTRACCIÓN DE PROPERTY SETS
+// ============================================
+function extractPropertySets(data) {
+    const result = [];
+
+    function walk(node) {
+        if (!node || typeof node !== 'object') return;
+
+        if (node._category?.value === 'IFCPROPERTYSET') {
+            result.push(node);
+        }
+
+        for (const key in node) {
+            const value = node[key];
+            if (Array.isArray(value)) {
+                value.forEach(walk);
+            } else if (value && typeof value === 'object') {
+                walk(value);
+            }
+        }
+    }
+
+    if (Array.isArray(data)) {
+        data.forEach(walk);
+    } else {
+        walk(data);
+    }
+
+    return result;
+}
+
+// ============================================
+// CONSTRUCCIÓN DE MAPAS DE PROPERTIES
+// ============================================
+async function buildModelProperties(model) {
+    const propertiesMap = new Map();
+
+    const ids = await model.getItems();
+    const data = await model.getItemsData(ids, {
+        attributesDefault: true,
+        relations: {
+            IsDefinedBy: { attributes: true, relations: true },
+            IsTypedBy: { attributes: true, relations: true }
+        }
+    });
+
+    data.forEach((itemData, index) => {
+        const id = ids[index];
+        const propertySets = extractPropertySets(itemData);
+
+        propertySets.forEach((pset) => {
+            const props = pset.HasProperties || pset.properties || [];
+            const propsArray = Array.isArray(props) ? props : [props];
+
+            propsArray.forEach((prop) => {
+                const name = prop.Name?.value ?? prop.name?.value;
+                const value = prop.NominalValue?.value ?? prop.value?.value;
+
+                if (name === undefined || value === undefined) return;
+
+                if (!propertiesMap.has(name)) {
+                    propertiesMap.set(name, new Map());
+                }
+                const valuesMap = propertiesMap.get(name);
+
+                const valueKey = String(value);
+                if (!valuesMap.has(valueKey)) {
+                    valuesMap.set(valueKey, []);
+                }
+                valuesMap.get(valueKey).push(id);
+            });
+        });
+    });
+
+    return propertiesMap;
+}
+
+async function buildModelCategories(model) {
+    const categoriesMap = new Map();
+
+    const ids = await model.getItems();
+    const data = await model.getItemsData(ids, { attributesDefault: true });
+
+    data.forEach((itemData, index) => {
+        const id = ids[index];
+        const category = itemData._category?.value;
+        if (!category) return;
+
+        if (!categoriesMap.has(category)) {
+            categoriesMap.set(category, []);
+        }
+        categoriesMap.get(category).push(id);
+    });
+
+    return categoriesMap;
+}
+
+// ============================================
+// UI: FILTROS DE PROPIEDADES
+// ============================================
+function buildPropertyUI() {
+    const keySelect = document.getElementById('ar-property-key');
+    if (!keySelect) return;
+
+    keySelect.innerHTML = '<option value="">Selecciona una propiedad...</option>';
+
+    const sortedKeys = Array.from(modelProperties.keys()).sort();
+    sortedKeys.forEach((key) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = key;
+        keySelect.appendChild(option);
+    });
+
+    console.log('🧩 buildPropertyUI: keys cargadas:', sortedKeys.length);
+}
+
+function setupPropertyFilters() {
+    const keySelect = document.getElementById('ar-property-key');
+    const valueSelect = document.getElementById('ar-property-value');
+    const applyBtn = document.getElementById('ar-apply-property');
+    const clearBtn = document.getElementById('ar-clear-property');
+    const resetBtn = document.getElementById('ar-reset-filters');
+
+    if (keySelect) {
+        keySelect.addEventListener('change', () => {
+            const selectedKey = keySelect.value;
+            if (!valueSelect) return;
+
+            valueSelect.innerHTML = '<option value="">Selecciona un valor...</option>';
+            valueSelect.disabled = !selectedKey;
+            if (applyBtn) applyBtn.disabled = true;
+
+            if (selectedKey && modelProperties.has(selectedKey)) {
+                const values = Array.from(modelProperties.get(selectedKey).keys()).sort();
+                values.forEach((value) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    valueSelect.appendChild(option);
+                });
+            }
+        });
+    }
+
+    if (valueSelect) {
+        valueSelect.addEventListener('change', () => {
+            if (applyBtn) applyBtn.disabled = !valueSelect.value;
+        });
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            const key = keySelect.value;
+            const value = valueSelect.value;
+            if (!key || !value) return;
+
+            const exists = activePropertyFilters.some(
+                (f) => f.key === key && f.value === value
+            );
+            if (!exists) {
+                activePropertyFilters.push({ key, value });
+                renderPropertyFilters();
+                applyAllFilters();
+            }
+
+            keySelect.value = '';
+            valueSelect.innerHTML = '<option value="">Selecciona un valor...</option>';
+            valueSelect.disabled = true;
+            applyBtn.disabled = true;
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            activePropertyFilters = [];
+            renderPropertyFilters();
+            applyAllFilters();
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetAllFilters);
+    }
+}
+
+function renderPropertyFilters() {
+    const container = document.getElementById('ar-property-filters');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    activePropertyFilters.forEach((filter, index) => {
+        const chip = document.createElement('span');
+        chip.className = 'ar-filter-chip';
+        chip.innerHTML = `
+            ${escapeHtml(filter.key)}: ${escapeHtml(filter.value)}
+            <button type="button" data-index="${index}" class="ar-filter-remove">&times;</button>
+        `;
+        container.appendChild(chip);
+    });
+
+    container.querySelectorAll('.ar-filter-remove').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index, 10);
+            activePropertyFilters.splice(index, 1);
+            renderPropertyFilters();
+            applyAllFilters();
+        });
+    });
+}
+
+// ============================================
+// UI: CATEGORÍAS
+// ============================================
+function buildCategoryUI() {
+    const container = document.getElementById('ar-categories-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const sortedCategories = Array.from(modelCategories.keys()).sort();
+    sortedCategories.forEach((category) => {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'ar-category-item';
+        wrapper.innerHTML = `
+            <input type="checkbox" class="ar-category-toggle" data-category="${escapeHtml(category)}" checked>
+            <span>${escapeHtml(category)}</span>
+        `;
+        container.appendChild(wrapper);
+    });
+
+    container.querySelectorAll('.ar-category-toggle').forEach((checkbox) => {
+        checkbox.addEventListener('change', (e) => {
+            const category = e.target.dataset.category;
+            toggleCategory(category, e.target.checked);
+        });
+    });
+
+    console.log('🧩 buildCategoryUI: categorías cargadas:', sortedCategories.length);
+}
+
+function toggleCategory(category, visible) {
+    categoryVisibility.set(category, visible);
+    applyAllFilters();
+}
+
+function resetAllFilters() {
+    activePropertyFilters = [];
+    categoryVisibility.clear();
+
+    renderPropertyFilters();
+
+    document.querySelectorAll('.ar-category-toggle').forEach((checkbox) => {
+        checkbox.checked = true;
+    });
+
+    applyAllFilters();
+}
+
+// ============================================
+// APLICACIÓN DE FILTROS (categorías AND propiedades)
+// ============================================
+function getFilteredModelIds() {
+    // --- IDs visibles por categoría ---
+    let categoryIds = new Set();
+    let hasAnyCategory = false;
+
+    modelCategories.forEach((ids, category) => {
+        const isVisible = categoryVisibility.has(category)
+            ? categoryVisibility.get(category)
+            : true;
+
+        if (isVisible) {
+            hasAnyCategory = true;
+            ids.forEach((id) => categoryIds.add(id));
+        }
+    });
+
+    if (!hasAnyCategory) {
+        return [];
+    }
+
+    // --- IDs que cumplen los filtros de propiedades ---
+    if (activePropertyFilters.length === 0) {
+        return Array.from(categoryIds);
+    }
+
+    // Agrupar filtros por clave (OR intra-clave)
+    const filtersByKey = new Map();
+    activePropertyFilters.forEach((filter) => {
+        if (!filtersByKey.has(filter.key)) {
+            filtersByKey.set(filter.key, []);
+        }
+        filtersByKey.get(filter.key).push(filter.value);
+    });
+
+    let resultIds = null;
+
+    filtersByKey.forEach((values, key) => {
+        const valuesMap = modelProperties.get(key);
+        let idsForKey = new Set();
+
+        if (valuesMap) {
+            values.forEach((value) => {
+                const ids = valuesMap.get(value) || [];
+                ids.forEach((id) => idsForKey.add(id));
+            });
+        }
+
+        if (resultIds === null) {
+            resultIds = idsForKey;
         } else {
-
-            arReticle.visible =
-                false;
-        }
-    }
-}
-
-
-// =====================================================
-// RESIZE
-// =====================================================
-
-function onResize() {
-
-    if (
-        !container ||
-        !camera ||
-        !renderer
-    ) {
-
-        return;
-    }
-
-
-    const width =
-        container.clientWidth;
-
-
-    const height =
-        container.clientHeight;
-
-
-    camera.aspect =
-        width / height;
-
-
-    camera.updateProjectionMatrix();
-
-
-    renderer.setSize(
-        width,
-        height
-    );
-}
-
-
-// =====================================================
-// INICIAR
-// =====================================================
-
-initViewer()
-    .catch(
-        (error) => {
-
-            console.error(
-                'No se pudo iniciar el visor:',
-                error
+            // AND entre claves distintas
+            resultIds = new Set(
+                [...resultIds].filter((id) => idsForKey.has(id))
             );
         }
-    );
+    });
+
+    // Intersección final con categorías visibles
+    const finalIds = [...(resultIds || new Set())].filter((id) => categoryIds.has(id));
+    return finalIds;
+}
+
+async function applyAllFilters() {
+    if (!hider || !loadedModelId) return;
+
+    const filteredIds = getFilteredModelIds();
+
+    await hider.set(false);
+    await hider.set(true, { [loadedModelId]: filteredIds });
+
+    await fragments.core.update(true);
+}
+
+// ============================================
+// UTILIDAD
+// ============================================
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+}
+
+// ============================================
+// BOOTSTRAP
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    initViewer().catch((error) => {
+        console.error('❌ Error inicializando el visor AR:', error);
+    });
+});
