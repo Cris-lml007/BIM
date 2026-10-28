@@ -339,41 +339,31 @@ async function initViewer() {
     // RETICLE
     // =================================================
 
-    const reticleGeometry =
-        new THREE.RingGeometry(
-            0.08,
-            0.1,
-            32
-        );
+const reticleGeometry = new THREE.RingGeometry(
+    0.08,
+    0.12,
+    48
+);
 
+reticleGeometry.rotateX(-Math.PI / 2);
 
-    reticleGeometry.rotateX(
-        -Math.PI / 2
-    );
+const reticleMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
+    side: THREE.DoubleSide,
+    depthTest: false,
+    depthWrite: false
+});
 
+arReticle = new THREE.Mesh(
+    reticleGeometry,
+    reticleMaterial
+);
 
-    const reticleMaterial =
-        new THREE.MeshBasicMaterial();
+arReticle.matrixAutoUpdate = false;
+arReticle.visible = false;
+arReticle.renderOrder = 999;
 
-
-    arReticle =
-        new THREE.Mesh(
-            reticleGeometry,
-            reticleMaterial
-        );
-
-
-    arReticle.matrixAutoUpdate =
-        false;
-
-
-    arReticle.visible =
-        false;
-
-
-    scene.add(
-        arReticle
-    );
+scene.add(arReticle);
 
 
     // =================================================
@@ -993,136 +983,122 @@ async function onARSelect() {
 // HIT TEST
 // =====================================================
 
-function updateAR(frame) {
+async function updateAR(frame) {
 
-    if (!frame) {
+    if (!frame || !isAR) {
         return;
     }
 
+    const session = renderer.xr.getSession();
+    const referenceSpace = renderer.xr.getReferenceSpace();
 
-    const referenceSpace =
-        renderer.xr.getReferenceSpace();
-
-
-    const session =
-        renderer.xr.getSession();
-
-
-    if (!referenceSpace ||
-        !session) {
-
+    if (!session || !referenceSpace) {
         return;
     }
 
-
     // =================================================
-    // CREAR HIT TEST SOURCE
-    // =================================================
-
-    if (
-        !hitTestSourceRequested
-    ) {
-
-        session
-            .requestReferenceSpace(
-                'viewer'
-            )
-            .then(
-                (viewerSpace) => {
-
-                    return session
-                        .requestHitTestSource({
-                            space: viewerSpace
-                        });
-                }
-            )
-            .then(
-                (source) => {
-
-                    hitTestSource =
-                        source;
-                }
-            )
-            .catch(
-                (error) => {
-
-                    console.error(
-                        'Error creando Hit Test:',
-                        error
-                    );
-                }
-            );
-
-
-        session.addEventListener(
-            'end',
-            () => {
-
-                hitTestSourceRequested =
-                    false;
-
-
-                hitTestSource =
-                    null;
-
-
-                if (arReticle) {
-
-                    arReticle.visible =
-                        false;
-                }
-            }
-        );
-
-
-        hitTestSourceRequested =
-            true;
-    }
-
-
-    // =================================================
-    // RESULTADOS HIT TEST
+    // SOLICITAR HIT TEST
     // =================================================
 
-    if (hitTestSource) {
+    if (!hitTestSourceRequested) {
 
-        const hitTestResults =
-            frame.getHitTestResults(
-                hitTestSource
-            );
+        hitTestSourceRequested = true;
 
+        console.log('[AR] Solicitando Hit Test...');
 
-        if (
-            hitTestResults.length
-        ) {
+        try {
 
-            const hit =
-                hitTestResults[0];
+            const viewerSpace =
+                await session.requestReferenceSpace('viewer');
 
-
-            const pose =
-                hit.getPose(
-                    referenceSpace
-                );
-
-
-            if (pose) {
-
-                arReticle.visible =
-                    true;
-
-
-                arReticle.matrix.fromArray(
-                    pose.transform.matrix
-                );
+            // La sesión podría haber terminado mientras esperábamos.
+            if (
+                !isAR ||
+                renderer.xr.getSession() !== session
+            ) {
+                hitTestSourceRequested = false;
+                return;
             }
 
-        } else {
+            const source =
+                await session.requestHitTestSource({
+                    space: viewerSpace
+                });
 
-            arReticle.visible =
-                false;
+            if (
+                !isAR ||
+                renderer.xr.getSession() !== session
+            ) {
+                source.cancel();
+                hitTestSourceRequested = false;
+                return;
+            }
+
+            hitTestSource = source;
+
+            console.log('[AR] Hit Test inicializado correctamente');
+
+        } catch (error) {
+
+            console.error(
+                '[AR] Error solicitando Hit Test:',
+                error
+            );
+
+            hitTestSourceRequested = false;
+
+            return;
         }
     }
+
+    // =================================================
+    // ESPERAR A QUE EXISTA LA FUENTE
+    // =================================================
+
+    if (!hitTestSource) {
+        return;
+    }
+
+    // =================================================
+    // OBTENER RESULTADOS
+    // =================================================
+
+    const results =
+        frame.getHitTestResults(hitTestSource);
+
+    if (results.length === 0) {
+
+        arReticle.visible = false;
+
+        return;
+    }
+
+    // =================================================
+    // OBTENER POSE
+    // =================================================
+
+    const hit = results[0];
+
+    const pose = hit.getPose(referenceSpace);
+
+    if (!pose) {
+
+        arReticle.visible = false;
+
+        return;
+    }
+
+    // =================================================
+    // ACTUALIZAR RETÍCULA
+    // =================================================
+
+    arReticle.matrix.fromArray(
+        pose.transform.matrix
+    );
+
+    arReticle.matrixWorldNeedsUpdate = true;
+
+    arReticle.visible = true;
 }
 
 
