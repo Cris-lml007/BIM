@@ -447,86 +447,21 @@ function onARSessionEnd() {
 // HIT TEST
 // =====================================================
 
-async function updateAR(frame) {
-
-    if (!frame || !isAR) {
+function updateAR(frame) {
+    if (!isAR || !frame || !hitTestSource) {
+        arReticle.visible = false;
         return;
     }
-
-    const session = renderer.xr.getSession();
 
     const referenceSpace = renderer.xr.getReferenceSpace();
 
-    if (!session || !referenceSpace) {
+    if (!referenceSpace) {
+        arReticle.visible = false;
         return;
     }
 
-
-    // =================================================
-    // SOLICITAR HIT TEST SOURCE
-    // =================================================
-
-    if (!hitTestSourceRequested) {
-
-        hitTestSourceRequested = true;
-
-        console.log('[AR] Solicitando Hit Test');
-
-        try {
-
-            const viewerSpace =
-                await session.requestReferenceSpace('viewer');
-
-            if (
-                !isAR ||
-                renderer.xr.getSession() !== session
-            ) {
-                hitTestSourceRequested = false;
-                return;
-            }
-
-            const source =
-                await session.requestHitTestSource({
-                    space: viewerSpace
-                });
-
-            if (
-                !isAR ||
-                renderer.xr.getSession() !== session
-            ) {
-                source.cancel();
-                hitTestSourceRequested = false;
-                return;
-            }
-
-            hitTestSource = source;
-
-            console.log('[AR] Hit Test listo');
-
-        } catch (error) {
-
-            console.error('[AR] Error en Hit Test:', error);
-
-            hitTestSourceRequested = false;
-
-            return;
-        }
-    }
-
-
-    // =================================================
-    // ESPERAR A LA FUENTE
-    // =================================================
-
-    if (!hitTestSource) {
-        return;
-    }
-
-
-    // =================================================
-    // COMPROBAR POSE DEL VISOR
-    // =================================================
-
+    // Todas las operaciones con XRFrame deben ejecutarse
+    // sincrónicamente dentro del callback de animación.
     const viewerPose = frame.getViewerPose(referenceSpace);
 
     if (!viewerPose) {
@@ -534,47 +469,22 @@ async function updateAR(frame) {
         return;
     }
 
+    const hitTestResults = frame.getHitTestResults(hitTestSource);
 
-    // =================================================
-    // RESULTADOS HIT TEST
-    // =================================================
-
-    const results = frame.getHitTestResults(hitTestSource);
-
-    if (results.length === 0) {
-
+    if (hitTestResults.length === 0) {
         arReticle.visible = false;
-
         return;
     }
 
-
-    // =================================================
-    // POSE DE LA SUPERFICIE
-    // =================================================
-
-    const hit = results[0];
-
-    const hitPose = hit.getPose(referenceSpace);
+    const hitPose = hitTestResults[0].getPose(referenceSpace);
 
     if (!hitPose) {
-
         arReticle.visible = false;
-
         return;
     }
 
-
-    // =================================================
-    // ACTUALIZAR MATRIZ DIRECTAMENTE
-    // =================================================
-
-    arReticle.matrix.fromArray(
-        hitPose.transform.matrix
-    );
-
+    arReticle.matrix.fromArray(hitPose.transform.matrix);
     arReticle.matrixWorldNeedsUpdate = true;
-
     arReticle.visible = true;
 }
 
