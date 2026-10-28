@@ -202,125 +202,66 @@ async function initViewer() {
         );
 
 
-    // =================================================
-    // CUANDO SE CARGA EL MODELO
-    // =====================================================
+// =====================================================
+// CUANDO SE CARGA EL MODELO (dentro de initViewer)
+// =====================================================
 
-    fragments.list.onItemSet.add(
-        async ({ value: model }) => {
+fragments.list.onItemSet.add(
+    async ({ value: model }) => {
 
-            console.log(
-                'Modelo Fragments cargado'
-            );
+        console.log('Modelo Fragments cargado');
 
+        try {
 
-            // -------------------------------------------------
-            // CÁMARA
-            // -------------------------------------------------
+            model.useCamera(camera);
 
-            model.useCamera(
-                camera
-            );
+            scene.add(model.object);
 
+            arModel = model.object;
 
-            // -------------------------------------------------
-            // AGREGAR MODELO A LA ESCENA
-            // -------------------------------------------------
+            arModel.scale.set(1, 1, 1);
 
-            scene.add(
-                model.object
-            );
+            arModel.visible = false;
 
-
-            arModel =
-                model.object;
-
+            modelLoaded = true;
+            modelLoading = false;
 
             // -------------------------------------------------
-            // ESCALA
-            // -------------------------------------------------
-
-            arModel.scale.set(
-                1,
-                1,
-                1
-            );
-
-
-            // -------------------------------------------------
-            // OCULTO HASTA COLOCAR
-            // -------------------------------------------------
-
-            arModel.visible =
-                false;
-
-
-            // =================================================
             // CONSTRUIR PROPERTIES Y CATEGORIES
-            // =================================================
+            // -------------------------------------------------
 
-            modelProperties =
-                await buildModelProperties(model);
-
-            modelCategories =
-                await buildModelCategories(model);
-
-            console.log(
-                'Properties del modelo:',
-                modelProperties
-            );
-
-            console.log(
-                'Categories del modelo:',
-                modelCategories
-            );
-
-
-            // =================================================
-            // CONSTRUIR UI DE PROPERTIES
-            // =================================================
+            modelProperties = await buildModelProperties(model);
+            modelCategories = await buildModelCategories(model);
 
             buildPropertyUI();
-
-
-            // =================================================
-            // CONSTRUIR UI DE CATEGORÍAS
-            // =================================================
-
             buildCategoryUI();
 
-
-            modelLoaded =
-                true;
-
-
-            modelLoading =
-                false;
-
-
             // -------------------------------------------------
-            // ACTUALIZAR FRAGMENTS
+            // UNA SOLA ACTUALIZACIÓN, AWAITED
             // -------------------------------------------------
 
-            fragments.core.update(
-                true
+            await fragments.core.update(true);
+
+            // -------------------------------------------------
+            // OPACIDAD (sin update() interno duplicado,
+            // ver función modificada abajo)
+            // -------------------------------------------------
+
+            setModelOpacity(opacityValue);
+
+            console.log('Modelo preparado');
+
+        } catch (error) {
+
+            console.error(
+                'Error procesando modelo cargado:',
+                error
             );
 
-
-            // -------------------------------------------------
-            // APLICAR OPACIDAD ACTUAL
-            // -------------------------------------------------
-
-            setModelOpacity(
-                opacityValue
-            );
-
-
-            console.log(
-                'Modelo preparado'
-            );
+            modelLoading = false;
         }
-    );
+    }
+);
 
 
     // =================================================
@@ -1742,11 +1683,8 @@ function setModelOpacity(opacity) {
     // ACTUALIZAR FRAGMENTS
     // =================================================
 
-    if (fragments) {
-
-        fragments.core.update(
-            true
-        );
+ if (fragments && fragments.list.has('main')) {
+        fragments.core.update(true);
     }
 }
 
@@ -1757,195 +1695,107 @@ function setModelOpacity(opacity) {
 
 async function onARSelect() {
 
-    if (!isAR) {
-        return;
-    }
+    if (!isAR) return;
 
+    if (!arReticle || !arReticle.visible) return;
 
-    // =================================================
-    // COMPROBAR RETICLE
-    // =================================================
+    const position = new THREE.Vector3();
+    position.setFromMatrixPosition(arReticle.matrix);
 
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
+    if (modelLoaded && arModel) {
 
-        return;
-    }
+        arModel.position.copy(position);
+        arModel.visible = true;
 
-
-    // =================================================
-    // OBTENER POSICIÓN
-    // =================================================
-
-    const position =
-        new THREE.Vector3();
-
-
-    position.setFromMatrixPosition(
-        arReticle.matrix
-    );
-
-
-    // =================================================
-    // MODELO YA CARGADO
-    // =================================================
-
-    if (
-        modelLoaded &&
-        arModel
-    ) {
-
-        arModel.position.copy(
-            position
-        );
-
-
-        arModel.visible =
-            true;
-
-
-        console.log(
-            'Modelo colocado'
-        );
-
+        console.log('Modelo colocado');
 
         return;
     }
 
+    if (modelLoading) return;
 
-    // =================================================
-    // EVITAR DOBLE CARGA
-    // =================================================
+    modelLoading = true;
 
-    if (modelLoading) {
-
-        return;
-    }
-
-
-    modelLoading =
-        true;
-
-
-    // =================================================
-    // URL
-    // =================================================
-
-    const url =
-        container.dataset.url;
-
+    const url = container.dataset.url;
 
     if (!url) {
-
-        console.error(
-            'No existe data-url en #viewer'
-        );
-
-
-        modelLoading =
-            false;
-
-
+        console.error('No existe data-url en #viewer');
+        modelLoading = false;
         return;
     }
-
-
-    // =================================================
-    // CARGAR IFC
-    // =====================================================
 
     try {
 
-        console.log(
-            'Cargando modelo...'
-        );
+        console.log('Cargando modelo...');
 
-
-        const response =
-            await fetch(
-                url + '?type=frag'
-            );
-
+        const response = await fetch(url + '?type=frag');
 
         if (!response.ok) {
-
-            throw new Error(
-                `Error HTTP ${response.status}`
-            );
+            throw new Error(`Error HTTP ${response.status}`);
         }
 
+        const buffer = await response.arrayBuffer();
 
-        const buffer =
-            await response.arrayBuffer();
+        console.log('Fragment recibido');
 
-
-        console.log(
-            'Fragment recibido'
-        );
-
-
-        await fragments.core.load(
-            buffer,
-            {
-                modelId: 'main'
-            }
-        );
-
+        await fragments.core.load(buffer, { modelId: 'main' });
 
         // -------------------------------------------------
-        // COLOCAR MODELO
+        // NO llamamos a update() ni setModelOpacity() aquí.
+        // El listener onItemSet ya se encarga de todo eso
+        // cuando el modelo esté realmente listo.
+        // Solo posicionamos cuando arModel ya exista.
         // -------------------------------------------------
+
+        // Esperamos un tick para asegurar que el listener
+        // onItemSet ya corrió (normalmente ya lo hizo,
+        // pero por seguridad usamos un pequeño polling).
+
+        await waitForModel();
 
         if (arModel) {
 
-            arModel.position.copy(
-                position
-            );
+            arModel.position.copy(position);
+            arModel.visible = true;
 
-
-            arModel.scale.set(
-                1,
-                1,
-                1
-            );
-
-
-            arModel.visible =
-                true;
-
-
-            // -------------------------------------------------
-            // APLICAR OPACIDAD ACTUAL
-            // -------------------------------------------------
-
-            setModelOpacity(
-                opacityValue
-            );
-
-
-            fragments.core.update(
-                true
-            );
-
-
-            console.log(
-                'Modelo colocado en AR'
-            );
+            console.log('Modelo colocado en AR');
         }
 
     } catch (error) {
 
-        console.error(
-            'Error cargando IFC:',
-            error
-        );
-
-
-        modelLoading =
-            false;
+        console.error('Error cargando IFC:', error);
+        modelLoading = false;
     }
+}
+
+
+// =====================================================
+// ESPERAR A QUE EL MODELO ESTÉ LISTO
+// =====================================================
+
+function waitForModel(timeout = 5000) {
+
+    return new Promise((resolve, reject) => {
+
+        const start = performance.now();
+
+        function check() {
+
+            if (arModel && modelLoaded) {
+                resolve();
+                return;
+            }
+
+            if (performance.now() - start > timeout) {
+                reject(new Error('Timeout esperando el modelo'));
+                return;
+            }
+
+            requestAnimationFrame(check);
+        }
+
+        check();
+    });
 }
 
 
