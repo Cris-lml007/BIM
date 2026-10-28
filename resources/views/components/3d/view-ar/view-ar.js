@@ -1734,6 +1734,24 @@ async function loadAndPlaceModel(position) {
 
         arModel.visible =
             true;
+if (arModel) {
+    arModel.position.copy(position);
+    arModel.scale.set(1, 1, 1);
+    arModel.visible = true;
+    setModelOpacity(opacityValue);
+
+    // 🔍 DEBUG TEMPORAL
+    const box = new THREE.Box3().setFromObject(arModel);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    console.log('📍 Posición destino:', position);
+    console.log('📦 Bounding box size:', size);
+    console.log('📦 Bounding box center:', center);
+    console.log('👁️ arModel.visible:', arModel.visible);
+    console.log('🎨 opacityValue:', opacityValue);
+    console.log('📐 arModel.scale:', arModel.scale);
+    console.log('🧩 arModel.children.length:', arModel.children.length);
+}
 
 
         console.log(
