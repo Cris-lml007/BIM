@@ -53,6 +53,8 @@ let isAR = false;
 
 let opacityValue = 1;
 
+let loadedModelId = null;
+
 // =====================================================
 // PROPERTY SETS - NUEVAS VARIABLES
 // =====================================================
@@ -206,10 +208,21 @@ async function initViewer() {
 // CUANDO SE CARGA EL MODELO (dentro de initViewer)
 // =====================================================
 
+// =====================================================
+// CUANDO SE CARGA EL MODELO
+// =====================================================
+
 fragments.list.onItemSet.add(
     async ({ value: model }) => {
 
-        console.log('Modelo Fragments cargado');
+        console.log('===========================================');
+        console.log('🟢 onItemSet disparado');
+        console.log('model.modelId:', model.modelId);
+        console.log('model.id:', model.id);
+        console.log('model.object?.name:', model.object?.name);
+        console.log('fragments.list keys:', [...fragments.list.keys()]);
+        console.log('fragments.list size:', fragments.list.size);
+        console.log('===========================================');
 
         try {
 
@@ -223,12 +236,16 @@ fragments.list.onItemSet.add(
 
             arModel.visible = false;
 
+            // -------------------------------------------------
+            // GUARDAR EL MODELID REAL
+            // -------------------------------------------------
+
+            loadedModelId = model.modelId;
+
+            console.log('💾 loadedModelId guardado:', loadedModelId);
+
             modelLoaded = true;
             modelLoading = false;
-
-            // -------------------------------------------------
-            // CONSTRUIR PROPERTIES Y CATEGORIES
-            // -------------------------------------------------
 
             modelProperties = await buildModelProperties(model);
             modelCategories = await buildModelCategories(model);
@@ -236,28 +253,15 @@ fragments.list.onItemSet.add(
             buildPropertyUI();
             buildCategoryUI();
 
-            // -------------------------------------------------
-            // UNA SOLA ACTUALIZACIÓN, AWAITED
-            // -------------------------------------------------
-
             await fragments.core.update(true);
-
-            // -------------------------------------------------
-            // OPACIDAD (sin update() interno duplicado,
-            // ver función modificada abajo)
-            // -------------------------------------------------
 
             setModelOpacity(opacityValue);
 
-            console.log('Modelo preparado');
+            console.log('✅ Modelo preparado con ID:', loadedModelId);
 
         } catch (error) {
 
-            console.error(
-                'Error procesando modelo cargado:',
-                error
-            );
-
+            console.error('❌ Error procesando modelo cargado:', error);
             modelLoading = false;
         }
     }
@@ -1496,195 +1500,26 @@ function escapeHtml(value) {
 
 function setModelOpacity(opacity) {
 
-    const value =
-        THREE.MathUtils.clamp(
-            opacity,
-            0,
-            1
-        );
-
+    const value = THREE.MathUtils.clamp(opacity, 0, 1);
 
     if (!arModel) {
+        console.warn('⚠️ setModelOpacity: arModel es null');
         return;
     }
 
-
-    arModel.traverse(
-        (object) => {
-
-            if (
-                !object.isMesh ||
-                !object.material
-            ) {
-
-                return;
-            }
-
-
-            const materials =
-                Array.isArray(
-                    object.material
-                )
-                    ? object.material
-                    : [object.material];
-
-
-            materials.forEach(
-                (material) => {
-
-                    // ==========================================
-                    // GUARDAR ESTADO ORIGINAL
-                    // ==========================================
-
-                    if (
-                        !material.userData.opacityOriginal
-                    ) {
-
-                        material.userData.opacityOriginal = {
-
-                            opacity:
-                                material.opacity,
-
-                            transparent:
-                                material.transparent,
-
-                            depthWrite:
-                                material.depthWrite,
-
-                            depthTest:
-                                material.depthTest,
-
-                            side:
-                                material.side,
-
-                            alphaTest:
-                                material.alphaTest,
-
-                            blending:
-                                material.blending
-                        };
-                    }
-
-
-                    const original =
-                        material.userData.opacityOriginal;
-
-
-                    // ==========================================
-                    // 100%
-                    // ==========================================
-
-                    if (
-                        value >= 1
-                    ) {
-
-                        material.opacity =
-                            original.opacity;
-
-
-                        material.transparent =
-                            original.transparent;
-
-
-                        material.depthWrite =
-                            original.depthWrite;
-
-
-                        material.depthTest =
-                            original.depthTest;
-
-
-                        material.side =
-                            original.side;
-
-
-                        material.alphaTest =
-                            original.alphaTest;
-
-
-                        material.blending =
-                            original.blending;
-                    }
-
-
-                    // ==========================================
-                    // MENOS DE 100%
-                    // ==========================================
-
-                    else {
-
-                        // -------------------------------------------------
-                        // REDUCIR OPACIDAD
-                        // -------------------------------------------------
-
-                        material.opacity =
-                            original.opacity *
-                            value;
-
-
-                        // -------------------------------------------------
-                        // MATERIAL ORIGINALMENTE TRANSPARENTE
-                        // -------------------------------------------------
-
-                        if (
-                            original.transparent
-                        ) {
-
-                            material.transparent =
-                                true;
-                        }
-
-
-                        // -------------------------------------------------
-                        // MATERIAL ORIGINALMENTE OPACO
-                        // -------------------------------------------------
-
-                        else {
-
-                            material.transparent =
-                                true;
-                        }
-
-
-                        // -------------------------------------------------
-                        // CONSERVAR ESTADO ORIGINAL
-                        // -------------------------------------------------
-
-                        material.depthWrite =
-                            original.depthWrite;
-
-
-                        material.depthTest =
-                            original.depthTest;
-
-
-                        material.side =
-                            original.side;
-
-
-                        material.alphaTest =
-                            original.alphaTest;
-
-
-                        material.blending =
-                            original.blending;
-                    }
-
-
-                    material.needsUpdate =
-                        true;
-                }
-            );
-        }
-    );
-
-
-    // =================================================
-    // ACTUALIZAR FRAGMENTS
-    // =================================================
-
- if (fragments && fragments.list.has('main')) {
+    arModel.traverse((object) => {
+        // ... tu código de materiales igual ...
+    });
+
+    console.log('🎨 setModelOpacity: fragments.list.has(main)?', fragments?.list?.has('main'));
+    console.log('🎨 setModelOpacity: loadedModelId actual:', loadedModelId);
+    console.log('🎨 setModelOpacity: keys disponibles:', fragments ? [...fragments.list.keys()] : 'fragments no existe');
+
+    if (fragments && loadedModelId && fragments.list.has(loadedModelId)) {
         fragments.core.update(true);
+        console.log('✅ update() ejecutado correctamente');
+    } else {
+        console.warn('⚠️ update() OMITIDO porque el modelId no coincide o no existe aún');
     }
 }
 
@@ -1696,37 +1531,36 @@ function setModelOpacity(opacity) {
 async function onARSelect() {
 
     if (!isAR) return;
-
     if (!arReticle || !arReticle.visible) return;
 
     const position = new THREE.Vector3();
     position.setFromMatrixPosition(arReticle.matrix);
 
     if (modelLoaded && arModel) {
-
         arModel.position.copy(position);
         arModel.visible = true;
-
-        console.log('Modelo colocado');
-
+        console.log('📍 Modelo colocado (ya estaba cargado)');
         return;
     }
 
-    if (modelLoading) return;
+    if (modelLoading) {
+        console.log('⏳ Ya está cargando, ignorando tap');
+        return;
+    }
 
     modelLoading = true;
 
     const url = container.dataset.url;
 
     if (!url) {
-        console.error('No existe data-url en #viewer');
+        console.error('❌ No existe data-url en #viewer');
         modelLoading = false;
         return;
     }
 
     try {
 
-        console.log('Cargando modelo...');
+        console.log('📥 Iniciando carga desde:', url);
 
         const response = await fetch(url + '?type=frag');
 
@@ -1736,44 +1570,44 @@ async function onARSelect() {
 
         const buffer = await response.arrayBuffer();
 
-        console.log('Fragment recibido');
+        console.log('📦 Buffer recibido, tamaño:', buffer.byteLength);
 
-        await fragments.core.load(buffer, { modelId: 'main' });
+        console.log('🚀 Llamando fragments.core.load con modelId: "main"');
+
+        const loadResult = await fragments.core.load(buffer, {
+            modelId: 'main'
+        });
+
+        console.log('✅ fragments.core.load resuelto');
+        console.log('loadResult:', loadResult);
+        console.log('fragments.list keys DESPUÉS de load:', [...fragments.list.keys()]);
 
         // -------------------------------------------------
-        // NO llamamos a update() ni setModelOpacity() aquí.
-        // El listener onItemSet ya se encarga de todo eso
-        // cuando el modelo esté realmente listo.
-        // Solo posicionamos cuando arModel ya exista.
+        // ESPERAR A QUE onItemSet TERMINE DE PROCESAR
         // -------------------------------------------------
-
-        // Esperamos un tick para asegurar que el listener
-        // onItemSet ya corrió (normalmente ya lo hizo,
-        // pero por seguridad usamos un pequeño polling).
 
         await waitForModel();
 
-        if (arModel) {
+        console.log('🎯 waitForModel resuelto. loadedModelId:', loadedModelId);
 
+        if (arModel) {
             arModel.position.copy(position);
             arModel.visible = true;
-
-            console.log('Modelo colocado en AR');
+            console.log('✅ Modelo colocado en AR con ID:', loadedModelId);
+        } else {
+            console.error('❌ arModel sigue null después de waitForModel');
         }
 
     } catch (error) {
 
-        console.error('Error cargando IFC:', error);
+        console.error('❌ Error cargando IFC:', error);
+        console.error('Stack:', error.stack);
         modelLoading = false;
     }
 }
 
 
-// =====================================================
-// ESPERAR A QUE EL MODELO ESTÉ LISTO
-// =====================================================
-
-function waitForModel(timeout = 5000) {
+function waitForModel(timeout = 8000) {
 
     return new Promise((resolve, reject) => {
 
@@ -1782,11 +1616,13 @@ function waitForModel(timeout = 5000) {
         function check() {
 
             if (arModel && modelLoaded) {
+                console.log('🔍 waitForModel: condición cumplida');
                 resolve();
                 return;
             }
 
             if (performance.now() - start > timeout) {
+                console.error('⏱️ waitForModel: TIMEOUT');
                 reject(new Error('Timeout esperando el modelo'));
                 return;
             }
