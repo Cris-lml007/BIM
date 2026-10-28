@@ -121,9 +121,12 @@
             bottom: max(20px, env(safe-area-inset-bottom));
             transform: translateX(-50%);
             display: flex;
-            gap: 14px;
+            gap: 12px;
             pointer-events: auto;
             z-index: 25;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 95vw;
         }
 
         .ar-fab {
@@ -244,6 +247,113 @@
             max-height: 100%;
             overflow-y: auto;
         }
+
+        /* =====================================================
+           🆕 NUEVO: CORRECCIÓN DE POSICIÓN (D-PAD)
+           ===================================================== */
+
+        .ar-dpad-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .ar-dpad {
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px 60px;
+            grid-template-areas:
+                ".    up    ."
+                "left center right"
+                ".    down  .";
+            gap: 6px;
+        }
+
+        .ar-dpad-btn {
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.15s ease;
+        }
+
+        .ar-dpad-btn:active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .ar-dpad-up {
+            grid-area: up;
+        }
+
+        .ar-dpad-down {
+            grid-area: down;
+        }
+
+        .ar-dpad-left {
+            grid-area: left;
+        }
+
+        .ar-dpad-right {
+            grid-area: right;
+        }
+
+        .ar-dpad-center {
+            grid-area: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.45);
+            line-height: 1.2;
+            padding: 4px;
+        }
+
+        .ar-step-group {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .ar-step-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 11px;
+        }
+
+        .ar-step-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .ar-position-reset-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+            border-radius: 6px;
+        }
+
+        .ar-position-hint {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            margin: 0;
+        }
     </style>
 
     <div id="viewer"
@@ -355,6 +465,101 @@
         </div>
 
         <!-- ================================================= -->
+        <!-- 🆕 NUEVO — PANEL: CORRECCIÓN DE POSICIÓN -->
+        <!-- ================================================= -->
+
+        <div id="ar-panel-position" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-arrows-move me-2"></i>Ajustar posición</span>
+                <button type="button" class="ar-panel-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body">
+
+                <div class="ar-dpad-wrapper">
+
+                    <div class="ar-dpad">
+
+                        <button
+                            type="button"
+                            class="ar-dpad-btn ar-dpad-up"
+                            data-direction="up"
+                            title="Subir">
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="ar-dpad-btn ar-dpad-left"
+                            data-direction="left"
+                            title="Izquierda">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+
+                        <div class="ar-dpad-center">
+                            Mantén<br>presionado
+                        </div>
+
+                        <button
+                            type="button"
+                            class="ar-dpad-btn ar-dpad-right"
+                            data-direction="right"
+                            title="Derecha">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="ar-dpad-btn ar-dpad-down"
+                            data-direction="down"
+                            title="Bajar">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+
+                    </div>
+
+                    <p class="ar-position-hint">
+                        Izquierda/derecha se mueven según hacia
+                        dónde apunta la cámara
+                    </p>
+
+                    <div class="ar-step-group">
+                        <button
+                            type="button"
+                            class="ar-step-btn"
+                            data-step="0.01">
+                            Fino<br>1cm
+                        </button>
+                        <button
+                            type="button"
+                            class="ar-step-btn active"
+                            data-step="0.03">
+                            Normal<br>3cm
+                        </button>
+                        <button
+                            type="button"
+                            class="ar-step-btn"
+                            data-step="0.08">
+                            Grueso<br>8cm
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="ar-reset-position"
+                        class="ar-position-reset-btn">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>
+                        Volver al anclaje original
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================================================= -->
         <!-- FAB BAR -->
         <!-- ================================================= -->
 
@@ -372,6 +577,11 @@
             <button type="button" class="ar-fab" data-panel="properties" title="Propiedades">
                 <i class="bi bi-funnel"></i>
                 <span class="ar-fab-badge" id="ar-fab-badge-properties">0</span>
+            </button>
+
+            <!-- 🆕 NUEVO -->
+            <button type="button" class="ar-fab" data-panel="position" title="Ajustar posición">
+                <i class="bi bi-arrows-move"></i>
             </button>
 
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">
