@@ -54,6 +54,9 @@ let isAR = false;
 
 let opacityValue = 1;
 
+// Notificación de "superficie detectada" (una vez por sesión AR)
+let surfaceFoundNotified = false;
+
 // =====================================================
 // PROPERTY SETS / FILTROS
 // =====================================================
@@ -65,6 +68,159 @@ let modelCategories = new Map();
 
 let activePropertyFilters = [];
 let categoryVisibility = new Map();
+
+
+// =====================================================
+// TOASTS (notificaciones de estado)
+// =====================================================
+
+let toastCounter = 0;
+
+function showToast(message, type = 'info', duration = 4000) {
+
+    const toastContainer =
+        document.getElementById('ar-toast-container');
+
+    if (!toastContainer) {
+        return;
+    }
+
+    const id =
+        `ar-toast-${++toastCounter}`;
+
+    const toast =
+        document.createElement('div');
+
+    toast.id = id;
+    toast.className = `ar-toast ar-toast-${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('ar-toast-show');
+    });
+
+    setTimeout(() => {
+
+        toast.classList.remove('ar-toast-show');
+
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+
+    }, duration);
+}
+
+
+// =====================================================
+// PANELES FLOTANTES (FAB BAR)
+// =====================================================
+
+function closeAllPanels() {
+
+    document
+        .querySelectorAll('.ar-floating-panel')
+        .forEach(panel => {
+            panel.classList.remove('ar-panel-open');
+        });
+
+    document
+        .querySelectorAll('.ar-fab[data-panel]')
+        .forEach(btn => {
+            btn.classList.remove('active');
+        });
+}
+
+
+function setupARPanels() {
+
+    const fabButtons =
+        document.querySelectorAll('.ar-fab[data-panel]');
+
+    fabButtons.forEach(btn => {
+
+        btn.addEventListener('click', () => {
+
+            const targetId =
+                `ar-panel-${btn.dataset.panel}`;
+
+            const targetPanel =
+                document.getElementById(targetId);
+
+            if (!targetPanel) {
+                return;
+            }
+
+            const isOpen =
+                targetPanel.classList.contains(
+                    'ar-panel-open'
+                );
+
+            closeAllPanels();
+
+            if (!isOpen) {
+
+                targetPanel.classList.add(
+                    'ar-panel-open'
+                );
+
+                btn.classList.add('active');
+            }
+        });
+    });
+
+    document
+        .querySelectorAll('.ar-panel-close')
+        .forEach(btn => {
+
+            btn.addEventListener('click', () => {
+                closeAllPanels();
+            });
+        });
+}
+
+
+function updateFabBadges() {
+
+    const propsBadge =
+        document.getElementById(
+            'ar-fab-badge-properties'
+        );
+
+    if (propsBadge) {
+
+        const count =
+            activePropertyFilters.length;
+
+        propsBadge.textContent = count;
+
+        propsBadge.style.display =
+            count > 0 ? 'flex' : 'none';
+    }
+
+    const catBadge =
+        document.getElementById(
+            'ar-fab-badge-categories'
+        );
+
+    if (catBadge) {
+
+        let hiddenCount = 0;
+
+        categoryVisibility.forEach(visible => {
+
+            if (!visible) {
+                hiddenCount++;
+            }
+        });
+
+        catBadge.textContent = hiddenCount;
+
+        catBadge.style.display =
+            hiddenCount > 0 ? 'flex' : 'none';
+    }
+}
 
 
 // =====================================================
@@ -208,24 +364,6 @@ async function initViewer() {
     // =================================================
     // CUANDO SE CARGA EL MODELO
     // =================================================
-    //
-    // IMPORTANTE:
-    // Este listener se dispara de forma SÍNCRONA
-    // dentro de fragments.core.load(), en el momento
-    // exacto en que el modelo se registra en
-    // fragments.list.
-    //
-    // En ese instante el Worker (hilo aparte que
-    // procesa la geometría/datos) TODAVÍA puede no
-    // haber terminado de registrar el modelo.
-    //
-    // Por eso aquí SOLO hacemos operaciones síncronas
-    // (agregar a escena, cámara, etc). Cualquier
-    // operación que consulte al Worker
-    // (getItems, getItemsData...) se hace DESPUÉS,
-    // una vez que el await fragments.core.load()
-    // haya resuelto completamente (ver onARSelect).
-    // =================================================
 
     fragments.list.onItemSet.add(
         ({ value: model }) => {
@@ -236,18 +374,10 @@ async function initViewer() {
             );
 
 
-            // -------------------------------------------------
-            // CÁMARA
-            // -------------------------------------------------
-
             model.useCamera(
                 camera
             );
 
-
-            // -------------------------------------------------
-            // AGREGAR MODELO A LA ESCENA
-            // -------------------------------------------------
 
             scene.add(
                 model.object
@@ -258,10 +388,6 @@ async function initViewer() {
                 model.object;
 
 
-            // -------------------------------------------------
-            // ESCALA
-            // -------------------------------------------------
-
             arModel.scale.set(
                 1,
                 1,
@@ -269,17 +395,9 @@ async function initViewer() {
             );
 
 
-            // -------------------------------------------------
-            // OCULTO HASTA COLOCAR
-            // -------------------------------------------------
-
             arModel.visible =
                 false;
 
-
-            // -------------------------------------------------
-            // GUARDAR EL MODELID REAL
-            // -------------------------------------------------
 
             loadedModelId =
                 model.modelId;
@@ -368,6 +486,13 @@ async function initViewer() {
 
 
     // =================================================
+    // CONFIGURAR PANELES FLOTANTES / FAB BAR
+    // =================================================
+
+    setupARPanels();
+
+
+    // =================================================
     // CONFIGURAR RESET DE FILTROS
     // =================================================
 
@@ -383,6 +508,11 @@ async function initViewer() {
             async () => {
 
                 await resetAllFilters();
+
+                showToast(
+                    '🔄 Filtros reiniciados',
+                    'info'
+                );
             }
         );
     }
@@ -473,6 +603,13 @@ async function initViewer() {
                 false;
 
 
+            surfaceFoundNotified =
+                false;
+
+
+            closeAllPanels();
+
+
             if (arModel) {
 
                 arModel.visible =
@@ -503,6 +640,13 @@ async function initViewer() {
                 arUI.style.display =
                     'block';
             }
+
+
+            showToast(
+                '🟢 Sesión AR iniciada. Buscando superficie...',
+                'info',
+                5000
+            );
         }
     );
 
@@ -530,6 +674,13 @@ async function initViewer() {
 
             hitTestSourceRequested =
                 false;
+
+
+            surfaceFoundNotified =
+                false;
+
+
+            closeAllPanels();
 
 
             if (arReticle) {
@@ -1408,6 +1559,8 @@ async function applyAllFilters() {
     );
 
     fragments.core.update(true);
+
+    updateFabBadges();
 }
 
 
@@ -1666,11 +1819,6 @@ function setModelOpacity(opacity) {
     );
 
 
-    // =================================================
-    // ACTUALIZAR FRAGMENTS
-    // (solo si el modelo ya terminó de cargar)
-    // =================================================
-
     if (fragments && modelLoaded) {
 
         fragments.core.update(
@@ -1732,6 +1880,12 @@ async function onARSelect() {
         );
 
 
+        showToast(
+            '📍 Modelo reposicionado',
+            'success'
+        );
+
+
         return;
     }
 
@@ -1760,6 +1914,12 @@ async function onARSelect() {
             false;
 
 
+        showToast(
+            '❌ No se encontró la URL del modelo',
+            'error'
+        );
+
+
         return;
     }
 
@@ -1773,6 +1933,13 @@ async function onARSelect() {
         console.log(
             '📥 Iniciando carga desde:',
             url
+        );
+
+
+        showToast(
+            '📥 Cargando modelo IFC...',
+            'info',
+            8000
         );
 
 
@@ -1800,15 +1967,6 @@ async function onARSelect() {
         );
 
 
-        // -------------------------------------------------
-        // ESPERAR A QUE LOAD() RESUELVA COMPLETAMENTE
-        //
-        // Este await es la clave: garantiza que el Worker
-        // ya terminó de registrar el modelo antes de que
-        // intentemos hacer queries pesadas (getItems,
-        // getItemsData, etc).
-        // -------------------------------------------------
-
         await fragments.core.load(
             buffer,
             {
@@ -1822,10 +1980,6 @@ async function onARSelect() {
         );
 
 
-        // -------------------------------------------------
-        // OBTENER EL MODELO YA REGISTRADO
-        // -------------------------------------------------
-
         const model =
             fragments.list.get('main');
 
@@ -1837,11 +1991,6 @@ async function onARSelect() {
             );
         }
 
-
-        // -------------------------------------------------
-        // CONSTRUIR PROPERTIES Y CATEGORÍAS
-        // (ahora sí es seguro consultar al Worker)
-        // -------------------------------------------------
 
         console.log(
             '🔍 Construyendo properties...'
@@ -1869,26 +2018,33 @@ async function onARSelect() {
         );
 
 
-        // -------------------------------------------------
-        // CONSTRUIR UI DE FILTROS
-        // -------------------------------------------------
-
         buildPropertyUI();
         buildCategoryUI();
 
 
-        // -------------------------------------------------
-        // ACTUALIZAR FRAGMENTS
-        // -------------------------------------------------
+        let totalElements = 0;
+
+        for (
+            const categoryIds
+            of modelCategories.values()
+        ) {
+
+            totalElements +=
+                categoryIds.length;
+        }
+
+
+        showToast(
+            `✅ Modelo cargado: ${totalElements} elementos, ${modelCategories.size} categorías`,
+            'success',
+            5000
+        );
+
 
         await fragments.core.update(
             true
         );
 
-
-        // -------------------------------------------------
-        // COLOCAR MODELO
-        // -------------------------------------------------
 
         if (arModel) {
 
@@ -1917,6 +2073,12 @@ async function onARSelect() {
                 '✅ Modelo colocado en AR con ID:',
                 loadedModelId
             );
+
+
+            showToast(
+                '📍 Modelo colocado sobre la superficie',
+                'success'
+            );
         }
 
     } catch (error) {
@@ -1929,6 +2091,13 @@ async function onARSelect() {
 
         modelLoading =
             false;
+
+
+        showToast(
+            '❌ Error cargando el modelo IFC',
+            'error',
+            6000
+        );
     }
 }
 
@@ -2051,6 +2220,20 @@ function updateAR(frame) {
                 arReticle.matrix.fromArray(
                     pose.transform.matrix
                 );
+
+
+                if (!surfaceFoundNotified) {
+
+                    surfaceFoundNotified =
+                        true;
+
+
+                    showToast(
+                        '🎯 Superficie detectada. Toca la pantalla para colocar el modelo',
+                        'success',
+                        5000
+                    );
+                }
             }
 
         } else {
