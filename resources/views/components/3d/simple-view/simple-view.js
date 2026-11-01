@@ -77,10 +77,41 @@ async function ifcLoader(file){
         fragments.core.update();
     });
 
-    fragments.list.onItemSet.add(({ value: model }) => {
+    fragments.list.onItemSet.add(async ({ value: model }) => {
+
+
         model.useCamera(world.camera.three);
+
         world.scene.three.add(model.object);
+
         fragments.core.update(true);
+
+        try {
+
+            const items = await model.getItems();
+
+
+            if (items.length > 0) {
+
+                const item = items[0];
+
+
+                const properties =
+                    await model.getProperties(item);
+
+                console.log(
+                    "PROPIEDADES DEL PRIMER ITEM:",
+                    properties
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "ERROR OBTENIENDO PROPIEDADES:",
+                error
+            );
+        }
     });
 
     // 🔧 fix z-fighting
@@ -96,13 +127,52 @@ async function ifcLoader(file){
     const uint8 = new Uint8Array(buffer);
 
     await ifcLoader.load(uint8, false, file.name, {
+        instanceCallback: (importer) => {
+            importer.addAllAttributes();
+            importer.addAllRelations();
+        },
+
         processData: {
             progressCallback: (progress) => {
                 const percent = Math.round(progress * 100);
-                showViewerLoader(`Procesando IFC... ${percent}%`);
+                showViewerLoader(
+                    `Procesando IFC... ${percent}%`
+                );
             },
         },
     });
+
+
+    await new Promise((resolve) => {
+
+        const check = () => {
+
+            const models =
+            Array.from(fragments.list.values());
+
+            if (!models.length) {
+                requestAnimationFrame(check);
+                return;
+            }
+
+            const model = models[0];
+
+            console.log(
+                "ESPERANDO PROCESAMIENTO:",
+                model.isProcessing
+            );
+
+            if (model.isProcessing) {
+                requestAnimationFrame(check);
+                return;
+            }
+
+            resolve();
+        };
+
+        check();
+    });
+
 
     showViewerLoader(`Generando Vista...`);
     console.log("IFC cargado desde FILE 🚀");

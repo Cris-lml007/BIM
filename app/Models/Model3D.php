@@ -24,4 +24,8 @@ class Model3D extends Model
     public function anchors(){
         return $this->hasMany(Anchor::class,'model_id','id');
     }
+
+    public function incidents(){
+        return $this->hasMany(incident::class, 'model','id');
+    }
 }

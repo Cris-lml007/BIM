@@ -17,16 +17,18 @@ new #[Layout('layouts.viewer')] class extends Component
     public Project $project;
     public $models;
     public $anchors;
+    public $incidents;
 
     public function mount(Project $project, Model3D $model){
         $this->project = $project;
         $this->model = $model;
         $this->models = $this->project->models;
         $this->anchors = $this->model->anchors->toArray();
+        $this->incidents = $this->model->incidents->toArray();
     }
 
     #[Renderless]
-    public function saveMark($title,$model,$type,$x,$y,$z){
+    public function saveMark($title,$model,$type,$x,$y,$z,$normal_x,$normal_y,$normal_z){
         if($type == 'anchor'){
             do{
                 $hash = Str::random(64);
@@ -39,6 +41,9 @@ new #[Layout('layouts.viewer')] class extends Component
                 'x' => $x,
                 'y' => $y,
                 'z' => $z,
+                'normal_x' => $normal_x,
+                'normal_y' => $normal_y,
+                'normal_z' => $normal_z,
             ]);
         }else{
             $item = incident::create([
@@ -51,6 +56,9 @@ new #[Layout('layouts.viewer')] class extends Component
                 'x' => $x,
                 'y' => $y,
                 'z' => $z,
+                'normal_x' => $normal_x,
+                'normal_y' => $normal_y,
+                'normal_z' => $normal_z,
                 'project_id' => $this->project->id
 
             ]);

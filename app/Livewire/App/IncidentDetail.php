@@ -3,6 +3,7 @@
 namespace App\Livewire\App;
 
 use App\Models\incident;
+use App\Models\Project;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -20,8 +21,11 @@ class IncidentDetail extends Component
         'status' => null,
         'created_at' => null
     ];
-    public function mount($project){
+    public function mount(Project $project, $id = null){
         $this->project = $project;
+        if($id != null){
+            $this->getIncident($id);
+        }
 
     }
 
@@ -82,7 +86,7 @@ class IncidentDetail extends Component
 
         $comment->attachments()->create([
             'name' => $this->image->getClientOriginalName(),
-            'file' => $fileName, 
+            'file' => $fileName,
             'type' => $this->image->getClientMimeType(),
             'path' => $path,
         ]);
