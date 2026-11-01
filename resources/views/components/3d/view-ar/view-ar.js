@@ -1,6 +1,13 @@
-// ======================== CONFIGURACIÓN DESDE DATA-* =========================
-const $container = document.getElementById('ar-container');
-if (!$container) throw new Error('No se encontró #ar-container');
+// ======================================================
+// VISOR IFC EN REALIDAD AUMENTADA (WebXR + ThatOpen)
+//
+// Incluye:
+//  - Hit-test y colocación del modelo
+//  - Control de opacidad
+//  - Filtros por categorías y por propiedades
+//  - Ajuste fino de posición (D-pad)
+//  - 🆕 Selección BIM por raycasting + panel de propiedades
+// =====================================================
 
 const MODEL_URL    = $container.dataset.url        || '';
 const MODEL_TYPE   = $container.dataset.type        || '';
