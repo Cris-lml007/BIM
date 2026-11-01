@@ -163,6 +163,13 @@
             color: #111;
         }
 
+        /* 🆕 Botón modo incidencia activo → rojo */
+        #ar-btn-incident-mode.active {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #fff;
+        }
+
         .ar-fab-badge {
             position: absolute;
             top: -4px;
@@ -521,12 +528,226 @@
         }
 
         #ar-crosshair.busy .ch-dot { background: #22c55e; }
+
+        /* =====================================================
+           🆕 INDICADOR + CROSSHAIR DE MODO INCIDENCIA
+           ===================================================== */
+
+        .ar-incident-indicator {
+            position: absolute;
+            top: max(64px, calc(env(safe-area-inset-top) + 56px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.92);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 16px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 28;
+            display: none;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
+        }
+
+        .ar-incident-indicator.visible { display: block; }
+
+        #ar-incident-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 18;
+            display: none;
+        }
+
+        #ar-incident-crosshair.visible { display: block; }
+
+        #ar-incident-crosshair .ch-line-h,
+        #ar-incident-crosshair .ch-line-v {
+            position: absolute;
+            background: #ef4444;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+        }
+
+        #ar-incident-crosshair .ch-line-h {
+            top: 50%; left: 0; right: 0; height: 2px; margin-top: -1px;
+        }
+
+        #ar-incident-crosshair .ch-line-v {
+            left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+        }
+
+        #ar-incident-crosshair .ch-dot {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 8px; height: 8px;
+            margin: -4px 0 0 -4px;
+            border-radius: 50%;
+            background: #ef4444;
+            border: 1px solid rgba(0, 0, 0, 0.5);
+        }
+
+        #ar-incident-crosshair.busy .ch-dot { background: #22c55e; }
+
+        /* =====================================================
+           🆕 MODAL FORMULARIO DE INCIDENCIA / ANCLAJE
+           ===================================================== */
+
+        #ar-incident-form {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 40;
+            pointer-events: auto;
+            padding: 16px;
+        }
+
+        #ar-incident-form.open { display: flex; }
+
+        .ar-incident-card {
+            background: #1c1c1e;
+            color: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            width: min(340px, 94vw);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .ar-incident-card h3 {
+            margin: 0 0 14px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .ar-incident-card select,
+        .ar-incident-card input {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            touch-action: manipulation;
+        }
+
+        .ar-incident-card select option {
+            background: #1c1c1e;
+            color: #fff;
+        }
+
+        .ar-incident-card input:focus {
+            border-color: #ef4444;
+        }
+
+        .ar-incident-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .ar-incident-actions button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            touch-action: manipulation;
+        }
+
+        #ar-incident-cancel {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #ar-incident-save {
+            background: #ef4444;
+            border: none;
+            color: #fff;
+        }
+
+        #ar-incident-save:disabled { opacity: 0.5; }
+
+        /* =====================================================
+           🆕 LISTADO DE INCIDENCIAS / ANCLAJES
+           ===================================================== */
+
+        .ar-mark-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .ar-mark-item:last-child { border-bottom: none; }
+
+        .ar-mark-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ar-mark-dot.incident { background: #ef4444; }
+        .ar-mark-dot.anchor   { background: #3b82f6; }
+
+        .ar-mark-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ar-mark-title {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ar-mark-meta {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 2px;
+        }
+
+        .ar-mark-del {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: 15px;
+            padding: 4px 8px;
+            touch-action: manipulation;
+        }
     </style>
 
+    {{-- =====================================================
+         CONTENEDOR DEL VISOR
+         data-anchor-*  → coordenadas del anclaje actual
+         data-incidents → incidencias del modelo (JSON)
+         data-anchors   → todos los anclajes del modelo (JSON)
+         ===================================================== --}}
     <div id="viewer"
          class="viewport"
-        data-url="{{ route('app.Attachment', $model->model->id) }}"
-         data-type="{{ $model->model->type }}">
+         data-url="{{ route('app.Attachment', $model->model->id) }}"
+         data-type="{{ $model->model->type }}"
+         data-anchor-x="{{ $currentAnchor['x'] ?? 0 }}"
+         data-anchor-y="{{ $currentAnchor['y'] ?? 0 }}"
+         data-anchor-z="{{ $currentAnchor['z'] ?? 0 }}"
+         data-incidents='@json($incidents)'
+         data-anchors='@json($anchors)'>
     </div>
 
     <div id="ar-ui-container">
@@ -539,11 +760,43 @@
             🎯 Apunta y toca para seleccionar
         </div>
 
-        <!-- CROSSHAIR -->
+        <!-- CROSSHAIR BIM -->
         <div id="ar-crosshair">
             <div class="ch-line-h"></div>
             <div class="ch-line-v"></div>
             <div class="ch-dot"></div>
+        </div>
+
+        <!-- 🆕 INDICADOR MODO INCIDENCIA -->
+        <div id="ar-incident-indicator" class="ar-incident-indicator">
+            🚩 Toca sobre el modelo para crear una marca
+        </div>
+
+        <!-- 🆕 CROSSHAIR INCIDENCIA -->
+        <div id="ar-incident-crosshair">
+            <div class="ch-line-h"></div>
+            <div class="ch-line-v"></div>
+            <div class="ch-dot"></div>
+        </div>
+
+        <!-- 🆕 MODAL: NUEVA INCIDENCIA / ANCLAJE -->
+        <div id="ar-incident-form">
+            <div class="ar-incident-card">
+                <h3 id="ar-incident-form-title">🚩 Nueva marca</h3>
+                <select id="ar-incident-type">
+                    <option value="incident">🚩 Incidencia</option>
+                    <option value="anchor">📌 Anclaje (link compartible)</option>
+                </select>
+                <input type="text"
+                       id="ar-incident-title"
+                       maxlength="120"
+                       placeholder="Título de la marca..."
+                       autocomplete="off">
+                <div class="ar-incident-actions">
+                    <button type="button" id="ar-incident-cancel">Cancelar</button>
+                    <button type="button" id="ar-incident-save">Guardar</button>
+                </div>
+            </div>
         </div>
 
         <!-- PANEL: OPACIDAD -->
@@ -686,6 +939,22 @@
             </div>
         </div>
 
+        <!-- 🆕 PANEL: LISTADO DE INCIDENCIAS Y ANCLAJES -->
+        <div id="ar-panel-incidents" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Marcas del modelo</span>
+                <button type="button" class="ar-panel-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body" id="ar-incidents-body">
+                <div class="small text-white-50 text-center py-3">
+                    Cargando...
+                </div>
+            </div>
+        </div>
+
         <!-- FAB BAR -->
         <div id="ar-fab-bar">
 
@@ -707,15 +976,27 @@
                 <i class="bi bi-arrows-move"></i>
             </button>
 
-            <!-- 🆕 BOTÓN SELECCIÓN BIM -->
+            <!-- BOTÓN SELECCIÓN BIM -->
             <button type="button" id="ar-btn-bim-select" class="ar-fab"
                     title="Seleccionar elemento BIM">
                 <i class="bi bi-crosshair"></i>
             </button>
 
-            <!-- 🆕 BOTÓN VER INFO (abre el último seleccionado) -->
+            <!-- BOTÓN VER INFO BIM -->
             <button type="button" class="ar-fab" data-panel="bim-info" title="Info elemento">
                 <i class="bi bi-info-circle"></i>
+            </button>
+
+            <!-- 🆕 BOTÓN MODO CREAR MARCA -->
+            <button type="button" id="ar-btn-incident-mode" class="ar-fab"
+                    title="Crear incidencia / anclaje">
+                <i class="bi bi-geo-alt-fill"></i>
+            </button>
+
+            <!-- 🆕 BOTÓN LISTADO DE MARCAS -->
+            <button type="button" class="ar-fab" data-panel="incidents" title="Ver marcas">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span class="ar-fab-badge" id="ar-fab-badge-incidents">0</span>
             </button>
 
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">

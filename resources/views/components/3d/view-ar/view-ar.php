@@ -24,12 +24,13 @@ new #[Layout('layouts.viewer')] class extends Component
         $this->project = $project;
 
         $anchor = Anchor::where('hash', $hash)->firstOrFail();
+
         $this->model         = $anchor->model;
         $this->currentAnchor = $anchor->toArray();
         $this->models        = $this->project->models;
         $this->anchors       = $this->model->anchors->toArray();
 
-        // Cargar incidencias del modelo dentro del proyecto
+        // Incidencias de este modelo dentro del proyecto
         $this->incidents = incident::where('project_id', $this->project->id)
             ->where('model', $this->model->id)
             ->orderByDesc('created_at')
