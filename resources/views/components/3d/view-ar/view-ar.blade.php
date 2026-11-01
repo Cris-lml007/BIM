@@ -45,17 +45,9 @@
             transform: translateY(0);
         }
 
-        .ar-toast-success {
-            border-left-color: #22c55e;
-        }
-
-        .ar-toast-error {
-            border-left-color: #ef4444;
-        }
-
-        .ar-toast-info {
-            border-left-color: #2563eb;
-        }
+        .ar-toast-success { border-left-color: #22c55e; }
+        .ar-toast-error   { border-left-color: #ef4444; }
+        .ar-toast-info    { border-left-color: #2563eb; }
 
         /* =====================================================
            PANELES FLOTANTES
@@ -68,7 +60,7 @@
             transform: translateX(-50%) translateY(16px);
             width: min(92vw, 380px);
             max-height: 50vh;
-            background: rgba(17, 17, 17, 0.92);
+            background: rgba(17, 17, 17, 0.94);
             border-radius: 14px;
             color: white;
             overflow: hidden;
@@ -113,6 +105,7 @@
             padding: 14px 16px;
             overflow-y: auto;
             touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* =====================================================
@@ -136,9 +129,7 @@
             -ms-overflow-style: none;
         }
 
-        #ar-fab-bar::-webkit-scrollbar {
-            display: none;
-        }
+        #ar-fab-bar::-webkit-scrollbar { display: none; }
 
         .ar-fab {
             position: relative;
@@ -158,13 +149,18 @@
             touch-action: manipulation;
         }
 
-        .ar-fab:active {
-            transform: scale(0.92);
-        }
+        .ar-fab:active { transform: scale(0.92); }
 
         .ar-fab.active {
             background: #2563eb;
             border-color: #2563eb;
+        }
+
+        /* Botón BIM select activo → ámbar */
+        #ar-btn-bim-select.active {
+            background: #f59e0b;
+            border-color: #f59e0b;
+            color: #111;
         }
 
         .ar-fab-badge {
@@ -182,11 +178,6 @@
             align-items: center;
             justify-content: center;
             border: 2px solid #111;
-        }
-
-        .ar-fab.ar-fab-locked {
-            background: rgba(34, 197, 94, 0.25);
-            border-color: rgba(34, 197, 94, 0.6);
         }
 
         /* =====================================================
@@ -240,19 +231,10 @@
             touch-action: manipulation;
         }
 
-        .ar-filter-chip .ar-filter-remove:hover {
-            color: #ef4444;
-        }
-
         .ar-category-item {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 6px;
             margin-bottom: 6px;
-            transition: background 0.2s;
-        }
-
-        .ar-category-item:hover {
-            background: rgba(255, 255, 255, 0.1);
         }
 
         .ar-category-item input {
@@ -260,9 +242,7 @@
             touch-action: manipulation;
         }
 
-        .ar-category-item span:first-of-type {
-            font-size: 13px;
-        }
+        .ar-category-item span:first-of-type { font-size: 13px; }
 
         .ar-categories-scroll {
             max-height: 100%;
@@ -303,7 +283,6 @@
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-            transition: background 0.15s ease;
         }
 
         .ar-dpad-btn:active {
@@ -311,21 +290,10 @@
             border-color: #2563eb;
         }
 
-        .ar-dpad-up {
-            grid-area: up;
-        }
-
-        .ar-dpad-down {
-            grid-area: down;
-        }
-
-        .ar-dpad-left {
-            grid-area: left;
-        }
-
-        .ar-dpad-right {
-            grid-area: right;
-        }
+        .ar-dpad-up    { grid-area: up; }
+        .ar-dpad-down  { grid-area: down; }
+        .ar-dpad-left  { grid-area: left; }
+        .ar-dpad-right { grid-area: right; }
 
         .ar-dpad-center {
             grid-area: center;
@@ -411,25 +379,21 @@
         }
 
         /* =====================================================
-           BIM ELEMENT INFO PANEL (AR)
+           PANEL INFO BIM
            ===================================================== */
-
-        #ar-panel-bim-info {
-            max-height: 55vh;
-        }
 
         .ar-bim-info-title {
             font-size: 15px;
             font-weight: 700;
             color: #f59e0b;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             word-break: break-word;
         }
 
         .ar-bim-info-row {
             display: flex;
             justify-content: space-between;
-            gap: 8px;
+            gap: 10px;
             padding: 6px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             font-size: 12px;
@@ -438,29 +402,26 @@
         .ar-bim-info-label {
             color: rgba(255, 255, 255, 0.55);
             flex-shrink: 0;
-            max-width: 40%;
+            max-width: 42%;
         }
 
         .ar-bim-info-value {
             color: white;
             text-align: right;
-            word-break: break-all;
+            word-break: break-word;
             flex: 1;
         }
 
-        .ar-bim-info-section {
-            margin-top: 12px;
-        }
+        .ar-bim-info-section { margin-top: 10px; }
 
         .ar-bim-info-section-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 8px 10px;
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.07);
             border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 600;
             touch-action: manipulation;
             user-select: none;
@@ -468,94 +429,98 @@
         }
 
         .ar-bim-info-section-header:active {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.14);
         }
 
-        .ar-bim-info-section-body {
-            padding: 4px 10px;
+        .ar-bim-info-section-body { padding: 2px 10px; }
+
+        .ar-bim-deselect-btn {
+            width: 100%;
+            margin-top: 14px;
+            padding: 9px;
+            border-radius: 6px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+            font-size: 12px;
+            touch-action: manipulation;
         }
+
+        /* =====================================================
+           INDICADOR MODO SELECCIÓN + CROSSHAIR
+           ===================================================== */
 
         .ar-bim-select-indicator {
             position: absolute;
-            top: max(60px, env(safe-area-inset-top, 16px));
+            top: max(64px, calc(env(safe-area-inset-top) + 56px));
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(245, 158, 11, 0.9);
-            color: #000;
+            background: rgba(245, 158, 11, 0.92);
+            color: #111;
             font-size: 12px;
             font-weight: 700;
-            padding: 6px 16px;
+            padding: 7px 16px;
             border-radius: 20px;
             pointer-events: none;
             z-index: 28;
             display: none;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
         }
 
-        .ar-bim-select-indicator.visible {
-            display: block;
-            pointer-events: auto;
-        }
-
-        /* =====================================================
-           CROSSHAIR CENTRAL (para modo selección)
-           ===================================================== */
+        .ar-bim-select-indicator.visible { display: block; }
 
         #ar-crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             pointer-events: none;
-            z-index: 15;
+            z-index: 18;
             display: none;
         }
 
-        #ar-crosshair.visible {
-            display: block;
-        }
+        #ar-crosshair.visible { display: block; }
 
-        #ar-crosshair::before,
-        #ar-crosshair::after {
-            content: '';
+        #ar-crosshair .ch-line-h,
+        #ar-crosshair .ch-line-v {
             position: absolute;
             background: #f59e0b;
-            border-radius: 1px;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
         }
 
-        #ar-crosshair::before {
-            /* línea horizontal */
+        #ar-crosshair .ch-line-h {
             top: 50%;
             left: 0;
             right: 0;
             height: 2px;
-            transform: translateY(-50%);
+            margin-top: -1px;
         }
 
-        #ar-crosshair::after {
-            /* línea vertical */
+        #ar-crosshair .ch-line-v {
             left: 50%;
             top: 0;
             bottom: 0;
             width: 2px;
-            transform: translateX(-50%);
+            margin-left: -1px;
         }
 
-        /* Punto central */
-        #ar-crosshair-dot {
+        #ar-crosshair .ch-dot {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
+            margin: -4px 0 0 -4px;
             border-radius: 50%;
             background: #f59e0b;
-            box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.5);
         }
+
+        #ar-crosshair.busy .ch-dot { background: #22c55e; }
     </style>
 
     <div id="viewer"
@@ -569,14 +534,16 @@
         <!-- TOASTS -->
         <div id="ar-toast-container"></div>
 
-        <!-- INDICADOR DE MODO SELECCIÓN -->
+        <!-- INDICADOR MODO SELECCIÓN BIM -->
         <div id="ar-bim-select-indicator" class="ar-bim-select-indicator">
-            🎯 Toca un elemento para ver sus propiedades
+            🎯 Apunta y toca para seleccionar
         </div>
 
-        <!-- CROSSHAIR CENTRAL -->
+        <!-- CROSSHAIR -->
         <div id="ar-crosshair">
-            <div id="ar-crosshair-dot"></div>
+            <div class="ch-line-h"></div>
+            <div class="ch-line-v"></div>
+            <div class="ch-dot"></div>
         </div>
 
         <!-- PANEL: OPACIDAD -->
@@ -590,26 +557,20 @@
 
             <div class="ar-panel-body">
                 <div class="d-flex align-items-center gap-3">
-                    <input
-                        type="range"
-                        id="ar-opacity"
-                        min="0"
-                        max="100"
-                        value="100"
-                        step="1"
-                        style="flex: 1; touch-action: manipulation;"
-                    >
-                    <span id="ar-opacity-value" style="min-width: 48px; text-align: right;">
-                        100%
-                    </span>
+                    <input type="range"
+                           id="ar-opacity"
+                           min="0" max="100" value="100" step="1"
+                           style="flex: 1; touch-action: manipulation;">
+                    <span id="ar-opacity-value"
+                          style="min-width: 48px; text-align: right;">100%</span>
                 </div>
             </div>
         </div>
 
-        <!-- PANEL: PROPIEDADES (FILTROS) -->
+        <!-- PANEL: FILTRO POR PROPIEDADES -->
         <div id="ar-panel-properties" class="ar-floating-panel">
             <div class="ar-panel-header">
-                <span><i class="bi bi-funnel me-2"></i>Propiedades</span>
+                <span><i class="bi bi-funnel me-2"></i>Filtrar propiedades</span>
                 <button type="button" class="ar-panel-close">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -625,25 +586,14 @@
                 </select>
 
                 <div class="ar-filter-buttons">
-                    <button
-                        type="button"
-                        id="ar-apply-property"
-                        class="btn btn-primary btn-sm"
-                        disabled>
-                        Aplicar
-                    </button>
-                    <button
-                        type="button"
-                        id="ar-clear-property"
-                        class="btn btn-secondary btn-sm">
-                        Limpiar
-                    </button>
+                    <button type="button" id="ar-apply-property"
+                            class="btn btn-primary btn-sm" disabled>Aplicar</button>
+                    <button type="button" id="ar-clear-property"
+                            class="btn btn-secondary btn-sm">Limpiar</button>
                 </div>
 
                 <div id="ar-property-filters" class="mt-3">
-                    <div class="small text-white-50">
-                        Sin filtros activos
-                    </div>
+                    <div class="small text-white-50">Sin filtros activos</div>
                 </div>
             </div>
         </div>
@@ -658,12 +608,11 @@
             </div>
 
             <div class="ar-panel-body">
-                <div id="ar-categories-container" class="ar-categories-scroll">
-                </div>
+                <div id="ar-categories-container" class="ar-categories-scroll"></div>
             </div>
         </div>
 
-        <!-- PANEL: CORRECCIÓN DE POSICIÓN -->
+        <!-- PANEL: POSICIÓN -->
         <div id="ar-panel-position" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-arrows-move me-2"></i>Ajustar posición</span>
@@ -673,7 +622,6 @@
             </div>
 
             <div class="ar-panel-body">
-
                 <div class="ar-dpad-wrapper">
 
                     <p id="ar-position-status" class="ar-position-status searching">
@@ -681,88 +629,48 @@
                     </p>
 
                     <div class="ar-dpad">
+                        <button type="button" class="ar-dpad-btn ar-dpad-up"
+                                data-direction="up"><i class="bi bi-arrow-up"></i></button>
 
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-up"
-                            data-direction="up"
-                            title="Subir">
-                            <i class="bi bi-arrow-up"></i>
-                        </button>
+                        <button type="button" class="ar-dpad-btn ar-dpad-left"
+                                data-direction="left"><i class="bi bi-arrow-left"></i></button>
 
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-left"
-                            data-direction="left"
-                            title="Izquierda">
-                            <i class="bi bi-arrow-left"></i>
-                        </button>
+                        <div class="ar-dpad-center">Mantén<br>presionado</div>
 
-                        <div class="ar-dpad-center">
-                            Mantén<br>presionado
-                        </div>
+                        <button type="button" class="ar-dpad-btn ar-dpad-right"
+                                data-direction="right"><i class="bi bi-arrow-right"></i></button>
 
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-right"
-                            data-direction="right"
-                            title="Derecha">
-                            <i class="bi bi-arrow-right"></i>
-                        </button>
-
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-down"
-                            data-direction="down"
-                            title="Bajar">
-                            <i class="bi bi-arrow-down"></i>
-                        </button>
-
+                        <button type="button" class="ar-dpad-btn ar-dpad-down"
+                                data-direction="down"><i class="bi bi-arrow-down"></i></button>
                     </div>
 
                     <p class="ar-position-hint">
-                        Izquierda/derecha se mueven según hacia
-                        dónde apunta la cámara
+                        Izquierda/derecha se mueven según hacia dónde apunta la cámara
                     </p>
 
                     <div class="ar-step-group">
-                        <button type="button" class="ar-step-btn" data-step="0.01">
-                            Fino<br>1cm
-                        </button>
-                        <button type="button" class="ar-step-btn active" data-step="0.03">
-                            Normal<br>3cm
-                        </button>
-                        <button type="button" class="ar-step-btn" data-step="0.08">
-                            Grueso<br>8cm
-                        </button>
+                        <button type="button" class="ar-step-btn" data-step="0.01">Fino<br>1cm</button>
+                        <button type="button" class="ar-step-btn active" data-step="0.03">Normal<br>3cm</button>
+                        <button type="button" class="ar-step-btn" data-step="0.08">Grueso<br>8cm</button>
                     </div>
 
                     <div class="ar-position-actions">
-
-                        <button
-                            type="button"
-                            id="ar-reset-position"
-                            class="ar-position-reset-btn">
+                        <button type="button" id="ar-reset-position" class="ar-position-reset-btn">
                             <i class="bi bi-arrow-counterclockwise me-2"></i>
                             Volver al anclaje original
                         </button>
 
-                        <button
-                            type="button"
-                            id="ar-relocate-model"
-                            class="ar-position-relocate-btn">
+                        <button type="button" id="ar-relocate-model" class="ar-position-relocate-btn">
                             <i class="bi bi-geo-alt me-2"></i>
                             Reubicar en otra superficie
                         </button>
-
                     </div>
 
                 </div>
-
             </div>
         </div>
 
-        <!-- PANEL: INFORMACIÓN BIM DEL ELEMENTO SELECCIONADO -->
+        <!-- PANEL: INFO DEL ELEMENTO BIM -->
         <div id="ar-panel-bim-info" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-info-circle me-2"></i>Elemento BIM</span>
@@ -790,7 +698,7 @@
                 <span class="ar-fab-badge" id="ar-fab-badge-categories">0</span>
             </button>
 
-            <button type="button" class="ar-fab" data-panel="properties" title="Propiedades">
+            <button type="button" class="ar-fab" data-panel="properties" title="Filtrar">
                 <i class="bi bi-funnel"></i>
                 <span class="ar-fab-badge" id="ar-fab-badge-properties">0</span>
             </button>
@@ -799,8 +707,15 @@
                 <i class="bi bi-arrows-move"></i>
             </button>
 
-            <button type="button" id="ar-btn-bim-select" class="ar-fab" title="Seleccionar elemento BIM">
-                <i class="bi bi-cursor"></i>
+            <!-- 🆕 BOTÓN SELECCIÓN BIM -->
+            <button type="button" id="ar-btn-bim-select" class="ar-fab"
+                    title="Seleccionar elemento BIM">
+                <i class="bi bi-crosshair"></i>
+            </button>
+
+            <!-- 🆕 BOTÓN VER INFO (abre el último seleccionado) -->
+            <button type="button" class="ar-fab" data-panel="bim-info" title="Info elemento">
+                <i class="bi bi-info-circle"></i>
             </button>
 
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">

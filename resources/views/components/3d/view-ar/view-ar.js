@@ -1,4 +1,16 @@
-// ======================================================
+// =====================================================
+// VISOR IFC EN REALIDAD AUMENTADA (WebXR + ThatOpen)
+//
+// Incluye:
+//  - Hit-test y colocación del modelo
+//  - Control de opacidad
+//  - Filtros por categorías y por propiedades
+//  - Ajuste fino de posición (D-pad)
+//  - 🆕 Selección BIM por raycasting + panel de propiedades
+// =====================================================
+
+
+// =====================================================
 // CONTENEDOR
 // =====================================================
 
@@ -27,7 +39,7 @@ const opacityText =
 
 
 // =====================================================
-// VARIABLES
+// VARIABLES PRINCIPALES
 // =====================================================
 
 let components;
@@ -60,130 +72,80 @@ let surfaceFoundNotified = false;
 
 
 // =====================================================
-// BIM SELECT (RAYCASTING)
+// 🆕 SELECCIÓN BIM (RAYCASTING)
+// =====================================================
+//
+// NO usamos OBF.Highlighter ni OBC.Raycasters porque
+// ambos exigen un `world.renderer` completo de ThatOpen,
+// y en AR usamos nuestro propio THREE.WebGLRenderer con
+// renderer.xr.enabled = true.
+//
+// En su lugar usamos las APIs nativas del FragmentsModel:
+//
+//   model.raycast({ camera, mouse, dom })
+//   model.highlight(localIds, materialDefinition)
+//   model.resetHighlight(localIds)
+//
+// Esto es más ligero, no depende del World y funciona
+// perfectamente dentro de una sesión XR.
 // =====================================================
 
 let bimSelectMode = false;
-let selectedBimElement = null;
-let highlighter = null;
 
-// Meshes generados para raycasting preciso
-let raycastMeshes = [];
+// { modelId, localId }
+let selectedBimElement = null;
+
+// Último dato leído, para poder reabrir el panel
+let lastBimInfoData = null;
+
+let bimRaycastBusy = false;
+
+// Material de resaltado del elemento seleccionado
+const BIM_HIGHLIGHT_MATERIAL = {
+    color: new THREE.Color('#f59e0b'),
+    opacity: 1,
+    transparent: false,
+    renderedFaces: 0,
+};
 
 
 // =====================================================
 // GUARDA GLOBAL ANTI-PROPAGACIÓN HACIA XR
 // =====================================================
+//
+// El evento 'select' de una sesión immersive-ar en Chrome
+// Android NO se genera mediante el flujo normal de eventos
+// DOM. Chrome lo sintetiza internamente a partir del toque
+// crudo sobre la capa de dom-overlay, de forma independiente
+// a que el botón pulsado haya hecho stopPropagation().
+//
+// Por eso la única forma confiable de evitar que un tap
+// sobre la UI dispare una acción 3D es con una bandera de
+// estado consultada DIRECTAMENTE dentro de onARSelect().
+// =====================================================
 
 let uiPointerActive = false;
 let uiPointerReleaseTimer = null;
 
-// =====================================================
-// WRAPPER DEL RENDERER XR PARA THAT OPEN
-// =====================================================
-//
-// OBC.Raycasters / OBF.Highlighter necesitan que
-// world.renderer exista y tenga:
-//   - .three → el WebGLRenderer
-//   - .onResize / .onBeforeUpdate / .onAfterUpdate (eventos)
-//   - métodos mínimos (update, dispose, getSize, resize)
-//
-// Como en AR usamos un WebGLRenderer propio con xr.enabled,
-// creamos este wrapper para "presentarlo" como un renderer
-// válido para That Open sin perder el control del loop XR.
-// =====================================================
-
-function createARRendererWrapper(threeRenderer, container) {
-
-    return {
-
-        three: threeRenderer,
-
-        enabled: true,
-
-        isDisposeable: () => true,
-        isUpdateable: () => true,
-        isResizeable: () => true,
-
-        onResize: new OBC.Event(),
-        onBeforeUpdate: new OBC.Event(),
-        onAfterUpdate: new OBC.Event(),
-        onDisposed: new OBC.Event(),
-
-        update: () => {},
-
-        dispose: () => {},
-
-        getSize: () => {
-
-            return new THREE.Vector2(
-                container.clientWidth,
-                container.clientHeight
-            );
-        },
-
-        resize: (size) => {
-
-            if (!size) {
-
-                threeRenderer.setSize(
-                    container.clientWidth,
-                    container.clientHeight
-                );
-
-                return;
-            }
-
-            threeRenderer.setSize(
-                size.x,
-                size.y
-            );
-        },
-
-        setSize: (width, height) => {
-
-            threeRenderer.setSize(
-                width,
-                height
-            );
-        },
-    };
-}
-
-
-
-
 function markUIPointerActive() {
 
-    uiPointerActive =
-        true;
+    uiPointerActive = true;
 
     if (uiPointerReleaseTimer) {
-
-        clearTimeout(
-            uiPointerReleaseTimer
-        );
-
-        uiPointerReleaseTimer =
-            null;
+        clearTimeout(uiPointerReleaseTimer);
+        uiPointerReleaseTimer = null;
     }
 }
 
 function markUIPointerInactiveSoon() {
 
     if (uiPointerReleaseTimer) {
-
-        clearTimeout(
-            uiPointerReleaseTimer
-        );
+        clearTimeout(uiPointerReleaseTimer);
     }
 
     uiPointerReleaseTimer =
         setTimeout(() => {
-
-            uiPointerActive =
-                false;
-
+            uiPointerActive = false;
         }, 400);
 }
 
@@ -226,6 +188,7 @@ function setupGlobalUIGuard() {
 let positionStep = 0.03;
 let lastPlacedPosition = null;
 
+
 // =====================================================
 // PROPERTY SETS / FILTROS
 // =====================================================
@@ -254,13 +217,10 @@ function showToast(message, type = 'info', duration = 4000) {
         return;
     }
 
-    const id =
-        `ar-toast-${++toastCounter}`;
-
     const toast =
         document.createElement('div');
 
-    toast.id = id;
+    toast.id = `ar-toast-${++toastCounter}`;
     toast.className = `ar-toast ar-toast-${type}`;
     toast.textContent = message;
 
@@ -328,44 +288,63 @@ function closeAllPanels() {
 }
 
 
+function openPanel(panelKey) {
+
+    closeAllPanels();
+
+    const panel =
+        document.getElementById(
+            `ar-panel-${panelKey}`
+        );
+
+    if (panel) {
+        panel.classList.add('ar-panel-open');
+    }
+
+    const btn =
+        document.querySelector(
+            `.ar-fab[data-panel="${panelKey}"]`
+        );
+
+    if (btn) {
+        btn.classList.add('active');
+    }
+}
+
+
 function setupARPanels() {
 
-    const fabButtons =
-        document.querySelectorAll('.ar-fab[data-panel]');
+    document
+        .querySelectorAll('.ar-fab[data-panel]')
+        .forEach(btn => {
 
-    fabButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
 
-        btn.addEventListener('click', (e) => {
+                e.stopPropagation();
 
-            e.stopPropagation();
+                const key = btn.dataset.panel;
 
-            const targetId =
-                `ar-panel-${btn.dataset.panel}`;
+                const targetPanel =
+                    document.getElementById(
+                        `ar-panel-${key}`
+                    );
 
-            const targetPanel =
-                document.getElementById(targetId);
+                if (!targetPanel) {
+                    return;
+                }
 
-            if (!targetPanel) {
-                return;
-            }
+                const isOpen =
+                    targetPanel.classList.contains(
+                        'ar-panel-open'
+                    );
 
-            const isOpen =
-                targetPanel.classList.contains(
-                    'ar-panel-open'
-                );
+                closeAllPanels();
 
-            closeAllPanels();
-
-            if (!isOpen) {
-
-                targetPanel.classList.add(
-                    'ar-panel-open'
-                );
-
-                btn.classList.add('active');
-            }
+                if (!isOpen) {
+                    openPanel(key);
+                }
+            });
         });
-    });
 
     document
         .querySelectorAll('.ar-panel-close')
@@ -388,8 +367,7 @@ function updateFabBadges() {
 
     if (propsBadge) {
 
-        const count =
-            activePropertyFilters.length;
+        const count = activePropertyFilters.length;
 
         propsBadge.textContent = count;
 
@@ -407,7 +385,6 @@ function updateFabBadges() {
         let hiddenCount = 0;
 
         categoryVisibility.forEach(visible => {
-
             if (!visible) {
                 hiddenCount++;
             }
@@ -427,20 +404,15 @@ function updateFabBadges() {
 
 function disableHitTest() {
 
-    hitTestEnabled =
-        false;
+    hitTestEnabled = false;
 
     if (
         hitTestSource &&
         typeof hitTestSource.cancel === 'function'
     ) {
-
         try {
-
             hitTestSource.cancel();
-
         } catch (error) {
-
             console.warn(
                 '⚠️ No se pudo cancelar hitTestSource:',
                 error
@@ -448,17 +420,13 @@ function disableHitTest() {
         }
     }
 
-    hitTestSource =
-        null;
+    hitTestSource = null;
 
     if (arReticle) {
-
-        arReticle.visible =
-            false;
+        arReticle.visible = false;
     }
 
-    modelPlaced =
-        true;
+    modelPlaced = true;
 
     updatePositionStatusUI();
 
@@ -470,20 +438,17 @@ function disableHitTest() {
 
 function enableHitTest() {
 
-    hitTestEnabled =
-        true;
+    // Si estaba en modo selección BIM, lo apagamos:
+    // no tiene sentido reubicar y seleccionar a la vez.
+    if (bimSelectMode) {
+        setBimSelectMode(false);
+    }
 
-    hitTestSource =
-        null;
-
-    hitTestSourceRequested =
-        false;
-
-    surfaceFoundNotified =
-        false;
-
-    modelPlaced =
-        false;
+    hitTestEnabled = true;
+    hitTestSource = null;
+    hitTestSourceRequested = false;
+    surfaceFoundNotified = false;
+    modelPlaced = false;
 
     updatePositionStatusUI();
 
@@ -515,18 +480,14 @@ function updatePositionStatusUI() {
         statusEl.textContent =
             '🔒 Posición bloqueada (hit-test desactivado)';
 
-        statusEl.classList.remove(
-            'searching'
-        );
+        statusEl.classList.remove('searching');
 
     } else {
 
         statusEl.textContent =
             '🔍 Buscando superficie...';
 
-        statusEl.classList.add(
-            'searching'
-        );
+        statusEl.classList.add('searching');
     }
 }
 
@@ -537,14 +498,9 @@ function updatePositionStatusUI() {
 
 function getCameraRelativeRight() {
 
-    const right =
-        new THREE.Vector3();
-
-    const up =
-        new THREE.Vector3();
-
-    const forward =
-        new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3();
+    const forward = new THREE.Vector3();
 
     camera.matrixWorld.extractBasis(
         right,
@@ -555,11 +511,8 @@ function getCameraRelativeRight() {
     right.y = 0;
 
     if (right.lengthSq() < 0.0001) {
-
         right.set(1, 0, 0);
-
     } else {
-
         right.normalize();
     }
 
@@ -573,10 +526,7 @@ function nudgeModel(direction) {
         return;
     }
 
-    if (
-        !arModel ||
-        !arModel.visible
-    ) {
+    if (!arModel || !arModel.visible) {
 
         showToast(
             '⚠️ Coloca primero el modelo para poder ajustarlo',
@@ -589,42 +539,28 @@ function nudgeModel(direction) {
     switch (direction) {
 
         case 'up':
-
-            arModel.position.y +=
-                positionStep;
-
+            arModel.position.y += positionStep;
             break;
 
         case 'down':
-
-            arModel.position.y -=
-                positionStep;
-
+            arModel.position.y -= positionStep;
             break;
 
         case 'left': {
-
-            const right =
-                getCameraRelativeRight();
-
+            const right = getCameraRelativeRight();
             arModel.position.addScaledVector(
                 right,
                 -positionStep
             );
-
             break;
         }
 
         case 'right': {
-
-            const right =
-                getCameraRelativeRight();
-
+            const right = getCameraRelativeRight();
             arModel.position.addScaledVector(
                 right,
                 positionStep
             );
-
             break;
         }
 
@@ -632,21 +568,19 @@ function nudgeModel(direction) {
             return;
     }
 
-    if (fragments) {
+    // Mantener la matriz mundial sincronizada:
+    // el raycast de fragments depende de ella.
+    arModel.updateMatrixWorld(true);
 
-        fragments.core.update(
-            true
-        );
+    if (fragments) {
+        fragments.core.update(true);
     }
 }
 
 
 function resetModelPosition() {
 
-    if (
-        !arModel ||
-        !lastPlacedPosition
-    ) {
+    if (!arModel || !lastPlacedPosition) {
 
         showToast(
             '⚠️ No hay una posición de anclaje guardada',
@@ -656,15 +590,12 @@ function resetModelPosition() {
         return;
     }
 
-    arModel.position.copy(
-        lastPlacedPosition
-    );
+    arModel.position.copy(lastPlacedPosition);
+
+    arModel.updateMatrixWorld(true);
 
     if (fragments) {
-
-        fragments.core.update(
-            true
-        );
+        fragments.core.update(true);
     }
 
     showToast(
@@ -706,11 +637,7 @@ function setupPositionCorrection() {
                 holdTimeout = setTimeout(() => {
 
                     holdInterval = setInterval(() => {
-
-                        nudgeModel(
-                            btn.dataset.direction
-                        );
-
+                        nudgeModel(btn.dataset.direction);
                     }, 140);
 
                 }, 350);
@@ -729,85 +656,61 @@ function setupPositionCorrection() {
                 }
             };
 
-            btn.addEventListener(
-                'pointerdown',
-                (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    startMoving();
-                }
-            );
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                startMoving();
+            });
 
-            btn.addEventListener(
-                'pointerup',
-                (e) => {
-                    e.stopPropagation();
-                    stopMoving();
-                }
-            );
+            btn.addEventListener('pointerup', (e) => {
+                e.stopPropagation();
+                stopMoving();
+            });
 
-            btn.addEventListener(
-                'pointerleave',
-                stopMoving
-            );
+            btn.addEventListener('pointerleave', stopMoving);
+            btn.addEventListener('pointercancel', stopMoving);
 
-            btn.addEventListener(
-                'pointercancel',
-                stopMoving
-            );
-
-            btn.addEventListener(
-                'contextmenu',
-                (e) => e.preventDefault()
-            );
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
         });
 
 
     const resetPositionBtn =
-        document.getElementById(
-            'ar-reset-position'
-        );
+        document.getElementById('ar-reset-position');
 
     if (resetPositionBtn) {
 
-        resetPositionBtn.addEventListener(
-            'click',
-            (e) => {
-                e.stopPropagation();
-                resetModelPosition();
-            }
-        );
+        resetPositionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetModelPosition();
+        });
     }
 
 
     const relocateBtn =
-        document.getElementById(
-            'ar-relocate-model'
-        );
+        document.getElementById('ar-relocate-model');
 
     if (relocateBtn) {
 
-        relocateBtn.addEventListener(
-            'click',
-            (e) => {
+        relocateBtn.addEventListener('click', (e) => {
 
-                e.stopPropagation();
+            e.stopPropagation();
 
-                if (!arModel || !modelLoaded) {
+            if (!arModel || !modelLoaded) {
 
-                    showToast(
-                        '⚠️ Todavía no hay un modelo cargado',
-                        'error'
-                    );
+                showToast(
+                    '⚠️ Todavía no hay un modelo cargado',
+                    'error'
+                );
 
-                    return;
-                }
-
-                closeAllPanels();
-
-                enableHitTest();
+                return;
             }
-        );
+
+            closeAllPanels();
+
+            enableHitTest();
+        });
     }
 
 
@@ -815,356 +718,268 @@ function setupPositionCorrection() {
         .querySelectorAll('.ar-step-btn')
         .forEach(btn => {
 
-            btn.addEventListener(
-                'click',
-                (e) => {
-                    e.stopPropagation();
-                    setPositionStep(
-                        Number(btn.dataset.step)
-                    );
-                }
-            );
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setPositionStep(Number(btn.dataset.step));
+            });
         });
 }
 
 
 // =====================================================
-// RAYCASTING SOBRE EL MODELO FRAGMENTS
+// 🆕 MODO SELECCIÓN BIM
 // =====================================================
 
-async function buildRaycastMeshes() {
+function setBimSelectMode(enabled) {
 
-    raycastMeshes = [];
-
-    for (const [, model] of fragments.list) {
-
-        const idsWithGeometry =
-            await model.getItemsIdsWithGeometry();
-
-        const allMeshesData =
-            await model.getItemsGeometry(
-                idsWithGeometry
-            );
-
-        const geometries = new Map();
-
-        for (const itemId in allMeshesData) {
-
-            const meshData =
-                allMeshesData[itemId];
-
-            for (const geomData of meshData) {
-
-                if (
-                    !geomData.positions ||
-                    !geomData.indices ||
-                    !geomData.transform ||
-                    !geomData.representationId
-                ) {
-                    continue;
-                }
-
-                const representationId =
-                    geomData.representationId;
-
-                if (!geometries.has(representationId)) {
-
-                    const geometry =
-                        new THREE.BufferGeometry();
-
-                    geometry.setAttribute(
-                        'position',
-                        new THREE.Float32BufferAttribute(
-                            geomData.positions,
-                            3
-                        )
-                    );
-
-                    geometry.setIndex(
-                        Array.from(geomData.indices)
-                    );
-
-                    geometries.set(
-                        representationId,
-                        geometry
-                    );
-                }
-
-                const geometry =
-                    geometries.get(representationId);
-
-                const mesh =
-                    new THREE.Mesh(geometry);
-
-                mesh.applyMatrix4(
-                    geomData.transform
-                );
-
-                mesh.applyMatrix4(
-                    model.object.matrixWorld
-                );
-
-                mesh.updateWorldMatrix(
-                    true,
-                    true
-                );
-
-                raycastMeshes.push(mesh);
-            }
-        }
-    }
-
-    console.log(
-        '🔧 Meshes de raycast generados:',
-        raycastMeshes.length
-    );
-}
-
-
-async function raycastFragments(screenX, screenY) {
-
-    const results = [];
-
-    for (const [, model] of fragments.list) {
-
-        const mouse = new THREE.Vector2(
-            screenX,
-            screenY
-        );
-
-        const result =
-            await model.raycast({
-                camera: camera,
-                mouse: mouse,
-                dom: renderer.domElement,
-            });
-
-        if (result) {
-
-            result.fragmentsModel = model;
-            results.push(result);
-        }
-    }
-
-    if (results.length === 0) {
-        return null;
-    }
-
-    let closestResult = results[0];
-
-    for (let i = 1; i < results.length; i++) {
-
-        if (
-            results[i].distance <
-            closestResult.distance
-        ) {
-            closestResult = results[i];
-        }
-    }
-
-    return closestResult;
-}
-
-
-// =====================================================
-// SELECCIÓN BIM
-// =====================================================
-
-function toggleBimSelectMode() {
-
-    bimSelectMode = !bimSelectMode;
+    bimSelectMode = enabled;
 
     const btn =
-        document.getElementById(
-            'ar-btn-bim-select'
-        );
+        document.getElementById('ar-btn-bim-select');
 
     const indicator =
-        document.getElementById(
-            'ar-bim-select-indicator'
-        );
+        document.getElementById('ar-bim-select-indicator');
 
     const crosshair =
-        document.getElementById(
-            'ar-crosshair'
-        );
+        document.getElementById('ar-crosshair');
 
     if (btn) {
-
-        btn.classList.toggle(
-            'active',
-            bimSelectMode
-        );
+        btn.classList.toggle('active', enabled);
     }
 
     if (indicator) {
-
-        indicator.classList.toggle(
-            'visible',
-            bimSelectMode
-        );
+        indicator.classList.toggle('visible', enabled);
     }
 
     if (crosshair) {
-
-        crosshair.classList.toggle(
-            'visible',
-            bimSelectMode
-        );
-    }
-
-    if (bimSelectMode) {
-
-        showToast(
-            '🎯 Modo selección BIM activado. Toca un elemento del modelo.',
-            'info',
-            4000
-        );
-
-    } else {
-
-        // Al desactivar, limpiar selección
-        clearBimSelection();
-
-        showToast(
-            '🔓 Modo selección BIM desactivado',
-            'info',
-            2000
-        );
+        crosshair.classList.toggle('visible', enabled);
     }
 }
 
 
-async function clearBimSelection() {
+function toggleBimSelectMode() {
 
-    if (highlighter) {
-
-        try {
-            await highlighter.clear('select');
-        } catch (e) {
-            console.warn(
-                '⚠️ Error limpiando highlighter:',
-                e
-            );
-        }
-    }
-
-    selectedBimElement = null;
-
-    // Cerrar panel de info si está abierto
-    const infoPanel =
-        document.getElementById(
-            'ar-panel-bim-info'
-        );
-
-    if (infoPanel) {
-
-        infoPanel.classList.remove(
-            'ar-panel-open'
-        );
-    }
-}
-
-
-async function selectBimElementAR(model, localId) {
-
-    const data =
-        await getElementInfo(
-            model,
-            localId
-        );
-
-    if (!data) {
+    if (!modelLoaded || !arModel || !arModel.visible) {
 
         showToast(
-            '⚠️ No se pudo obtener información del elemento',
+            '⚠️ Primero coloca el modelo sobre una superficie',
             'error'
         );
 
         return;
     }
 
-    // Limpiar selección anterior
-    if (highlighter) {
+    if (bimSelectMode) {
 
-        try {
-            await highlighter.clear('select');
-        } catch (e) {
-            console.warn(
-                '⚠️ Error limpiando highlighter:',
-                e
-            );
-        }
+        setBimSelectMode(false);
+
+        showToast(
+            '🔓 Modo selección desactivado',
+            'info',
+            2000
+        );
+
+        return;
     }
 
-    // Highlight del elemento
-    const modelIdMap = {};
-
-    modelIdMap[model.modelId] = new Set([
-        localId
-    ]);
-
-    if (highlighter) {
-
-        try {
-
-            await highlighter.highlightByID(
-                'select',
-                modelIdMap,
-                false
-            );
-
-        } catch (e) {
-
-            console.warn(
-                '⚠️ Error al hacer highlight:',
-                e
-            );
-        }
+    // Si el hit-test estaba activo (modo reubicar),
+    // lo bloqueamos para que el tap no mueva el modelo.
+    if (hitTestEnabled) {
+        disableHitTest();
     }
 
-    selectedBimElement = {
-        model,
-        localId
-    };
-
-    // Construir la información
-    const info = {
-        localId:
-            data._localId?.value,
-
-        guid:
-            data._guid?.value,
-
-        category:
-            data._category?.value,
-
-        name:
-            data.Name?.value,
-
-        objectType:
-            data.ObjectType?.value,
-
-        tag:
-            data.Tag?.value,
-    };
-
-    const propertySets =
-        extractPropertySets(data);
-
-    // Mostrar panel
-    buildBimInfoPanelAR({
-        info,
-        propertySets
-    });
+    setBimSelectMode(true);
 
     showToast(
-        `✅ Seleccionado: ${info.name || info.category || 'Elemento'}`,
-        'success',
-        3000
+        '🎯 Apunta con la mira a un elemento y toca la pantalla',
+        'info',
+        5000
     );
 }
 
+
+function setCrosshairBusy(busy) {
+
+    const crosshair =
+        document.getElementById('ar-crosshair');
+
+    if (crosshair) {
+        crosshair.classList.toggle('busy', busy);
+    }
+}
+
+
+// =====================================================
+// 🆕 RAYCAST SOBRE LOS MODELOS FRAGMENTS
+// =====================================================
+//
+// En una sesión XR no disponemos de coordenadas de toque
+// fiables (el evento 'select' no las entrega), por eso
+// lanzamos el rayo desde el CENTRO de la pantalla, que es
+// justamente donde dibujamos la mira (crosshair).
+//
+// three.js copia cada frame la pose y la matriz de
+// proyección de la cámara XR dentro de nuestra
+// PerspectiveCamera, así que `camera` es válida aquí.
+// =====================================================
+
+async function raycastFragmentsAtScreenCenter() {
+
+    const dom = renderer.domElement;
+
+    const rect = dom.getBoundingClientRect();
+
+    const mouse = new THREE.Vector2(
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2
+    );
+
+    const results = [];
+
+    for (const [, model] of fragments.list) {
+
+        let result = null;
+
+        try {
+
+            result = await model.raycast({
+                camera: camera,
+                mouse: mouse,
+                dom: dom,
+            });
+
+        } catch (error) {
+
+            console.warn(
+                '⚠️ Error en raycast del modelo',
+                model.modelId,
+                error
+            );
+
+            continue;
+        }
+
+        if (result) {
+            result.fragmentsModel = model;
+            results.push(result);
+        }
+    }
+
+    if (!results.length) {
+        return null;
+    }
+
+    let closest = results[0];
+
+    for (let i = 1; i < results.length; i++) {
+
+        if (results[i].distance < closest.distance) {
+            closest = results[i];
+        }
+    }
+
+    return closest;
+}
+
+
+// =====================================================
+// 🆕 RESALTADO DEL ELEMENTO SELECCIONADO
+// =====================================================
+
+async function clearBimHighlight() {
+
+    if (!selectedBimElement || !fragments) {
+        return;
+    }
+
+    const model =
+        fragments.list.get(
+            selectedBimElement.modelId
+        );
+
+    if (!model) {
+        return;
+    }
+
+    try {
+
+        await model.resetHighlight([
+            selectedBimElement.localId
+        ]);
+
+        await fragments.core.update(true);
+
+    } catch (error) {
+
+        console.warn(
+            '⚠️ No se pudo limpiar el resaltado:',
+            error
+        );
+    }
+}
+
+
+async function applyBimHighlight(model, localId) {
+
+    try {
+
+        await model.highlight(
+            [localId],
+            BIM_HIGHLIGHT_MATERIAL
+        );
+
+        await fragments.core.update(true);
+
+    } catch (error) {
+
+        console.warn(
+            '⚠️ No se pudo resaltar el elemento:',
+            error
+        );
+    }
+}
+
+
+async function clearBimSelection(closePanel = true) {
+
+    await clearBimHighlight();
+
+    selectedBimElement = null;
+    lastBimInfoData = null;
+
+    if (closePanel) {
+
+        const panel =
+            document.getElementById('ar-panel-bim-info');
+
+        if (panel) {
+            panel.classList.remove('ar-panel-open');
+        }
+    }
+
+    resetBimInfoPanel();
+}
+
+
+function resetBimInfoPanel() {
+
+    const body =
+        document.getElementById('ar-bim-info-body');
+
+    if (body) {
+
+        body.innerHTML = `
+<div class="small text-white-50 text-center py-3">
+    Selecciona un elemento para ver sus propiedades
+</div>
+`;
+    }
+}
+
+
+// =====================================================
+// 🆕 OBTENER DATOS IFC DEL ELEMENTO
+// =====================================================
 
 async function getElementInfo(model, localId) {
 
@@ -1196,15 +1011,63 @@ async function getElementInfo(model, localId) {
 
 
 // =====================================================
-// CONSTRUIR PANEL DE INFORMACIÓN BIM (AR)
+// 🆕 SELECCIONAR ELEMENTO BIM
 // =====================================================
 
-function buildBimInfoPanelAR({ info, propertySets }) {
+async function selectBimElement(model, localId) {
+
+    const data =
+        await getElementInfo(model, localId);
+
+    if (!data) {
+
+        showToast(
+            '⚠️ No se pudo obtener información del elemento',
+            'error'
+        );
+
+        return;
+    }
+
+    // Quitar resaltado anterior
+    await clearBimHighlight();
+
+    // Aplicar nuevo resaltado
+    await applyBimHighlight(model, localId);
+
+    selectedBimElement = {
+        modelId: model.modelId,
+        localId: localId,
+    };
+
+    const info = {
+        localId:    data._localId?.value,
+        guid:       data._guid?.value,
+        category:   data._category?.value,
+        name:       data.Name?.value,
+        objectType: data.ObjectType?.value,
+        tag:        data.Tag?.value,
+    };
+
+    const propertySets =
+        extractPropertySets(data);
+
+    lastBimInfoData = { info, propertySets };
+
+    buildBimInfoUI(lastBimInfoData);
+
+    openPanel('bim-info');
+}
+
+
+// =====================================================
+// 🆕 CONSTRUIR UI DEL PANEL DE INFORMACIÓN BIM
+// =====================================================
+
+function buildBimInfoUI({ info, propertySets }) {
 
     const body =
-        document.getElementById(
-            'ar-bim-info-body'
-        );
+        document.getElementById('ar-bim-info-body');
 
     if (!body) {
         return;
@@ -1213,37 +1076,40 @@ function buildBimInfoPanelAR({ info, propertySets }) {
     body.innerHTML = '';
 
 
-    // =========================
+    // -----------------------------
     // TÍTULO
-    // =========================
+    // -----------------------------
 
     const title =
         document.createElement('div');
 
-    title.className =
-        'ar-bim-info-title';
+    title.className = 'ar-bim-info-title';
 
     title.textContent =
-        info.name || info.category || 'Elemento BIM';
+        info.name ||
+        info.category ||
+        'Elemento BIM';
 
     body.appendChild(title);
 
 
-    // =========================
+    // -----------------------------
     // INFORMACIÓN BÁSICA
-    // =========================
+    // -----------------------------
 
     const basic =
         document.createElement('div');
 
     const basicFields = [
         ['Categoría', info.category],
-        ['Nombre', info.name],
-        ['Tipo', info.objectType],
-        ['GUID', info.guid],
-        ['Tag', info.tag],
-        ['ID', info.localId],
+        ['Nombre',    info.name],
+        ['Tipo',      info.objectType],
+        ['GUID',      info.guid],
+        ['Tag',       info.tag],
+        ['ID',        info.localId],
     ];
+
+    let basicHtml = '';
 
     for (const [label, value] of basicFields) {
 
@@ -1255,164 +1121,164 @@ function buildBimInfoPanelAR({ info, propertySets }) {
             continue;
         }
 
-        basic.innerHTML += `
+        basicHtml += `
 <div class="ar-bim-info-row">
-    <div class="ar-bim-info-label">
-        ${escapeHtml(label)}
-    </div>
-    <div class="ar-bim-info-value">
-        ${escapeHtml(String(value))}
-    </div>
+    <div class="ar-bim-info-label">${escapeHtml(label)}</div>
+    <div class="ar-bim-info-value">${escapeHtml(String(value))}</div>
 </div>
 `;
     }
+
+    basic.innerHTML = basicHtml;
 
     body.appendChild(basic);
 
 
-    // =========================
+    // -----------------------------
     // PROPERTY SETS
-    // =========================
+    // -----------------------------
 
-    for (const [setName, properties] of propertySets) {
+    if (!propertySets.size) {
 
-        const section =
+        const empty =
             document.createElement('div');
 
-        section.className =
-            'ar-bim-info-section';
+        empty.className =
+            'small text-white-50 mt-3 text-center';
 
-        const header =
-            document.createElement('div');
+        empty.textContent =
+            'Este elemento no tiene Property Sets';
 
-        header.className =
-            'ar-bim-info-section-header';
+        body.appendChild(empty);
 
-        header.innerHTML = `
-<span>${escapeHtml(setName)}</span>
-<i class="bi bi-chevron-down"></i>
+    } else {
+
+        for (const [setName, properties] of propertySets) {
+
+            const section =
+                document.createElement('div');
+
+            section.className = 'ar-bim-info-section';
+
+            const header =
+                document.createElement('div');
+
+            header.className =
+                'ar-bim-info-section-header';
+
+            header.innerHTML = `
+<span class="text-truncate">${escapeHtml(setName)}</span>
+<i class="bi bi-chevron-right"></i>
 `;
 
-        const sectionBody =
-            document.createElement('div');
+            const sectionBody =
+                document.createElement('div');
 
-        sectionBody.className =
-            'ar-bim-info-section-body';
+            sectionBody.className =
+                'ar-bim-info-section-body d-none';
 
-        for (const property of properties) {
+            let rowsHtml = '';
 
-            sectionBody.innerHTML += `
+            for (const property of properties) {
+
+                rowsHtml += `
 <div class="ar-bim-info-row">
-    <div class="ar-bim-info-label">
-        ${escapeHtml(property.name)}
-    </div>
-    <div class="ar-bim-info-value">
-        ${escapeHtml(
-            property.value !== null
-                ? String(property.value)
-                : '-'
-        )}
-    </div>
+    <div class="ar-bim-info-label">${escapeHtml(property.name)}</div>
+    <div class="ar-bim-info-value">${escapeHtml(
+        property.value !== null && property.value !== undefined
+            ? String(property.value)
+            : '-'
+    )}</div>
 </div>
 `;
+            }
+
+            sectionBody.innerHTML = rowsHtml;
+
+            header.addEventListener('click', (e) => {
+
+                e.stopPropagation();
+
+                const hidden =
+                    sectionBody.classList.toggle('d-none');
+
+                const icon = header.querySelector('i');
+
+                icon.className = hidden
+                    ? 'bi bi-chevron-right'
+                    : 'bi bi-chevron-down';
+            });
+
+            section.appendChild(header);
+            section.appendChild(sectionBody);
+
+            body.appendChild(section);
         }
-
-        header.addEventListener('click', (e) => {
-
-            e.stopPropagation();
-
-            const hidden =
-                sectionBody.classList.toggle('d-none');
-
-            const icon =
-                header.querySelector('i');
-
-            icon.className = hidden
-                ? 'bi bi-chevron-right'
-                : 'bi bi-chevron-down';
-        });
-
-        section.appendChild(header);
-        section.appendChild(sectionBody);
-
-        body.appendChild(section);
     }
 
 
-    // =========================
-    // ABRIR PANEL
-    // =========================
+    // -----------------------------
+    // BOTÓN DESELECCIONAR
+    // -----------------------------
 
-    closeAllPanels();
+    const deselect =
+        document.createElement('button');
 
-    const panel =
-        document.getElementById(
-            'ar-panel-bim-info'
+    deselect.type = 'button';
+    deselect.className = 'ar-bim-deselect-btn';
+
+    deselect.innerHTML =
+        '<i class="bi bi-x-circle me-2"></i>Quitar selección';
+
+    deselect.addEventListener('click', async (e) => {
+
+        e.stopPropagation();
+
+        await clearBimSelection(true);
+
+        showToast(
+            '✖️ Selección eliminada',
+            'info',
+            2000
         );
+    });
 
-    if (panel) {
+    body.appendChild(deselect);
 
-        panel.classList.add(
-            'ar-panel-open'
-        );
-    }
+    // Volver arriba al abrir
+    body.scrollTop = 0;
 }
 
 
 // =====================================================
-// CONFIGURAR BOTÓN BIM SELECT
+// 🆕 CONFIGURAR BOTONES DE SELECCIÓN BIM
 // =====================================================
 
 function setupBimSelect() {
 
-    const btnBimSelect =
-        document.getElementById(
-            'ar-btn-bim-select'
-        );
+    const btn =
+        document.getElementById('ar-btn-bim-select');
 
-    if (btnBimSelect) {
+    if (btn) {
 
-        btnBimSelect.addEventListener(
-            'click',
-            (e) => {
-
-                e.stopPropagation();
-
-                if (!modelLoaded) {
-
-                    showToast(
-                        '⚠️ Primero carga y coloca el modelo',
-                        'error'
-                    );
-
-                    return;
-                }
-
-                toggleBimSelectMode();
-            }
-        );
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleBimSelectMode();
+        });
     }
 
+    const closeInfo =
+        document.getElementById('ar-close-bim-info');
 
-    // Cerrar info BIM también limpia selección
-    const closeInfoBtn =
-        document.getElementById(
-            'ar-close-bim-info'
-        );
+    if (closeInfo) {
 
-    if (closeInfoBtn) {
-
-        closeInfoBtn.addEventListener(
-            'click',
-            async (e) => {
-
-                e.stopPropagation();
-
-                await clearBimSelection();
-
-                closeAllPanels();
-            }
-        );
+        closeInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Solo cerramos el panel; el resaltado se
+            // mantiene para que el usuario siga viendo
+            // qué eligió.
+            closeAllPanels();
+        });
     }
 }
 
@@ -1427,134 +1293,67 @@ async function initViewer() {
     // THAT OPEN
     // =================================================
 
-    components =
-        new OBC.Components();
+    components = new OBC.Components();
 
+    const worlds = components.get(OBC.Worlds);
 
-    const worlds =
-        components.get(
-            OBC.Worlds
-        );
+    world = worlds.create();
 
-
-    world =
-        worlds.create();
-
-
-    world.scene =
-        new OBC.SimpleScene(
-            components
-        );
-
+    world.scene = new OBC.SimpleScene(components);
 
     world.scene.setup();
 
+    world.scene.three.background = null;
 
-    world.scene.three.background =
-        null;
-
-
-    scene =
-        world.scene.three;
+    scene = world.scene.three;
 
 
     // =================================================
     // WEBGL RENDERER (XR)
+    //
+    // Importante: NO asignamos este renderer a
+    // world.renderer. Los setters de OBC.SimpleWorld
+    // esperan una instancia de OBC.SimpleRenderer y
+    // fallan con un renderer XR externo.
+    //
+    // No lo necesitamos: ni Hider, ni FragmentsManager,
+    // ni model.raycast/highlight dependen de world.renderer.
     // =================================================
 
-    renderer =
-        new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true
-        });
+    renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+    });
 
-
-    renderer.setPixelRatio(
-        window.devicePixelRatio
-    );
-
+    renderer.setPixelRatio(window.devicePixelRatio);
 
     renderer.setSize(
         container.clientWidth,
         container.clientHeight
     );
 
+    renderer.xr.enabled = true;
 
-    renderer.xr.enabled =
-        true;
-
-
-    container.appendChild(
-        renderer.domElement
-    );
+    container.appendChild(renderer.domElement);
 
 
     // =================================================
     // CAMERA
     // =================================================
 
-    camera =
-        new THREE.PerspectiveCamera(
-            70,
-
-            container.clientWidth /
-            container.clientHeight,
-
-            0.01,
-            1000
-        );
-
-
-    camera.position.set(
-        10,
-        10,
-        10
+    camera = new THREE.PerspectiveCamera(
+        70,
+        container.clientWidth / container.clientHeight,
+        0.01,
+        1000
     );
 
-
-    camera.lookAt(
-        0,
-        0,
-        0
-    );
+    camera.position.set(10, 10, 10);
+    camera.lookAt(0, 0, 0);
 
 
     // =================================================
-    // 🆕 WRAPPER DEL RENDERER PARA THAT OPEN
-    // =================================================
-    //
-    // IMPORTANTE: debe asignarse ANTES de components.init()
-    // y antes de pedir Raycasters/Highlighter.
-    // =================================================
-
-    world.renderer =
-        createARRendererWrapper(
-            renderer,
-            container
-        );
-
-
-    // =================================================
-    // 🆕 CAMERA PARA EL WORLD
-    // =================================================
-    //
-    // El Raycasters también lee world.camera.three
-    // =================================================
-
-    world.camera = {
-        three: camera,
-        enabled: true,
-        onAspectUpdated: new OBC.Event(),
-        onDisposed: new OBC.Event(),
-        isDisposeable: () => true,
-        isUpdateable: () => true,
-        update: () => {},
-        dispose: () => {},
-    };
-
-
-    // =================================================
-    // COMPONENTS INIT
+    // COMPONENTS
     // =================================================
 
     components.init();
@@ -1564,85 +1363,50 @@ async function initViewer() {
     // HIDER
     // =================================================
 
-    hider =
-        components.get(
-            OBC.Hider
-        );
+    hider = components.get(OBC.Hider);
 
 
     // =================================================
     // FRAGMENTS
     // =================================================
 
-    fragments =
-        components.get(
-            OBC.FragmentsManager
-        );
+    fragments = components.get(OBC.FragmentsManager);
 
-
-    fragments.init(
-        '/engine/worker.mjs'
-    );
+    fragments.init('/engine/worker.mjs');
 
 
     // =================================================
-    // RAYCASTERS (ahora sí puede acceder al renderer)
+    // MATERIALES: POLYGON OFFSET
+    //
+    // Evita z-fighting entre el elemento resaltado y la
+    // geometría original.
     // =================================================
 
     try {
 
-        components.get(OBC.Raycasters).get(world);
+        fragments.core.models.materials.list.onItemSet.add(
+            ({ value: material }) => {
 
-        console.log(
-            '✅ Raycasters configurados'
+                const isLod =
+                    'isLodMaterial' in material &&
+                    material.isLodMaterial;
+
+                if (!isLod) {
+                    material.polygonOffset = true;
+                    material.polygonOffsetUnits = 1;
+                    material.polygonOffsetFactor =
+                        Math.random();
+                }
+            }
         );
 
-    } catch (e) {
+    } catch (error) {
 
         console.warn(
-            '⚠️ No se pudo configurar Raycasters:',
-            e
+            '⚠️ No se pudo configurar polygonOffset:',
+            error
         );
     }
-
-
-    // =================================================
-    // HIGHLIGHTER
-    // =================================================
-
-    try {
-
-        highlighter =
-            components.get(
-                OBF.Highlighter
-            );
-
-        highlighter.setup({
-            world,
-
-            selectMaterialDefinition: {
-                color: new THREE.Color('#f59e0b'),
-                opacity: 1,
-                transparent: false,
-                renderedFaces: 0,
-            },
-        });
-
-        console.log(
-            '✅ Highlighter configurado'
-        );
-
-    } catch (e) {
-
-        console.warn(
-            '⚠️ No se pudo configurar el Highlighter:',
-            e
-        );
-
-        highlighter = null;
-    }
-
-
 
 
     // =================================================
@@ -1657,43 +1421,20 @@ async function initViewer() {
                 model.modelId
             );
 
+            model.useCamera(camera);
 
-            model.useCamera(
-                camera
-            );
+            scene.add(model.object);
 
+            arModel = model.object;
 
-            scene.add(
-                model.object
-            );
+            arModel.scale.set(1, 1, 1);
 
+            arModel.visible = false;
 
-            arModel =
-                model.object;
+            loadedModelId = model.modelId;
 
-
-            arModel.scale.set(
-                1,
-                1,
-                1
-            );
-
-
-            arModel.visible =
-                false;
-
-
-            loadedModelId =
-                model.modelId;
-
-
-            modelLoaded =
-                true;
-
-
-            modelLoading =
-                false;
-
+            modelLoaded = true;
+            modelLoading = false;
 
             console.log(
                 '✅ Modelo registrado en escena:',
@@ -1704,127 +1445,53 @@ async function initViewer() {
 
 
     // =================================================
-    // MATERIALS (POLYGON OFFSET)
-    // =================================================
-
-    fragments.core.models.materials.list.onItemSet.add(
-        ({ value: material }) => {
-
-            if (
-                !(
-                    'isLodMaterial' in material &&
-                    material.isLodMaterial
-                )
-            ) {
-
-                material.polygonOffset = true;
-                material.polygonOffsetUnits = 1;
-                material.polygonOffsetFactor =
-                    Math.random();
-            }
-        }
-    );
-
-
-    // =================================================
     // BOTÓN AR
     // =================================================
 
-    const arButton =
-        ARButton.createButton(
-            renderer,
-            {
-                requiredFeatures: [
-                    'hit-test'
-                ],
-
-                optionalFeatures: [
-                    'dom-overlay'
-                ],
-
-                domOverlay: {
-                    root: arUI
-                }
-            }
-        );
-
-
-    document.body.appendChild(
-        arButton
+    const arButton = ARButton.createButton(
+        renderer,
+        {
+            requiredFeatures: ['hit-test'],
+            optionalFeatures: ['dom-overlay'],
+            domOverlay: { root: arUI }
+        }
     );
+
+    document.body.appendChild(arButton);
 
 
     // =================================================
-    // CONFIGURAR SLIDER DE OPACIDAD
+    // SLIDER DE OPACIDAD
     // =================================================
 
     if (opacitySlider) {
 
-        opacitySlider.addEventListener(
-            'input',
-            (e) => {
+        opacitySlider.addEventListener('input', (e) => {
 
-                e.stopPropagation();
+            e.stopPropagation();
 
-                opacityValue =
-                    Number(
-                        opacitySlider.value
-                    ) / 100;
+            opacityValue =
+                Number(opacitySlider.value) / 100;
 
-
-                if (opacityText) {
-
-                    opacityText.textContent =
-                        `${opacitySlider.value}%`;
-                }
-
-
-                setModelOpacity(
-                    opacityValue
-                );
+            if (opacityText) {
+                opacityText.textContent =
+                    `${opacitySlider.value}%`;
             }
-        );
+
+            setModelOpacity(opacityValue);
+        });
     }
 
 
     // =================================================
-    // CONFIGURAR FILTROS DE PROPERTIES
+    // SETUP DE UI
     // =================================================
 
     setupPropertyFilters();
-
-
-    // =================================================
-    // CONFIGURAR PANELES FLOTANTES / FAB BAR
-    // =================================================
-
     setupARPanels();
-
-
-    // =================================================
-    // CONFIGURAR CORRECCIÓN DE POSICIÓN
-    // =================================================
-
     setupPositionCorrection();
-
-
-    // =================================================
-    // CONFIGURAR BIM SELECT
-    // =================================================
-
     setupBimSelect();
-
-
-    // =================================================
-    // GUARDA GLOBAL ANTI-PROPAGACIÓN
-    // =================================================
-
     setupGlobalUIGuard();
-
-
-    // =================================================
-    // MEDIR ALTURA DEL FAB BAR
-    // =================================================
 
     updateFabBarHeightVar();
 
@@ -1835,13 +1502,11 @@ async function initViewer() {
 
 
     // =================================================
-    // CONFIGURAR RESET DE FILTROS
+    // RESET DE FILTROS
     // =================================================
 
     const resetFiltersBtn =
-        document.getElementById(
-            'ar-reset-filters'
-        );
+        document.getElementById('ar-reset-filters');
 
     if (resetFiltersBtn) {
 
@@ -1867,325 +1532,145 @@ async function initViewer() {
     // =================================================
 
     const reticleGeometry =
-        new THREE.RingGeometry(
-            0.08,
-            0.1,
-            32
-        );
+        new THREE.RingGeometry(0.08, 0.1, 32);
 
-
-    reticleGeometry.rotateX(
-        -Math.PI / 2
-    );
-
+    reticleGeometry.rotateX(-Math.PI / 2);
 
     const reticleMaterial =
         new THREE.MeshBasicMaterial();
 
-
-    arReticle =
-        new THREE.Mesh(
-            reticleGeometry,
-            reticleMaterial
-        );
-
-
-    arReticle.matrixAutoUpdate =
-        false;
-
-
-    arReticle.visible =
-        false;
-
-
-    scene.add(
-        arReticle
+    arReticle = new THREE.Mesh(
+        reticleGeometry,
+        reticleMaterial
     );
+
+    arReticle.matrixAutoUpdate = false;
+    arReticle.visible = false;
+
+    scene.add(arReticle);
 
 
     // =================================================
-    // CONTROLLER
+    // CONTROLLER XR
     // =================================================
 
-    arController =
-        renderer.xr.getController(0);
+    arController = renderer.xr.getController(0);
 
+    arController.addEventListener('select', onARSelect);
 
-    arController.addEventListener(
-        'select',
-        onARSelect
-    );
-
-
-    scene.add(
-        arController
-    );
+    scene.add(arController);
 
 
     // =================================================
     // INICIO DE AR
     // =================================================
 
-    renderer.xr.addEventListener(
-        'sessionstart',
-        () => {
+    renderer.xr.addEventListener('sessionstart', () => {
 
-            console.log(
-                'AR iniciado'
-            );
+        console.log('AR iniciado');
 
+        isAR = true;
 
-            isAR =
-                true;
+        hitTestSource = null;
+        hitTestSourceRequested = false;
+        hitTestEnabled = true;
+        modelPlaced = false;
+        surfaceFoundNotified = false;
+        lastPlacedPosition = null;
+        uiPointerActive = false;
 
+        setBimSelectMode(false);
 
-            hitTestSource =
-                null;
+        closeAllPanels();
 
-
-            hitTestSourceRequested =
-                false;
-
-
-            hitTestEnabled =
-                true;
-
-            modelPlaced =
-                false;
-
-            updatePositionStatusUI();
-
-
-            surfaceFoundNotified =
-                false;
-
-
-            lastPlacedPosition =
-                null;
-
-
-            uiPointerActive =
-                false;
-
-
-            // Resetear modo BIM select al iniciar AR
-            bimSelectMode = false;
-            selectedBimElement = null;
-
-            const bimBtn =
-                document.getElementById(
-                    'ar-btn-bim-select'
-                );
-
-            if (bimBtn) {
-                bimBtn.classList.remove('active');
-            }
-
-            const indicator =
-                document.getElementById(
-                    'ar-bim-select-indicator'
-                );
-
-            if (indicator) {
-                indicator.classList.remove('visible');
-            }
-
-            const crosshair =
-                document.getElementById(
-                    'ar-crosshair'
-                );
-
-            if (crosshair) {
-                crosshair.classList.remove('visible');
-            }
-
-
-            closeAllPanels();
-
-
-            if (arModel) {
-
-                arModel.visible =
-                    false;
-            }
-
-
-            if (opacitySlider) {
-
-                opacitySlider.value =
-                    Math.round(
-                        opacityValue * 100
-                    );
-            }
-
-
-            if (opacityText) {
-
-                opacityText.textContent =
-                    `${Math.round(
-                        opacityValue * 100
-                    )}%`;
-            }
-
-
-            if (arUI) {
-
-                arUI.style.display =
-                    'block';
-            }
-
-
-            requestAnimationFrame(
-                updateFabBarHeightVar
-            );
-
-
-            showToast(
-                '🟢 Sesión AR iniciada. Buscando superficie...',
-                'info',
-                5000
-            );
+        if (arModel) {
+            arModel.visible = false;
         }
-    );
+
+        if (opacitySlider) {
+            opacitySlider.value =
+                Math.round(opacityValue * 100);
+        }
+
+        if (opacityText) {
+            opacityText.textContent =
+                `${Math.round(opacityValue * 100)}%`;
+        }
+
+        if (arUI) {
+            arUI.style.display = 'block';
+        }
+
+        updatePositionStatusUI();
+
+        requestAnimationFrame(updateFabBarHeightVar);
+
+        showToast(
+            '🟢 Sesión AR iniciada. Buscando superficie...',
+            'info',
+            5000
+        );
+    });
 
 
     // =================================================
     // FIN DE AR
     // =================================================
 
-    renderer.xr.addEventListener(
-        'sessionend',
-        async () => {
+    renderer.xr.addEventListener('sessionend', async () => {
 
-            console.log(
-                'AR finalizado'
-            );
+        console.log('AR finalizado');
 
+        isAR = false;
 
-            isAR =
-                false;
+        hitTestSource = null;
+        hitTestSourceRequested = false;
+        hitTestEnabled = true;
+        modelPlaced = false;
+        surfaceFoundNotified = false;
+        uiPointerActive = false;
 
+        setBimSelectMode(false);
 
-            hitTestSource =
-                null;
+        await clearBimSelection(true);
 
+        closeAllPanels();
 
-            hitTestSourceRequested =
-                false;
-
-
-            hitTestEnabled =
-                true;
-
-
-            modelPlaced =
-                false;
-
-
-            surfaceFoundNotified =
-                false;
-
-
-            uiPointerActive =
-                false;
-
-
-            // Resetear BIM select
-            bimSelectMode = false;
-
-            await clearBimSelection();
-
-            const bimBtn =
-                document.getElementById(
-                    'ar-btn-bim-select'
-                );
-
-            if (bimBtn) {
-                bimBtn.classList.remove('active');
-            }
-
-            const indicator =
-                document.getElementById(
-                    'ar-bim-select-indicator'
-                );
-
-            if (indicator) {
-                indicator.classList.remove('visible');
-            }
-
-            const crosshair =
-                document.getElementById(
-                    'ar-crosshair'
-                );
-
-            if (crosshair) {
-                crosshair.classList.remove('visible');
-            }
-
-
-            closeAllPanels();
-
-
-            if (arReticle) {
-
-                arReticle.visible =
-                    false;
-            }
-
-
-            if (arUI) {
-
-                arUI.style.display =
-                    'none';
-            }
-
-
-            if (arModel) {
-
-                arModel.visible =
-                    true;
-            }
+        if (arReticle) {
+            arReticle.visible = false;
         }
-    );
+
+        if (arUI) {
+            arUI.style.display = 'none';
+        }
+
+        if (arModel) {
+            arModel.visible = true;
+        }
+    });
 
 
     // =================================================
     // ANIMATION LOOP
     // =================================================
 
-    renderer.setAnimationLoop(
-        (timestamp, frame) => {
+    renderer.setAnimationLoop((timestamp, frame) => {
 
-            updateAR(
-                frame
-            );
+        updateAR(frame);
 
-
-            if (
-                isAR &&
-                arModel
-            ) {
-
-                fragments.core.update();
-            }
-
-
-            renderer.render(
-                scene,
-                camera
-            );
+        if (isAR && arModel) {
+            fragments.core.update();
         }
-    );
+
+        renderer.render(scene, camera);
+    });
 
 
     // =================================================
     // RESIZE
     // =================================================
 
-    window.addEventListener(
-        'resize',
-        onResize
-    );
+    window.addEventListener('resize', onResize);
 
 
     // =================================================
@@ -2193,9 +1678,7 @@ async function initViewer() {
     // =================================================
 
     if (arUI) {
-
-        arUI.style.display =
-            'none';
+        arUI.style.display = 'none';
     }
 }
 
@@ -2206,55 +1689,44 @@ async function initViewer() {
 
 async function buildModelProperties(model) {
 
-    const items =
-        await model.getItems();
+    const items = await model.getItems();
 
-    const ids =
-        Array.from(items.keys());
+    const ids = Array.from(items.keys());
 
-    const data =
-        await model.getItemsData(
-            ids,
-            {
-                attributesDefault: true,
+    const data = await model.getItemsData(
+        ids,
+        {
+            attributesDefault: true,
 
-                relations: {
-                    IsDefinedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
-
-                    IsTypedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
+            relations: {
+                IsDefinedBy: {
+                    attributes: true,
+                    relations: true,
                 },
-            }
-        );
+
+                IsTypedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+            },
+        }
+    );
 
     const properties = new Map();
 
     for (const item of data) {
 
-        const id =
-            item._localId?.value;
+        const id = item._localId?.value;
 
         if (id === undefined) {
             continue;
         }
 
-        const propertySets =
-            extractPropertySets(item);
+        const propertySets = extractPropertySets(item);
 
-        for (
-            const [, propertyList]
-            of propertySets
-        ) {
+        for (const [, propertyList] of propertySets) {
 
-            for (
-                const property
-                of propertyList
-            ) {
+            for (const property of propertyList) {
 
                 if (
                     property.value === null ||
@@ -2264,34 +1736,20 @@ async function buildModelProperties(model) {
                     continue;
                 }
 
-                const key =
-                    property.name;
-
-                const value =
-                    String(property.value);
+                const key = property.name;
+                const value = String(property.value);
 
                 if (!properties.has(key)) {
-
-                    properties.set(
-                        key,
-                        new Map()
-                    );
+                    properties.set(key, new Map());
                 }
 
-                const values =
-                    properties.get(key);
+                const values = properties.get(key);
 
                 if (!values.has(value)) {
-
-                    values.set(
-                        value,
-                        []
-                    );
+                    values.set(value, []);
                 }
 
-                values
-                    .get(value)
-                    .push(id);
+                values.get(value).push(id);
             }
         }
     }
@@ -2306,60 +1764,45 @@ async function buildModelProperties(model) {
 
 async function buildModelCategories(model) {
 
-    const items =
-        await model.getItems();
+    const items = await model.getItems();
 
-    const ids =
-        Array.from(items.keys());
+    const ids = Array.from(items.keys());
 
-    const data =
-        await model.getItemsData(
-            ids,
-            {
-                attributesDefault: true,
+    const data = await model.getItemsData(
+        ids,
+        {
+            attributesDefault: true,
 
-                relations: {
-                    IsDefinedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
-
-                    IsTypedBy: {
-                        attributes: true,
-                        relations: true,
-                    },
+            relations: {
+                IsDefinedBy: {
+                    attributes: true,
+                    relations: true,
                 },
-            }
-        );
+
+                IsTypedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+            },
+        }
+    );
 
     const categories = new Map();
 
     for (const item of data) {
 
-        const id =
-            item._localId?.value;
+        const id = item._localId?.value;
+        const category = item._category?.value;
 
-        const category =
-            item._category?.value;
-
-        if (
-            id === undefined ||
-            !category
-        ) {
+        if (id === undefined || !category) {
             continue;
         }
 
         if (!categories.has(category)) {
-
-            categories.set(
-                category,
-                []
-            );
+            categories.set(category, []);
         }
 
-        categories
-            .get(category)
-            .push(id);
+        categories.get(category).push(id);
     }
 
     return categories;
@@ -2377,10 +1820,7 @@ function extractPropertySets(data) {
 
     function traverse(node) {
 
-        if (
-            !node ||
-            typeof node !== 'object'
-        ) {
+        if (!node || typeof node !== 'object') {
             return;
         }
 
@@ -2390,9 +1830,7 @@ function extractPropertySets(data) {
 
         visited.add(node);
 
-        if (
-            node._category?.value === 'IFCPROPERTYSET'
-        ) {
+        if (node._category?.value === 'IFCPROPERTYSET') {
 
             const setName =
                 node.Name?.value ?? 'Sin nombre';
@@ -2401,29 +1839,23 @@ function extractPropertySets(data) {
                 propertySets.set(setName, []);
             }
 
-            const properties =
-                node.HasProperties ?? [];
+            const properties = node.HasProperties ?? [];
 
             for (const property of properties) {
 
-                const name =
-                    property.Name?.value;
+                const name = property.Name?.value;
 
                 if (!name) {
                     continue;
                 }
 
-                propertySets
-                    .get(setName)
-                    .push({
-                        name,
-                        value:
-                            property.NominalValue?.value ??
-                            null,
-                        type:
-                            property.NominalValue?.type ??
-                            null
-                    });
+                propertySets.get(setName).push({
+                    name,
+                    value:
+                        property.NominalValue?.value ?? null,
+                    type:
+                        property.NominalValue?.type ?? null
+                });
             }
         }
 
@@ -2437,10 +1869,7 @@ function extractPropertySets(data) {
                     traverse(child);
                 }
 
-            } else if (
-                value &&
-                typeof value === 'object'
-            ) {
+            } else if (value && typeof value === 'object') {
 
                 traverse(value);
             }
@@ -2454,60 +1883,41 @@ function extractPropertySets(data) {
 
 
 // =====================================================
-// CONSTRUIR UI DE PROPERTIES
+// CONSTRUIR UI DE PROPERTIES (FILTROS)
 // =====================================================
 
 function buildPropertyUI() {
 
     const selectKey =
-        document.getElementById(
-            'ar-property-key'
-        );
+        document.getElementById('ar-property-key');
 
     const selectValue =
-        document.getElementById(
-            'ar-property-value'
-        );
+        document.getElementById('ar-property-value');
 
     if (!selectKey || !selectValue) {
 
         console.warn(
-            '⚠️ No se encontraron los selects de property-key/value en el DOM'
+            '⚠️ No se encontraron los selects de property-key/value'
         );
 
         return;
     }
 
-    selectKey.innerHTML = `
-<option value="">
-    Seleccionar propiedad
-</option>
-`;
+    selectKey.innerHTML =
+        '<option value="">Seleccionar propiedad</option>';
 
-    selectValue.innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
+    selectValue.innerHTML =
+        '<option value="">Seleccionar valor</option>';
 
     selectValue.disabled = true;
 
-    const allKeys = new Set();
-
-    for (const key of modelProperties.keys()) {
-        allKeys.add(key);
-    }
-
     const sortedKeys =
-        Array.from(allKeys)
-            .sort((a, b) =>
-                a.localeCompare(b)
-            );
+        Array.from(modelProperties.keys())
+            .sort((a, b) => a.localeCompare(b));
 
     for (const key of sortedKeys) {
 
-        const option =
-            document.createElement('option');
+        const option = document.createElement('option');
 
         option.value = key;
         option.textContent = key;
@@ -2528,73 +1938,49 @@ function buildPropertyUI() {
 
 function buildCategoryUI() {
 
-    const container =
-        document.getElementById(
-            'ar-categories-container'
-        );
+    const cont =
+        document.getElementById('ar-categories-container');
 
-    if (!container) {
+    if (!cont) {
 
         console.warn(
-            '⚠️ No se encontró ar-categories-container en el DOM'
+            '⚠️ No se encontró ar-categories-container'
         );
 
         return;
     }
 
-    container.innerHTML = '';
+    cont.innerHTML = '';
 
-    for (
-        const [groupName, categoryIds]
-        of modelCategories
-    ) {
+    for (const [groupName, categoryIds] of modelCategories) {
 
-        const group =
-            document.createElement('div');
+        const group = document.createElement('div');
 
-        group.className =
-            'ar-category-item';
+        group.className = 'ar-category-item';
 
         group.innerHTML = `
 <div class="d-flex align-items-center gap-2 p-2">
-
-    <input
-        type="checkbox"
-        checked
-        class="form-check-input ar-category-toggle m-0"
-        data-category="${escapeHtml(groupName)}"
-    >
-
-    <span
-        class="text-truncate flex-grow-1"
-        title="${escapeHtml(groupName)}"
-    >
-        ${escapeHtml(groupName)}
-    </span>
-
-    <span class="badge bg-secondary">
-        ${categoryIds.length}
-    </span>
-
+    <input type="checkbox" checked
+           class="form-check-input ar-category-toggle m-0"
+           data-category="${escapeHtml(groupName)}">
+    <span class="text-truncate flex-grow-1"
+          title="${escapeHtml(groupName)}">${escapeHtml(groupName)}</span>
+    <span class="badge bg-secondary">${categoryIds.length}</span>
 </div>
 `;
 
-        container.appendChild(group);
+        cont.appendChild(group);
     }
 
-    container
-        .querySelectorAll('.ar-category-toggle')
+    cont.querySelectorAll('.ar-category-toggle')
         .forEach(checkbox => {
 
             checkbox.addEventListener(
                 'change',
                 async (e) => {
 
-                    const category =
-                        e.target.dataset.category;
-
                     await toggleCategory(
-                        category,
+                        e.target.dataset.category,
                         e.target.checked
                     );
                 }
@@ -2615,208 +2001,151 @@ function buildCategoryUI() {
 function setupPropertyFilters() {
 
     const selectKey =
-        document.getElementById(
-            'ar-property-key'
-        );
+        document.getElementById('ar-property-key');
 
     if (selectKey) {
 
-        selectKey.addEventListener(
-            'change',
-            function () {
+        selectKey.addEventListener('change', function () {
 
-                const key = this.value;
+            const key = this.value;
 
-                const selectValue =
-                    document.getElementById(
-                        'ar-property-value'
-                    );
+            const selectValue =
+                document.getElementById('ar-property-value');
 
-                const btnApply =
-                    document.getElementById(
-                        'ar-apply-property'
-                    );
+            const btnApply =
+                document.getElementById('ar-apply-property');
 
-                selectValue.innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
+            selectValue.innerHTML =
+                '<option value="">Seleccionar valor</option>';
 
-                selectValue.disabled = true;
-                btnApply.disabled = true;
+            selectValue.disabled = true;
+            btnApply.disabled = true;
 
-                if (!key) {
-                    return;
-                }
-
-                const allValues = new Set();
-
-                const values =
-                    modelProperties.get(key);
-
-                if (values) {
-                    for (const value of values.keys()) {
-                        allValues.add(value);
-                    }
-                }
-
-                const sortedValues =
-                    Array.from(allValues)
-                        .sort((a, b) =>
-                            a.localeCompare(b)
-                        );
-
-                for (const value of sortedValues) {
-
-                    const option =
-                        document.createElement('option');
-
-                    option.value = value;
-                    option.textContent = value;
-
-                    selectValue.appendChild(option);
-                }
-
-                selectValue.disabled =
-                    sortedValues.length === 0;
+            if (!key) {
+                return;
             }
-        );
+
+            const values = modelProperties.get(key);
+
+            const sortedValues = values
+                ? Array.from(values.keys())
+                    .sort((a, b) => a.localeCompare(b))
+                : [];
+
+            for (const value of sortedValues) {
+
+                const option =
+                    document.createElement('option');
+
+                option.value = value;
+                option.textContent = value;
+
+                selectValue.appendChild(option);
+            }
+
+            selectValue.disabled =
+                sortedValues.length === 0;
+        });
     }
 
 
     const selectValue =
-        document.getElementById(
-            'ar-property-value'
-        );
+        document.getElementById('ar-property-value');
 
     if (selectValue) {
 
-        selectValue.addEventListener(
-            'change',
-            function () {
+        selectValue.addEventListener('change', function () {
 
-                const btnApply =
-                    document.getElementById(
-                        'ar-apply-property'
-                    );
-
-                btnApply.disabled = !this.value;
-            }
-        );
+            document
+                .getElementById('ar-apply-property')
+                .disabled = !this.value;
+        });
     }
 
 
     const btnApply =
-        document.getElementById(
-            'ar-apply-property'
-        );
+        document.getElementById('ar-apply-property');
 
     if (btnApply) {
 
-        btnApply.addEventListener(
-            'click',
-            async (e) => {
+        btnApply.addEventListener('click', async (e) => {
 
-                e.stopPropagation();
+            e.stopPropagation();
 
-                const key =
-                    document.getElementById(
-                        'ar-property-key'
-                    ).value;
+            const key =
+                document.getElementById('ar-property-key').value;
 
-                const value =
-                    document.getElementById(
-                        'ar-property-value'
-                    ).value;
+            const value =
+                document.getElementById('ar-property-value').value;
 
-                if (!key || !value) {
-                    return;
-                }
-
-                const exists =
-                    activePropertyFilters.some(
-                        filter =>
-                            filter.key === key &&
-                            filter.value === value
-                    );
-
-                if (!exists) {
-
-                    activePropertyFilters.push({
-                        key,
-                        value
-                    });
-                }
-
-                document.getElementById(
-                    'ar-property-key'
-                ).value = '';
-
-                document.getElementById(
-                    'ar-property-value'
-                ).innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
-
-                document.getElementById(
-                    'ar-property-value'
-                ).disabled = true;
-
-                document.getElementById(
-                    'ar-apply-property'
-                ).disabled = true;
-
-                renderPropertyFilters();
-
-                await applyAllFilters();
+            if (!key || !value) {
+                return;
             }
-        );
+
+            const exists =
+                activePropertyFilters.some(
+                    filter =>
+                        filter.key === key &&
+                        filter.value === value
+                );
+
+            if (!exists) {
+                activePropertyFilters.push({ key, value });
+            }
+
+            clearPropertySelectors();
+
+            renderPropertyFilters();
+
+            await applyAllFilters();
+        });
     }
 
 
     const btnClear =
-        document.getElementById(
-            'ar-clear-property'
-        );
+        document.getElementById('ar-clear-property');
 
     if (btnClear) {
 
-        btnClear.addEventListener(
-            'click',
-            async (e) => {
+        btnClear.addEventListener('click', async (e) => {
 
-                e.stopPropagation();
+            e.stopPropagation();
 
-                activePropertyFilters = [];
+            activePropertyFilters = [];
 
-                document.getElementById(
-                    'ar-property-key'
-                ).value = '';
+            clearPropertySelectors();
 
-                document.getElementById(
-                    'ar-property-value'
-                ).innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
+            renderPropertyFilters();
 
-                document.getElementById(
-                    'ar-property-value'
-                ).disabled = true;
+            await applyAllFilters();
+        });
+    }
+}
 
-                document.getElementById(
-                    'ar-apply-property'
-                ).disabled = true;
 
-                renderPropertyFilters();
+function clearPropertySelectors() {
 
-                await applyAllFilters();
-            }
-        );
+    const keyEl =
+        document.getElementById('ar-property-key');
+
+    const valueEl =
+        document.getElementById('ar-property-value');
+
+    const applyEl =
+        document.getElementById('ar-apply-property');
+
+    if (keyEl) {
+        keyEl.value = '';
+    }
+
+    if (valueEl) {
+        valueEl.innerHTML =
+            '<option value="">Seleccionar valor</option>';
+        valueEl.disabled = true;
+    }
+
+    if (applyEl) {
+        applyEl.disabled = true;
     }
 }
 
@@ -2827,23 +2156,19 @@ function setupPropertyFilters() {
 
 function renderPropertyFilters() {
 
-    const container =
-        document.getElementById(
-            'ar-property-filters'
-        );
+    const cont =
+        document.getElementById('ar-property-filters');
 
-    if (!container) {
+    if (!cont) {
         return;
     }
 
-    container.innerHTML = '';
+    cont.innerHTML = '';
 
     if (!activePropertyFilters.length) {
 
-        container.innerHTML = `
-<div class="small text-white-50">
-    Sin filtros activos
-</div>
+        cont.innerHTML = `
+<div class="small text-white-50">Sin filtros activos</div>
 `;
 
         return;
@@ -2855,60 +2180,45 @@ function renderPropertyFilters() {
         index++
     ) {
 
-        const filter =
-            activePropertyFilters[index];
+        const filter = activePropertyFilters[index];
 
-        const item =
-            document.createElement('div');
+        const item = document.createElement('div');
 
-        item.className =
-            'ar-filter-chip';
+        item.className = 'ar-filter-chip';
 
         item.innerHTML = `
 <div class="d-flex align-items-center justify-content-between gap-1">
-
     <span class="small text-truncate">
-        ${escapeHtml(filter.key)}:
-        ${escapeHtml(filter.value)}
+        ${escapeHtml(filter.key)}: ${escapeHtml(filter.value)}
     </span>
-
-    <button
-        type="button"
-        class="btn btn-sm p-0 ar-filter-remove"
-        data-index="${index}"
-        style="line-height: 1;">
+    <button type="button"
+            class="btn btn-sm p-0 ar-filter-remove"
+            data-index="${index}"
+            style="line-height: 1;">
         <i class="bi bi-x"></i>
     </button>
-
 </div>
 `;
 
-        container.appendChild(item);
+        cont.appendChild(item);
     }
 
-    container
-        .querySelectorAll('.ar-filter-remove')
+    cont.querySelectorAll('.ar-filter-remove')
         .forEach(button => {
 
-            button.addEventListener(
-                'click',
-                async (e) => {
+            button.addEventListener('click', async (e) => {
 
-                    e.stopPropagation();
+                e.stopPropagation();
 
-                    const index =
-                        Number(
-                            button.dataset.index
-                        );
+                const index =
+                    Number(button.dataset.index);
 
-                    activePropertyFilters
-                        .splice(index, 1);
+                activePropertyFilters.splice(index, 1);
 
-                    renderPropertyFilters();
+                renderPropertyFilters();
 
-                    await applyAllFilters();
-                }
-            );
+                await applyAllFilters();
+            });
         });
 }
 
@@ -2919,10 +2229,7 @@ function renderPropertyFilters() {
 
 async function toggleCategory(category, visible) {
 
-    categoryVisibility.set(
-        category,
-        visible
-    );
+    categoryVisibility.set(category, visible);
 
     await applyAllFilters();
 }
@@ -2944,34 +2251,7 @@ async function resetAllFilters() {
             cb.checked = true;
         });
 
-    const keyEl =
-        document.getElementById(
-            'ar-property-key'
-        );
-
-    const valueEl =
-        document.getElementById(
-            'ar-property-value'
-        );
-
-    const applyEl =
-        document.getElementById(
-            'ar-apply-property'
-        );
-
-    if (keyEl) keyEl.value = '';
-
-    if (valueEl) {
-
-        valueEl.innerHTML = `
-<option value="">
-    Seleccionar valor
-</option>
-`;
-        valueEl.disabled = true;
-    }
-
-    if (applyEl) applyEl.disabled = true;
+    clearPropertySelectors();
 
     renderPropertyFilters();
 
@@ -2985,16 +2265,11 @@ async function resetAllFilters() {
 
 async function applyAllFilters() {
 
-    if (
-        !fragments ||
-        !loadedModelId ||
-        !hider
-    ) {
+    if (!fragments || !loadedModelId || !hider) {
         return;
     }
 
-    const filteredIds =
-        getFilteredModelIds();
+    const filteredIds = getFilteredModelIds();
 
     const modelIdMap = {
         [loadedModelId]: filteredIds
@@ -3002,14 +2277,21 @@ async function applyAllFilters() {
 
     await hider.set(false);
 
-    await hider.set(
-        true,
-        modelIdMap
-    );
+    await hider.set(true, modelIdMap);
 
-    fragments.core.update(true);
+    await fragments.core.update(true);
 
     updateFabBadges();
+
+
+    // Si el elemento seleccionado quedó oculto,
+    // limpiamos la selección para evitar confusión.
+    if (
+        selectedBimElement &&
+        !filteredIds.has(selectedBimElement.localId)
+    ) {
+        await clearBimSelection(true);
+    }
 }
 
 
@@ -3021,10 +2303,7 @@ function getFilteredModelIds() {
 
     let ids = new Set();
 
-    for (
-        const [category, categoryIds]
-        of modelCategories
-    ) {
+    for (const [category, categoryIds] of modelCategories) {
 
         const visible =
             categoryVisibility.has(category)
@@ -3045,27 +2324,16 @@ function getFilteredModelIds() {
 
         const filtersByKey = new Map();
 
-        for (
-            const filter
-            of activePropertyFilters
-        ) {
+        for (const filter of activePropertyFilters) {
 
             if (!filtersByKey.has(filter.key)) {
-                filtersByKey.set(
-                    filter.key,
-                    []
-                );
+                filtersByKey.set(filter.key, []);
             }
 
-            filtersByKey
-                .get(filter.key)
-                .push(filter.value);
+            filtersByKey.get(filter.key).push(filter.value);
         }
 
-        for (
-            const [key, values]
-            of filtersByKey
-        ) {
+        for (const [key, values] of filtersByKey) {
 
             const propertyValues =
                 modelProperties.get(key);
@@ -3095,9 +2363,7 @@ function getFilteredModelIds() {
             }
 
             ids = new Set(
-                [...ids].filter(
-                    id => groupIds.has(id)
-                )
+                [...ids].filter(id => groupIds.has(id))
             );
 
             if (!ids.size) {
@@ -3116,8 +2382,7 @@ function getFilteredModelIds() {
 
 function escapeHtml(value) {
 
-    const div =
-        document.createElement('div');
+    const div = document.createElement('div');
 
     div.textContent = value;
 
@@ -3132,139 +2397,64 @@ function escapeHtml(value) {
 function setModelOpacity(opacity) {
 
     const value =
-        THREE.MathUtils.clamp(
-            opacity,
-            0,
-            1
-        );
-
+        THREE.MathUtils.clamp(opacity, 0, 1);
 
     if (!arModel) {
         return;
     }
 
+    arModel.traverse((object) => {
 
-    arModel.traverse(
-        (object) => {
+        if (!object.isMesh || !object.material) {
+            return;
+        }
 
-            if (
-                !object.isMesh ||
-                !object.material
-            ) {
+        const materials =
+            Array.isArray(object.material)
+                ? object.material
+                : [object.material];
 
-                return;
+        materials.forEach((material) => {
+
+            if (!material.userData.opacityOriginal) {
+
+                material.userData.opacityOriginal = {
+                    opacity:     material.opacity,
+                    transparent: material.transparent,
+                    depthWrite:  material.depthWrite,
+                    depthTest:   material.depthTest,
+                    side:        material.side,
+                    alphaTest:   material.alphaTest,
+                    blending:    material.blending
+                };
             }
 
+            const original =
+                material.userData.opacityOriginal;
 
-            const materials =
-                Array.isArray(
-                    object.material
-                )
-                    ? object.material
-                    : [object.material];
+            if (value >= 1) {
 
+                material.opacity     = original.opacity;
+                material.transparent = original.transparent;
 
-            materials.forEach(
-                (material) => {
+            } else {
 
-                    if (
-                        !material.userData.opacityOriginal
-                    ) {
+                material.opacity     = original.opacity * value;
+                material.transparent = true;
+            }
 
-                        material.userData.opacityOriginal = {
+            material.depthWrite = original.depthWrite;
+            material.depthTest  = original.depthTest;
+            material.side       = original.side;
+            material.alphaTest  = original.alphaTest;
+            material.blending   = original.blending;
 
-                            opacity:
-                                material.opacity,
-
-                            transparent:
-                                material.transparent,
-
-                            depthWrite:
-                                material.depthWrite,
-
-                            depthTest:
-                                material.depthTest,
-
-                            side:
-                                material.side,
-
-                            alphaTest:
-                                material.alphaTest,
-
-                            blending:
-                                material.blending
-                        };
-                    }
-
-
-                    const original =
-                        material.userData.opacityOriginal;
-
-
-                    if (
-                        value >= 1
-                    ) {
-
-                        material.opacity =
-                            original.opacity;
-
-                        material.transparent =
-                            original.transparent;
-
-                        material.depthWrite =
-                            original.depthWrite;
-
-                        material.depthTest =
-                            original.depthTest;
-
-                        material.side =
-                            original.side;
-
-                        material.alphaTest =
-                            original.alphaTest;
-
-                        material.blending =
-                            original.blending;
-
-                    } else {
-
-                        material.opacity =
-                            original.opacity *
-                            value;
-
-                        material.transparent =
-                            true;
-
-                        material.depthWrite =
-                            original.depthWrite;
-
-                        material.depthTest =
-                            original.depthTest;
-
-                        material.side =
-                            original.side;
-
-                        material.alphaTest =
-                            original.alphaTest;
-
-                        material.blending =
-                            original.blending;
-                    }
-
-
-                    material.needsUpdate =
-                        true;
-                }
-            );
-        }
-    );
-
+            material.needsUpdate = true;
+        });
+    });
 
     if (fragments && modelLoaded) {
-
-        fragments.core.update(
-            true
-        );
+        fragments.core.update(true);
     }
 }
 
@@ -3280,7 +2470,13 @@ async function onARSelect() {
     }
 
 
-    // GUARDA PRINCIPAL ANTI-PROPAGACIÓN
+    // -------------------------------------------------
+    // GUARDA ANTI-PROPAGACIÓN
+    //
+    // Si el dedo está (o acaba de estar) sobre algún
+    // control de la UI, ignoramos este 'select'.
+    // -------------------------------------------------
+
     if (uiPointerActive) {
 
         console.log(
@@ -3292,70 +2488,72 @@ async function onARSelect() {
 
 
     // =================================================
-    // MODO BIM SELECT ACTIVO
+    // 🆕 MODO SELECCIÓN BIM
     // =================================================
 
-    if (bimSelectMode && modelLoaded && modelPlaced) {
+    if (bimSelectMode) {
 
-        console.log(
-            '🎯 BIM Select: ejecutando raycast...'
-        );
+        if (bimRaycastBusy) {
+            return;
+        }
 
-        // Obtener la posición del centro de la pantalla
-        // En AR, el toque no da coordenadas fiables del
-        // raycaster interno de XR para fragments, así que
-        // lanzamos un ray desde el centro de la pantalla
-        // (donde está el crosshair).
+        if (!modelLoaded || !arModel || !arModel.visible) {
 
-        const domRect =
-            renderer.domElement.getBoundingClientRect();
+            showToast(
+                '⚠️ El modelo todavía no está colocado',
+                'error'
+            );
 
-        const centerX =
-            domRect.left + domRect.width / 2;
+            return;
+        }
 
-        const centerY =
-            domRect.top + domRect.height / 2;
+        bimRaycastBusy = true;
+        setCrosshairBusy(true);
 
         try {
 
             const result =
-                await raycastFragments(
-                    centerX,
-                    centerY
-                );
+                await raycastFragmentsAtScreenCenter();
 
-            if (result) {
+            if (!result) {
 
-                console.log(
-                    '🎯 Raycast hit, localId:',
-                    result.localId
-                );
-
-                await selectBimElementAR(
-                    result.fragmentsModel,
-                    result.localId
+                showToast(
+                    '🔍 Nada bajo la mira. Apunta a una superficie del modelo.',
+                    'info',
+                    2500
                 );
 
             } else {
 
-                showToast(
-                    '⚠️ No se detectó ningún elemento. Apunta al modelo con el crosshair.',
-                    'info',
-                    3000
+                console.log(
+                    '🎯 Hit BIM → localId:',
+                    result.localId,
+                    'modelo:',
+                    result.fragmentsModel.modelId
+                );
+
+                await selectBimElement(
+                    result.fragmentsModel,
+                    result.localId
                 );
             }
 
-        } catch (e) {
+        } catch (error) {
 
             console.error(
-                '❌ Error en raycast BIM:',
-                e
+                '❌ Error en la selección BIM:',
+                error
             );
 
             showToast(
-                '❌ Error al intentar seleccionar el elemento',
+                '❌ Error al seleccionar el elemento',
                 'error'
             );
+
+        } finally {
+
+            bimRaycastBusy = false;
+            setCrosshairBusy(false);
         }
 
         return;
@@ -3363,74 +2561,46 @@ async function onARSelect() {
 
 
     // =================================================
-    // COMPORTAMIENTO NORMAL (COLOCAR MODELO)
+    // MODO COLOCACIÓN (HIT-TEST)
     // =================================================
 
     if (!hitTestEnabled) {
         return;
     }
 
-
-    if (
-        !arReticle ||
-        !arReticle.visible
-    ) {
-
+    if (!arReticle || !arReticle.visible) {
         return;
     }
 
+    const position = new THREE.Vector3();
 
-    const position =
-        new THREE.Vector3();
-
-
-    position.setFromMatrixPosition(
-        arReticle.matrix
-    );
+    position.setFromMatrixPosition(arReticle.matrix);
 
 
-    // =================================================
+    // -------------------------------------------------
     // MODELO YA CARGADO → SOLO REPOSICIONAR
-    // =================================================
+    // -------------------------------------------------
 
-    if (
-        modelLoaded &&
-        arModel
-    ) {
+    if (modelLoaded && arModel) {
 
-        arModel.position.copy(
-            position
-        );
+        arModel.position.copy(position);
 
+        arModel.visible = true;
 
-        arModel.visible =
-            true;
+        arModel.updateMatrixWorld(true);
 
-
-        lastPlacedPosition =
-            position.clone();
-
+        lastPlacedPosition = position.clone();
 
         console.log(
-            '📍 Modelo colocado (ya estaba cargado)'
+            '📍 Modelo reposicionado'
         );
-
 
         showToast(
             '📍 Modelo reposicionado',
             'success'
         );
 
-
         disableHitTest();
-
-        // Construir meshes de raycast después de colocar
-        buildRaycastMeshes().catch(e => {
-            console.warn(
-                '⚠️ Error construyendo meshes de raycast:',
-                e
-            );
-        });
 
         return;
     }
@@ -3440,47 +2610,32 @@ async function onARSelect() {
         return;
     }
 
+    modelLoading = true;
 
-    modelLoading =
-        true;
-
-
-    const url =
-        container.dataset.url;
-
+    const url = container.dataset.url;
 
     if (!url) {
 
-        console.error(
-            '❌ No existe data-url en #viewer'
-        );
+        console.error('❌ No existe data-url en #viewer');
 
-
-        modelLoading =
-            false;
-
+        modelLoading = false;
 
         showToast(
             '❌ No se encontró la URL del modelo',
             'error'
         );
 
-
         return;
     }
 
 
-    // =================================================
+    // -------------------------------------------------
     // CARGAR IFC
-    // =================================================
+    // -------------------------------------------------
 
     try {
 
-        console.log(
-            '📥 Iniciando carga desde:',
-            url
-        );
-
+        console.log('📥 Iniciando carga desde:', url);
 
         showToast(
             '📥 Cargando modelo IFC...',
@@ -3488,12 +2643,8 @@ async function onARSelect() {
             8000
         );
 
-
         const response =
-            await fetch(
-                url + '?type=frag'
-            );
-
+            await fetch(url + '?type=frag');
 
         if (!response.ok) {
 
@@ -3502,64 +2653,50 @@ async function onARSelect() {
             );
         }
 
-
-        const buffer =
-            await response.arrayBuffer();
-
+        const buffer = await response.arrayBuffer();
 
         console.log(
             '📦 Buffer recibido, tamaño:',
             buffer.byteLength
         );
 
-
         await fragments.core.load(
             buffer,
-            {
-                modelId: 'main'
-            }
+            { modelId: 'main' }
         );
-
 
         console.log(
-            '✅ fragments.core.load resuelto completamente'
+            '✅ fragments.core.load resuelto'
         );
 
-
-        const model =
-            fragments.list.get('main');
-
+        const model = fragments.list.get('main');
 
         if (!model) {
 
             throw new Error(
-                'Modelo no encontrado en fragments.list después de load()'
+                'Modelo no encontrado en fragments.list'
             );
         }
 
 
-        console.log(
-            '🔍 Construyendo properties...'
-        );
+        console.log('🔍 Construyendo properties...');
 
         modelProperties =
             await buildModelProperties(model);
 
         console.log(
-            '✅ Properties construidas:',
+            '✅ Properties:',
             modelProperties.size
         );
 
 
-        console.log(
-            '🔍 Construyendo categories...'
-        );
+        console.log('🔍 Construyendo categories...');
 
         modelCategories =
             await buildModelCategories(model);
 
         console.log(
-            '✅ Categories construidas:',
+            '✅ Categories:',
             modelCategories.size
         );
 
@@ -3570,15 +2707,9 @@ async function onARSelect() {
 
         let totalElements = 0;
 
-        for (
-            const categoryIds
-            of modelCategories.values()
-        ) {
-
-            totalElements +=
-                categoryIds.length;
+        for (const categoryIds of modelCategories.values()) {
+            totalElements += categoryIds.length;
         }
-
 
         showToast(
             `✅ Modelo cargado: ${totalElements} elementos, ${modelCategories.size} categorías`,
@@ -3586,73 +2717,42 @@ async function onARSelect() {
             5000
         );
 
-
-        await fragments.core.update(
-            true
-        );
+        await fragments.core.update(true);
 
 
         if (arModel) {
 
-            arModel.position.copy(
-                position
-            );
+            arModel.position.copy(position);
 
+            arModel.scale.set(1, 1, 1);
 
-            arModel.scale.set(
-                1,
-                1,
-                1
-            );
+            arModel.visible = true;
 
+            arModel.updateMatrixWorld(true);
 
-            arModel.visible =
-                true;
+            lastPlacedPosition = position.clone();
 
-
-            lastPlacedPosition =
-                position.clone();
-
-
-            setModelOpacity(
-                opacityValue
-            );
-
+            setModelOpacity(opacityValue);
 
             console.log(
-                '✅ Modelo colocado en AR con ID:',
+                '✅ Modelo colocado en AR:',
                 loadedModelId
             );
 
-
             showToast(
-                '📍 Modelo colocado sobre la superficie',
-                'success'
+                '📍 Modelo colocado. Usa 🎯 para inspeccionar elementos.',
+                'success',
+                5000
             );
 
-
             disableHitTest();
-
-            // Construir meshes de raycast
-            buildRaycastMeshes().catch(e => {
-                console.warn(
-                    '⚠️ Error construyendo meshes de raycast:',
-                    e
-                );
-            });
         }
 
     } catch (error) {
 
-        console.error(
-            '❌ Error cargando IFC:',
-            error
-        );
+        console.error('❌ Error cargando IFC:', error);
 
-
-        modelLoading =
-            false;
-
+        modelLoading = false;
 
         showToast(
             '❌ Error cargando el modelo IFC',
@@ -3673,7 +2773,6 @@ function updateAR(frame) {
         return;
     }
 
-
     if (!hitTestEnabled) {
 
         if (arReticle) {
@@ -3683,130 +2782,83 @@ function updateAR(frame) {
         return;
     }
 
-
     const referenceSpace =
         renderer.xr.getReferenceSpace();
 
+    const session = renderer.xr.getSession();
 
-    const session =
-        renderer.xr.getSession();
-
-
-    if (!referenceSpace ||
-        !session) {
-
+    if (!referenceSpace || !session) {
         return;
     }
 
 
-    if (
-        !hitTestSourceRequested
-    ) {
+    if (!hitTestSourceRequested) {
 
         session
-            .requestReferenceSpace(
-                'viewer'
-            )
-            .then(
-                (viewerSpace) => {
+            .requestReferenceSpace('viewer')
+            .then((viewerSpace) => {
 
-                    return session
-                        .requestHitTestSource({
-                            space: viewerSpace
-                        });
+                return session.requestHitTestSource({
+                    space: viewerSpace
+                });
+            })
+            .then((source) => {
+
+                if (!hitTestEnabled) {
+
+                    try {
+                        source.cancel();
+                    } catch (e) {}
+
+                    return;
                 }
-            )
-            .then(
-                (source) => {
 
-                    if (!hitTestEnabled) {
+                hitTestSource = source;
+            })
+            .catch((error) => {
 
-                        try {
-                            source.cancel();
-                        } catch (e) {}
+                console.error(
+                    'Error creando Hit Test:',
+                    error
+                );
+            });
 
-                        return;
-                    }
+        session.addEventListener('end', () => {
 
-                    hitTestSource =
-                        source;
-                }
-            )
-            .catch(
-                (error) => {
+            hitTestSourceRequested = false;
+            hitTestSource = null;
 
-                    console.error(
-                        'Error creando Hit Test:',
-                        error
-                    );
-                }
-            );
-
-
-        session.addEventListener(
-            'end',
-            () => {
-
-                hitTestSourceRequested =
-                    false;
-
-
-                hitTestSource =
-                    null;
-
-
-                if (arReticle) {
-
-                    arReticle.visible =
-                        false;
-                }
+            if (arReticle) {
+                arReticle.visible = false;
             }
-        );
+        });
 
-
-        hitTestSourceRequested =
-            true;
+        hitTestSourceRequested = true;
     }
 
 
     if (hitTestSource) {
 
         const hitTestResults =
-            frame.getHitTestResults(
-                hitTestSource
-            );
+            frame.getHitTestResults(hitTestSource);
 
+        if (hitTestResults.length) {
 
-        if (
-            hitTestResults.length
-        ) {
+            const hit = hitTestResults[0];
 
-            const hit =
-                hitTestResults[0];
-
-
-            const pose =
-                hit.getPose(
-                    referenceSpace
-                );
-
+            const pose = hit.getPose(referenceSpace);
 
             if (pose) {
 
-                arReticle.visible =
-                    true;
-
+                arReticle.visible = true;
 
                 arReticle.matrix.fromArray(
                     pose.transform.matrix
                 );
 
-
                 if (!surfaceFoundNotified) {
 
-                    surfaceFoundNotified =
-                        true;
-
+                    surfaceFoundNotified = true;
 
                     showToast(
                         '🎯 Superficie detectada. Toca la pantalla para colocar el modelo',
@@ -3818,8 +2870,7 @@ function updateAR(frame) {
 
         } else {
 
-            arReticle.visible =
-                false;
+            arReticle.visible = false;
         }
     }
 }
@@ -3831,35 +2882,18 @@ function updateAR(frame) {
 
 function onResize() {
 
-    if (
-        !container ||
-        !camera ||
-        !renderer
-    ) {
-
+    if (!container || !camera || !renderer) {
         return;
     }
 
+    const width = container.clientWidth;
+    const height = container.clientHeight;
 
-    const width =
-        container.clientWidth;
-
-
-    const height =
-        container.clientHeight;
-
-
-    camera.aspect =
-        width / height;
-
+    camera.aspect = width / height;
 
     camera.updateProjectionMatrix();
 
-
-    renderer.setSize(
-        width,
-        height
-    );
+    renderer.setSize(width, height);
 }
 
 
@@ -3868,12 +2902,10 @@ function onResize() {
 // =====================================================
 
 initViewer()
-    .catch(
-        (error) => {
+    .catch((error) => {
 
-            console.error(
-                'No se pudo iniciar el visor:',
-                error
-            );
-        }
-    );
+        console.error(
+            'No se pudo iniciar el visor:',
+            error
+        );
+    });
