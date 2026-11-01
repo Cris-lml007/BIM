@@ -12,62 +12,82 @@ use Livewire\Component;
 
 new #[Layout('layouts.viewer')] class extends Component
 {
-
     public Model3D $model;
     public Project $project;
     public $models;
     public $anchors;
+    public $currentAnchor;
+    public $incidents;
 
-    public function mount(Project $project, Model3D $model){
+    public function mount(Project $project, $hash)
+    {
         $this->project = $project;
-        $this->model = $model;
-        $this->models = $this->project->models;
-        $this->anchors = $this->model->anchors->toArray();
+
+        $anchor = Anchor::where('hash', $hash)->firstOrFail();
+        $this->model         = $anchor->model;
+        $this->currentAnchor = $anchor->toArray();
+        $this->models        = $this->project->models;
+        $this->anchors       = $this->model->anchors->toArray();
+
+        // Cargar incidencias del modelo dentro del proyecto
+        $this->incidents = incident::where('project_id', $this->project->id)
+            ->where('model', $this->model->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->toArray();
     }
 
     #[Renderless]
-    public function saveMark($title,$model,$type,$x,$y,$z){
-        if($type == 'anchor'){
-            do{
+    public function saveMark($title, $model, $type, $x, $y, $z, $normal_x, $normal_y, $normal_z)
+    {
+        if ($type == 'anchor') {
+            do {
                 $hash = Str::random(64);
-            }while(Anchor::where('hash',$hash)->exists());
-            $item = Anchor::create([
-                'model_id' => $model == 'main' ? $this->model->id : explode('|',$model)[1],
-                'user_id' => Auth::user()->id,
-                'title' => $title,
-                'hash' => $hash,
-                'x' => $x,
-                'y' => $y,
-                'z' => $z,
-            ]);
-        }else{
-            $item = incident::create([
-                'title' => $title,
-                'description' => '',
-                'priority' => 1,
-                'status' => 1,
-                'user_id' => Auth::user()->id,
-                'model' => $model == 'main' ? $this->model->id : explode('|',$model)[1],
-                'x' => $x,
-                'y' => $y,
-                'z' => $z,
-                'project_id' => $this->project->id
+            } while (Anchor::where('hash', $hash)->exists());
 
+            $item = Anchor::create([
+                'model_id' => $model == 'main' ? $this->model->id : explode('|', $model)[1],
+                'user_id'  => Auth::user()->id,
+                'title'    => $title,
+                'hash'     => $hash,
+                'x'        => $x,
+                'y'        => $y,
+                'z'        => $z,
+                'normal_x' => $normal_x,
+                'normal_y' => $normal_y,
+                'normal_z' => $normal_z,
+            ]);
+        } else {
+            $item = incident::create([
+                'title'       => $title,
+                'description' => '',
+                'priority'    => 1,
+                'status'      => 1,
+                'user_id'     => Auth::user()->id,
+                'model'       => $model == 'main' ? $this->model->id : explode('|', $model)[1],
+                'x'           => $x,
+                'y'           => $y,
+                'z'           => $z,
+                'normal_x'    => $normal_x,
+                'normal_y'    => $normal_y,
+                'normal_z'    => $normal_z,
+                'project_id'  => $this->project->id,
             ]);
         }
 
-        if($item->id){
+        if ($item->id) {
             return $item->id;
-        }else{
+        } else {
             return "fail";
         }
     }
 
     #[Renderless]
-    public function removeMark($id,$type){
-        if($type == 'anchor'){
+    public function removeMark($id, $type)
+    {
+        if ($type == 'anchor') {
             Anchor::destroy($id);
-        }else{
+        } else {
             incident::destroy($id);
         }
     }
