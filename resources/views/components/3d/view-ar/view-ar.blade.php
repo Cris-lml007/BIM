@@ -794,7 +794,22 @@
             touch-action: manipulation;
         }
     </style>
+{{-- Tarjeta de información --}}
+<div class="card card-outline card-primary">
+    <div class="card-body text-center">
+            <h5 class="font-weight-bold mb-2">{{ $anchor->title }}</h5>
 
+        <p class="text-muted mb-1">
+            <i class="fas fa-cube mr-1"></i>
+        {{ $model->name }}
+        </p>
+
+        <p class="text-muted mb-0">
+            <i class="fas fa-calendar-alt mr-1"></i>
+                {{ $anchor->create_at }}
+        </p>
+    </div>
+</div>
     {{-- =====================================================
          CONTENEDOR DEL VISOR
          data-anchor-*  → coordenadas del anclaje actual

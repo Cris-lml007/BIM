@@ -14,6 +14,7 @@ new #[Layout('layouts.viewer')] class extends Component
 {
     public Model3D $model;
     public Project $project;
+    public Anchor $anchor;
     public $models;
     public $anchors;
     public $currentAnchor;
@@ -25,6 +26,7 @@ new #[Layout('layouts.viewer')] class extends Component
 
         $anchor = Anchor::where('hash', $hash)->firstOrFail();
 
+        $this->anchor = $anchor;
         $this->model         = $anchor->model;
         $this->currentAnchor = $anchor->toArray();
         $this->models        = $this->project->models;
