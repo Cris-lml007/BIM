@@ -843,39 +843,72 @@ function updateIncidentBadge() {
     badge.style.display = total > 0 ? 'flex' : 'none';
 }
 
-// ---- Listado en el panel ----
-function renderIncidentList() {
-    const body = document.getElementById('ar-incidents-body');
-    if (!body) return;
+/* ───────── Detalle de incidencia (panel chat) ───────── */
 
-    const all = [
-        ...incidentsData.map(i => ({ ...i, _type: 'incident' })),
-        ...anchorsData.map(a => ({ ...a, _type: 'anchor' })),
-    ];
+function openIncidentDetail(incidentId) {
+    // 1. Abrir el panel flotante
+    openPanel('chat');
 
-    if (!all.length) {
-        body.innerHTML = '<div class="small text-white-50 text-center py-3">No hay marcas en este modelo</div>';
-        return;
+    // 2. Disparar el evento Livewire para que
+    //    <livewire:app.incident-detail> cargue los datos
+    try {
+        const comp = getLivewireComponent();
+        if (comp) {
+            // Livewire v3: dispatch desde el componente
+            if (typeof comp.dispatch === 'function') {
+                comp.dispatch('getIncident', { id: incidentId });
+            }
+            // Fallback: dispatch global
+            else if (typeof comp.$wire?.dispatch === 'function') {
+                comp.$wire.dispatch('getIncident', { id: incidentId });
+            }
+            // Último recurso: evento DOM nativo
+            else {
+                window.dispatchEvent(
+                    new CustomEvent('getIncident', { detail: { id: incidentId } })
+                );
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ No se pudo dispatch getIncident:', e);
+        window.dispatchEvent(
+            new CustomEvent('getIncident', { detail: { id: incidentId } })
+        );
     }
+}
 
-    body.innerHTML = '';
-    for (const item of all) {
-        const row = document.createElement('div');
-        row.className = 'ar-mark-item';
-        row.innerHTML = `
-<div class="ar-mark-dot ${item._type}"></div>
-<div class="ar-mark-info">
-    <div class="ar-mark-title">${escapeHtml(item.title || '(sin título)')}</div>
-    <div class="ar-mark-meta">${item._type === 'anchor' ? '📌 Anclaje' : '🚩 Incidencia'} · ID ${item.id}</div>
-</div>
-<button type="button" class="ar-mark-del" title="Eliminar">
-    <i class="bi bi-trash"></i>
-</button>`;
-        row.querySelector('.ar-mark-del').addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteMark(item.id, item._type);
-        });
-        body.appendChild(row);
+
+/* ───────── Detalle de incidencia (panel chat) ───────── */
+
+function openIncidentDetail(incidentId) {
+    // 1. Abrir el panel flotante
+    openPanel('chat');
+
+    // 2. Disparar el evento Livewire para que
+    //    <livewire:app.incident-detail> cargue los datos
+    try {
+        const comp = getLivewireComponent();
+        if (comp) {
+            // Livewire v3: dispatch desde el componente
+            if (typeof comp.dispatch === 'function') {
+                comp.dispatch('getIncident', { id: incidentId });
+            }
+            // Fallback: dispatch global
+            else if (typeof comp.$wire?.dispatch === 'function') {
+                comp.$wire.dispatch('getIncident', { id: incidentId });
+            }
+            // Último recurso: evento DOM nativo
+            else {
+                window.dispatchEvent(
+                    new CustomEvent('getIncident', { detail: { id: incidentId } })
+                );
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ No se pudo dispatch getIncident:', e);
+        window.dispatchEvent(
+            new CustomEvent('getIncident', { detail: { id: incidentId } })
+        );
     }
 }
 

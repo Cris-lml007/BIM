@@ -45,9 +45,17 @@
             transform: translateY(0);
         }
 
-        .ar-toast-success { border-left-color: #22c55e; }
-        .ar-toast-error   { border-left-color: #ef4444; }
-        .ar-toast-info    { border-left-color: #2563eb; }
+        .ar-toast-success {
+            border-left-color: #22c55e;
+        }
+
+        .ar-toast-error {
+            border-left-color: #ef4444;
+        }
+
+        .ar-toast-info {
+            border-left-color: #2563eb;
+        }
 
         /* =====================================================
            PANELES FLOTANTES
@@ -129,7 +137,9 @@
             -ms-overflow-style: none;
         }
 
-        #ar-fab-bar::-webkit-scrollbar { display: none; }
+        #ar-fab-bar::-webkit-scrollbar {
+            display: none;
+        }
 
         .ar-fab {
             position: relative;
@@ -149,7 +159,9 @@
             touch-action: manipulation;
         }
 
-        .ar-fab:active { transform: scale(0.92); }
+        .ar-fab:active {
+            transform: scale(0.92);
+        }
 
         .ar-fab.active {
             background: #2563eb;
@@ -249,7 +261,9 @@
             touch-action: manipulation;
         }
 
-        .ar-category-item span:first-of-type { font-size: 13px; }
+        .ar-category-item span:first-of-type {
+            font-size: 13px;
+        }
 
         .ar-categories-scroll {
             max-height: 100%;
@@ -297,10 +311,21 @@
             border-color: #2563eb;
         }
 
-        .ar-dpad-up    { grid-area: up; }
-        .ar-dpad-down  { grid-area: down; }
-        .ar-dpad-left  { grid-area: left; }
-        .ar-dpad-right { grid-area: right; }
+        .ar-dpad-up {
+            grid-area: up;
+        }
+
+        .ar-dpad-down {
+            grid-area: down;
+        }
+
+        .ar-dpad-left {
+            grid-area: left;
+        }
+
+        .ar-dpad-right {
+            grid-area: right;
+        }
 
         .ar-dpad-center {
             grid-area: center;
@@ -419,7 +444,9 @@
             flex: 1;
         }
 
-        .ar-bim-info-section { margin-top: 10px; }
+        .ar-bim-info-section {
+            margin-top: 10px;
+        }
 
         .ar-bim-info-section-header {
             display: flex;
@@ -439,7 +466,9 @@
             background: rgba(255, 255, 255, 0.14);
         }
 
-        .ar-bim-info-section-body { padding: 2px 10px; }
+        .ar-bim-info-section-body {
+            padding: 2px 10px;
+        }
 
         .ar-bim-deselect-btn {
             width: 100%;
@@ -476,7 +505,9 @@
             white-space: nowrap;
         }
 
-        .ar-bim-select-indicator.visible { display: block; }
+        .ar-bim-select-indicator.visible {
+            display: block;
+        }
 
         #ar-crosshair {
             position: absolute;
@@ -490,7 +521,9 @@
             display: none;
         }
 
-        #ar-crosshair.visible { display: block; }
+        #ar-crosshair.visible {
+            display: block;
+        }
 
         #ar-crosshair .ch-line-h,
         #ar-crosshair .ch-line-v {
@@ -527,7 +560,9 @@
             border: 1px solid rgba(0, 0, 0, 0.5);
         }
 
-        #ar-crosshair.busy .ch-dot { background: #22c55e; }
+        #ar-crosshair.busy .ch-dot {
+            background: #22c55e;
+        }
 
         /* =====================================================
            🆕 INDICADOR + CROSSHAIR DE MODO INCIDENCIA
@@ -552,7 +587,9 @@
             white-space: nowrap;
         }
 
-        .ar-incident-indicator.visible { display: block; }
+        .ar-incident-indicator.visible {
+            display: block;
+        }
 
         #ar-incident-crosshair {
             position: absolute;
@@ -566,7 +603,9 @@
             display: none;
         }
 
-        #ar-incident-crosshair.visible { display: block; }
+        #ar-incident-crosshair.visible {
+            display: block;
+        }
 
         #ar-incident-crosshair .ch-line-h,
         #ar-incident-crosshair .ch-line-v {
@@ -576,24 +615,36 @@
         }
 
         #ar-incident-crosshair .ch-line-h {
-            top: 50%; left: 0; right: 0; height: 2px; margin-top: -1px;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            margin-top: -1px;
         }
 
         #ar-incident-crosshair .ch-line-v {
-            left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            margin-left: -1px;
         }
 
         #ar-incident-crosshair .ch-dot {
             position: absolute;
-            top: 50%; left: 50%;
-            width: 8px; height: 8px;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
             margin: -4px 0 0 -4px;
             border-radius: 50%;
             background: #ef4444;
             border: 1px solid rgba(0, 0, 0, 0.5);
         }
 
-        #ar-incident-crosshair.busy .ch-dot { background: #22c55e; }
+        #ar-incident-crosshair.busy .ch-dot {
+            background: #22c55e;
+        }
 
         /* =====================================================
            🆕 MODAL FORMULARIO DE INCIDENCIA / ANCLAJE
@@ -611,7 +662,9 @@
             padding: 16px;
         }
 
-        #ar-incident-form.open { display: flex; }
+        #ar-incident-form.open {
+            display: flex;
+        }
 
         .ar-incident-card {
             background: #1c1c1e;
@@ -678,7 +731,9 @@
             color: #fff;
         }
 
-        #ar-incident-save:disabled { opacity: 0.5; }
+        #ar-incident-save:disabled {
+            opacity: 0.5;
+        }
 
         /* =====================================================
            🆕 LISTADO DE INCIDENCIAS / ANCLAJES
@@ -692,7 +747,9 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.07);
         }
 
-        .ar-mark-item:last-child { border-bottom: none; }
+        .ar-mark-item:last-child {
+            border-bottom: none;
+        }
 
         .ar-mark-dot {
             width: 11px;
@@ -701,8 +758,13 @@
             flex-shrink: 0;
         }
 
-        .ar-mark-dot.incident { background: #ef4444; }
-        .ar-mark-dot.anchor   { background: #3b82f6; }
+        .ar-mark-dot.incident {
+            background: #ef4444;
+        }
+
+        .ar-mark-dot.anchor {
+            background: #3b82f6;
+        }
 
         .ar-mark-info {
             flex: 1;
@@ -739,15 +801,10 @@
          data-incidents → incidencias del modelo (JSON)
          data-anchors   → todos los anclajes del modelo (JSON)
          ===================================================== --}}
-    <div id="viewer"
-         class="viewport"
-         data-url="{{ route('app.Attachment', $model->model->id) }}"
-         data-type="{{ $model->model->type }}"
-         data-anchor-x="{{ $currentAnchor['x'] ?? 0 }}"
-         data-anchor-y="{{ $currentAnchor['y'] ?? 0 }}"
-         data-anchor-z="{{ $currentAnchor['z'] ?? 0 }}"
-         data-incidents='@json($incidents)'
-         data-anchors='@json($anchors)'>
+    <div id="viewer" class="viewport" data-url="{{ route('app.Attachment', $model->model->id) }}"
+        data-type="{{ $model->model->type }}" data-anchor-x="{{ $currentAnchor['x'] ?? 0 }}"
+        data-anchor-y="{{ $currentAnchor['y'] ?? 0 }}" data-anchor-z="{{ $currentAnchor['z'] ?? 0 }}"
+        data-incidents='@json($incidents)' data-anchors='@json($anchors)'>
     </div>
 
     <div id="ar-ui-container">
@@ -787,11 +844,8 @@
                     <option value="incident">🚩 Incidencia</option>
                     <option value="anchor">📌 Anclaje (link compartible)</option>
                 </select>
-                <input type="text"
-                       id="ar-incident-title"
-                       maxlength="120"
-                       placeholder="Título de la marca..."
-                       autocomplete="off">
+                <input type="text" id="ar-incident-title" maxlength="120" placeholder="Título de la marca..."
+                    autocomplete="off">
                 <div class="ar-incident-actions">
                     <button type="button" id="ar-incident-cancel">Cancelar</button>
                     <button type="button" id="ar-incident-save">Guardar</button>
@@ -810,12 +864,9 @@
 
             <div class="ar-panel-body">
                 <div class="d-flex align-items-center gap-3">
-                    <input type="range"
-                           id="ar-opacity"
-                           min="0" max="100" value="100" step="1"
-                           style="flex: 1; touch-action: manipulation;">
-                    <span id="ar-opacity-value"
-                          style="min-width: 48px; text-align: right;">100%</span>
+                    <input type="range" id="ar-opacity" min="0" max="100" value="100" step="1"
+                        style="flex: 1; touch-action: manipulation;">
+                    <span id="ar-opacity-value" style="min-width: 48px; text-align: right;">100%</span>
                 </div>
             </div>
         </div>
@@ -839,10 +890,9 @@
                 </select>
 
                 <div class="ar-filter-buttons">
-                    <button type="button" id="ar-apply-property"
-                            class="btn btn-primary btn-sm" disabled>Aplicar</button>
-                    <button type="button" id="ar-clear-property"
-                            class="btn btn-secondary btn-sm">Limpiar</button>
+                    <button type="button" id="ar-apply-property" class="btn btn-primary btn-sm"
+                        disabled>Aplicar</button>
+                    <button type="button" id="ar-clear-property" class="btn btn-secondary btn-sm">Limpiar</button>
                 </div>
 
                 <div id="ar-property-filters" class="mt-3">
@@ -882,19 +932,19 @@
                     </p>
 
                     <div class="ar-dpad">
-                        <button type="button" class="ar-dpad-btn ar-dpad-up"
-                                data-direction="up"><i class="bi bi-arrow-up"></i></button>
+                        <button type="button" class="ar-dpad-btn ar-dpad-up" data-direction="up"><i
+                                class="bi bi-arrow-up"></i></button>
 
-                        <button type="button" class="ar-dpad-btn ar-dpad-left"
-                                data-direction="left"><i class="bi bi-arrow-left"></i></button>
+                        <button type="button" class="ar-dpad-btn ar-dpad-left" data-direction="left"><i
+                                class="bi bi-arrow-left"></i></button>
 
                         <div class="ar-dpad-center">Mantén<br>presionado</div>
 
-                        <button type="button" class="ar-dpad-btn ar-dpad-right"
-                                data-direction="right"><i class="bi bi-arrow-right"></i></button>
+                        <button type="button" class="ar-dpad-btn ar-dpad-right" data-direction="right"><i
+                                class="bi bi-arrow-right"></i></button>
 
-                        <button type="button" class="ar-dpad-btn ar-dpad-down"
-                                data-direction="down"><i class="bi bi-arrow-down"></i></button>
+                        <button type="button" class="ar-dpad-btn ar-dpad-down" data-direction="down"><i
+                                class="bi bi-arrow-down"></i></button>
                     </div>
 
                     <p class="ar-position-hint">
@@ -955,6 +1005,20 @@
             </div>
         </div>
 
+        <!-- chat / detalle de incidencia -->
+        <div id="ar-panel-chat" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-chat-dots-fill me-2"></i>Detalle</span>
+                <button type="button" class="ar-panel-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body" id="ar-chat-body">
+                <livewire:app.incident-detail modal_name="modal-incident-detail" :project="$project" />
+            </div>
+        </div>
+
         <!-- FAB BAR -->
         <div id="ar-fab-bar">
 
@@ -977,8 +1041,7 @@
             </button>
 
             <!-- BOTÓN SELECCIÓN BIM -->
-            <button type="button" id="ar-btn-bim-select" class="ar-fab"
-                    title="Seleccionar elemento BIM">
+            <button type="button" id="ar-btn-bim-select" class="ar-fab" title="Seleccionar elemento BIM">
                 <i class="bi bi-crosshair"></i>
             </button>
 
@@ -988,8 +1051,7 @@
             </button>
 
             <!-- 🆕 BOTÓN MODO CREAR MARCA -->
-            <button type="button" id="ar-btn-incident-mode" class="ar-fab"
-                    title="Crear incidencia / anclaje">
+            <button type="button" id="ar-btn-incident-mode" class="ar-fab" title="Crear incidencia / anclaje">
                 <i class="bi bi-geo-alt-fill"></i>
             </button>
 
@@ -997,6 +1059,10 @@
             <button type="button" class="ar-fab" data-panel="incidents" title="Ver marcas">
                 <i class="bi bi-exclamation-triangle-fill"></i>
                 <span class="ar-fab-badge" id="ar-fab-badge-incidents">0</span>
+            </button>
+
+            <button type="button" id="ar-btn-chat" data-panel="chat" title="Detalle incidencia">
+                <i class="bi bi-chat-dots-fill"></i>
             </button>
 
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">
