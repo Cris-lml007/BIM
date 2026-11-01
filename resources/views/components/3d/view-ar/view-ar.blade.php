@@ -1061,10 +1061,6 @@
                 <span class="ar-fab-badge" id="ar-fab-badge-incidents">0</span>
             </button>
 
-            <button type="button" id="ar-btn-chat" data-panel="chat" title="Detalle incidencia">
-                <i class="bi bi-chat-dots-fill"></i>
-            </button>
-
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>

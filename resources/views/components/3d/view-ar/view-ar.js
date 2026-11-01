@@ -936,12 +936,13 @@ function renderIncidentList() {
         const row = document.createElement('div');
         row.className = 'ar-mark-item';
 
-        row.addEventListener('click', (e) => {
-            if (e.target.closest('.ar-mark-del')) return;
-            markUIPointerActive();
-            openIncidentDetail(item.id);
-            markUIPointerInactiveSoon();
-        });
+    row.addEventListener('click', (e) => {
+        if (e.target.closest('.ar-mark-del')) return;
+        if (item._type !== 'incident') return;   // ← solo incidencias
+        markUIPointerActive();
+        openIncidentDetail(item.id);
+        markUIPointerInactiveSoon();
+    });
 
         const dot = document.createElement('span');
         dot.className = `ar-mark-dot ${item._type}`;
