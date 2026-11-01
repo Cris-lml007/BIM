@@ -78,6 +78,81 @@ let raycastMeshes = [];
 let uiPointerActive = false;
 let uiPointerReleaseTimer = null;
 
+// =====================================================
+// WRAPPER DEL RENDERER XR PARA THAT OPEN
+// =====================================================
+//
+// OBC.Raycasters / OBF.Highlighter necesitan que
+// world.renderer exista y tenga:
+//   - .three → el WebGLRenderer
+//   - .onResize / .onBeforeUpdate / .onAfterUpdate (eventos)
+//   - métodos mínimos (update, dispose, getSize, resize)
+//
+// Como en AR usamos un WebGLRenderer propio con xr.enabled,
+// creamos este wrapper para "presentarlo" como un renderer
+// válido para That Open sin perder el control del loop XR.
+// =====================================================
+
+function createARRendererWrapper(threeRenderer, container) {
+
+    return {
+
+        three: threeRenderer,
+
+        enabled: true,
+
+        isDisposeable: () => true,
+        isUpdateable: () => true,
+        isResizeable: () => true,
+
+        onResize: new OBC.Event(),
+        onBeforeUpdate: new OBC.Event(),
+        onAfterUpdate: new OBC.Event(),
+        onDisposed: new OBC.Event(),
+
+        update: () => {},
+
+        dispose: () => {},
+
+        getSize: () => {
+
+            return new THREE.Vector2(
+                container.clientWidth,
+                container.clientHeight
+            );
+        },
+
+        resize: (size) => {
+
+            if (!size) {
+
+                threeRenderer.setSize(
+                    container.clientWidth,
+                    container.clientHeight
+                );
+
+                return;
+            }
+
+            threeRenderer.setSize(
+                size.x,
+                size.y
+            );
+        },
+
+        setSize: (width, height) => {
+
+            threeRenderer.setSize(
+                width,
+                height
+            );
+        },
+    };
+}
+
+
+
+
 function markUIPointerActive() {
 
     uiPointerActive =
@@ -1384,7 +1459,7 @@ async function initViewer() {
 
 
     // =================================================
-    // WEBGL RENDERER
+    // WEBGL RENDERER (XR)
     // =================================================
 
     renderer =
@@ -1445,7 +1520,41 @@ async function initViewer() {
 
 
     // =================================================
-    // COMPONENTS
+    // 🆕 WRAPPER DEL RENDERER PARA THAT OPEN
+    // =================================================
+    //
+    // IMPORTANTE: debe asignarse ANTES de components.init()
+    // y antes de pedir Raycasters/Highlighter.
+    // =================================================
+
+    world.renderer =
+        createARRendererWrapper(
+            renderer,
+            container
+        );
+
+
+    // =================================================
+    // 🆕 CAMERA PARA EL WORLD
+    // =================================================
+    //
+    // El Raycasters también lee world.camera.three
+    // =================================================
+
+    world.camera = {
+        three: camera,
+        enabled: true,
+        onAspectUpdated: new OBC.Event(),
+        onDisposed: new OBC.Event(),
+        isDisposeable: () => true,
+        isUpdateable: () => true,
+        update: () => {},
+        dispose: () => {},
+    };
+
+
+    // =================================================
+    // COMPONENTS INIT
     // =================================================
 
     components.init();
@@ -1474,6 +1583,27 @@ async function initViewer() {
     fragments.init(
         '/engine/worker.mjs'
     );
+
+
+    // =================================================
+    // RAYCASTERS (ahora sí puede acceder al renderer)
+    // =================================================
+
+    try {
+
+        components.get(OBC.Raycasters).get(world);
+
+        console.log(
+            '✅ Raycasters configurados'
+        );
+
+    } catch (e) {
+
+        console.warn(
+            '⚠️ No se pudo configurar Raycasters:',
+            e
+        );
+    }
 
 
     // =================================================
@@ -1513,25 +1643,6 @@ async function initViewer() {
     }
 
 
-    // =================================================
-    // RAYCASTERS
-    // =================================================
-
-    try {
-
-        components.get(OBC.Raycasters).get(world);
-
-        console.log(
-            '✅ Raycasters configurados'
-        );
-
-    } catch (e) {
-
-        console.warn(
-            '⚠️ No se pudo configurar Raycasters:',
-            e
-        );
-    }
 
 
     // =================================================
