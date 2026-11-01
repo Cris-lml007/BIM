@@ -1,6 +1,6 @@
 <div>
     <style>
-        #ar-ui-container {
+        #ar-ui-container{
             position: fixed;
             inset: 0;
             pointer-events: none;
