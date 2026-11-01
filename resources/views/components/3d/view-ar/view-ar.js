@@ -1,4 +1,4 @@
-// ======================== CONFIGURACIÓN DESDE DATA-* ========================
+// ======================== CONFIGURACIÓN DESDE DATA-* =========================
 const $container = document.getElementById('ar-container');
 if (!$container) throw new Error('No se encontró #ar-container');
 
