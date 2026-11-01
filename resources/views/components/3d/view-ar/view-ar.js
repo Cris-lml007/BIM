@@ -336,6 +336,7 @@ async function loadModel() {
     try {
         const sep = MODEL_URL.includes('?') ? '&' : '?';
         const res = await fetch(`${MODEL_URL}${sep}type=frag`);
+        console.log(`${MODEL_URL}${sep}type=frag`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buffer = await res.arrayBuffer();
         const model  = await fragments.core.load(buffer, { modelId: MODEL_ID_STR });
