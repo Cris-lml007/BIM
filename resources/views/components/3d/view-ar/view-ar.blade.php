@@ -4,7 +4,7 @@
          ============================================================ --}}
     <div id="ar-container"
          class="viewport"
-         data-url="{{ route('app.Attachment', $model->id) }}"
+        data-url="{{ route('app.Attachment', $model->model->id) }}"
          data-type="{{ $model->model->type }}"
          data-model-id="{{ $model->id }}"
          data-project-id="{{ $project->id }}"
