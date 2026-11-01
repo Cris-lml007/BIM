@@ -58,22 +58,21 @@ let opacityValue = 1;
 
 let surfaceFoundNotified = false;
 
+
 // =====================================================
-// 🆕 NUEVO — GUARDA GLOBAL ANTI-PROPAGACIÓN HACIA XR
+// BIM SELECT (RAYCASTING)
 // =====================================================
-//
-// IMPORTANTE:
-// El evento 'select' de una sesión immersive-ar en Chrome
-// Android NO se genera mediante el flujo normal de eventos
-// DOM. Chrome sintetiza ese evento internamente a partir del
-// toque crudo sobre la capa de dom-overlay, de forma
-// independiente a que el botón pulsado haya hecho
-// stopPropagation()/preventDefault().
-//
-// Por eso la única forma confiable de evitar que un tap
-// sobre la UI mueva el modelo es con una bandera de estado
-// consultada DIRECTAMENTE dentro de onARSelect(), en vez de
-// intentar "frenar" el evento a nivel DOM.
+
+let bimSelectMode = false;
+let selectedBimElement = null;
+let highlighter = null;
+
+// Meshes generados para raycasting preciso
+let raycastMeshes = [];
+
+
+// =====================================================
+// GUARDA GLOBAL ANTI-PROPAGACIÓN HACIA XR
 // =====================================================
 
 let uiPointerActive = false;
@@ -104,8 +103,6 @@ function markUIPointerInactiveSoon() {
         );
     }
 
-    // Pequeño margen (ms) porque el 'select' de XR puede
-    // sintetizarse unos instantes después del pointerup real.
     uiPointerReleaseTimer =
         setTimeout(() => {
 
@@ -121,9 +118,6 @@ function setupGlobalUIGuard() {
         return;
     }
 
-    // Capture:true para enterarnos ANTES que cualquier otro
-    // listener, sin importar sobre qué control específico
-    // haya caído el toque dentro de la UI.
     arUI.addEventListener(
         'pointerdown',
         markUIPointerActive,
@@ -142,7 +136,6 @@ function setupGlobalUIGuard() {
         true
     );
 
-    // Respaldo para navegadores/casos donde no llegue pointerup
     arUI.addEventListener(
         'touchend',
         markUIPointerInactiveSoon,
@@ -215,14 +208,7 @@ function showToast(message, type = 'info', duration = 4000) {
 
 
 // =====================================================
-// 🆕 NUEVO — ALTURA DINÁMICA DEL FAB BAR
-// =====================================================
-//
-// El FAB bar ahora puede desplazarse con scroll horizontal
-// en vez de hacer wrap a 2 filas, pero su altura real puede
-// variar levemente por dispositivo/zoom. La medimos y la
-// exponemos como variable CSS para que los paneles flotantes
-// siempre se posicionen justo encima, sin solaparse.
+// ALTURA DINÁMICA DEL FAB BAR
 // =====================================================
 
 function updateFabBarHeightVar() {
@@ -768,6 +754,595 @@ function setupPositionCorrection() {
 
 
 // =====================================================
+// RAYCASTING SOBRE EL MODELO FRAGMENTS
+// =====================================================
+
+async function buildRaycastMeshes() {
+
+    raycastMeshes = [];
+
+    for (const [, model] of fragments.list) {
+
+        const idsWithGeometry =
+            await model.getItemsIdsWithGeometry();
+
+        const allMeshesData =
+            await model.getItemsGeometry(
+                idsWithGeometry
+            );
+
+        const geometries = new Map();
+
+        for (const itemId in allMeshesData) {
+
+            const meshData =
+                allMeshesData[itemId];
+
+            for (const geomData of meshData) {
+
+                if (
+                    !geomData.positions ||
+                    !geomData.indices ||
+                    !geomData.transform ||
+                    !geomData.representationId
+                ) {
+                    continue;
+                }
+
+                const representationId =
+                    geomData.representationId;
+
+                if (!geometries.has(representationId)) {
+
+                    const geometry =
+                        new THREE.BufferGeometry();
+
+                    geometry.setAttribute(
+                        'position',
+                        new THREE.Float32BufferAttribute(
+                            geomData.positions,
+                            3
+                        )
+                    );
+
+                    geometry.setIndex(
+                        Array.from(geomData.indices)
+                    );
+
+                    geometries.set(
+                        representationId,
+                        geometry
+                    );
+                }
+
+                const geometry =
+                    geometries.get(representationId);
+
+                const mesh =
+                    new THREE.Mesh(geometry);
+
+                mesh.applyMatrix4(
+                    geomData.transform
+                );
+
+                mesh.applyMatrix4(
+                    model.object.matrixWorld
+                );
+
+                mesh.updateWorldMatrix(
+                    true,
+                    true
+                );
+
+                raycastMeshes.push(mesh);
+            }
+        }
+    }
+
+    console.log(
+        '🔧 Meshes de raycast generados:',
+        raycastMeshes.length
+    );
+}
+
+
+async function raycastFragments(screenX, screenY) {
+
+    const results = [];
+
+    for (const [, model] of fragments.list) {
+
+        const mouse = new THREE.Vector2(
+            screenX,
+            screenY
+        );
+
+        const result =
+            await model.raycast({
+                camera: camera,
+                mouse: mouse,
+                dom: renderer.domElement,
+            });
+
+        if (result) {
+
+            result.fragmentsModel = model;
+            results.push(result);
+        }
+    }
+
+    if (results.length === 0) {
+        return null;
+    }
+
+    let closestResult = results[0];
+
+    for (let i = 1; i < results.length; i++) {
+
+        if (
+            results[i].distance <
+            closestResult.distance
+        ) {
+            closestResult = results[i];
+        }
+    }
+
+    return closestResult;
+}
+
+
+// =====================================================
+// SELECCIÓN BIM
+// =====================================================
+
+function toggleBimSelectMode() {
+
+    bimSelectMode = !bimSelectMode;
+
+    const btn =
+        document.getElementById(
+            'ar-btn-bim-select'
+        );
+
+    const indicator =
+        document.getElementById(
+            'ar-bim-select-indicator'
+        );
+
+    const crosshair =
+        document.getElementById(
+            'ar-crosshair'
+        );
+
+    if (btn) {
+
+        btn.classList.toggle(
+            'active',
+            bimSelectMode
+        );
+    }
+
+    if (indicator) {
+
+        indicator.classList.toggle(
+            'visible',
+            bimSelectMode
+        );
+    }
+
+    if (crosshair) {
+
+        crosshair.classList.toggle(
+            'visible',
+            bimSelectMode
+        );
+    }
+
+    if (bimSelectMode) {
+
+        showToast(
+            '🎯 Modo selección BIM activado. Toca un elemento del modelo.',
+            'info',
+            4000
+        );
+
+    } else {
+
+        // Al desactivar, limpiar selección
+        clearBimSelection();
+
+        showToast(
+            '🔓 Modo selección BIM desactivado',
+            'info',
+            2000
+        );
+    }
+}
+
+
+async function clearBimSelection() {
+
+    if (highlighter) {
+
+        try {
+            await highlighter.clear('select');
+        } catch (e) {
+            console.warn(
+                '⚠️ Error limpiando highlighter:',
+                e
+            );
+        }
+    }
+
+    selectedBimElement = null;
+
+    // Cerrar panel de info si está abierto
+    const infoPanel =
+        document.getElementById(
+            'ar-panel-bim-info'
+        );
+
+    if (infoPanel) {
+
+        infoPanel.classList.remove(
+            'ar-panel-open'
+        );
+    }
+}
+
+
+async function selectBimElementAR(model, localId) {
+
+    const data =
+        await getElementInfo(
+            model,
+            localId
+        );
+
+    if (!data) {
+
+        showToast(
+            '⚠️ No se pudo obtener información del elemento',
+            'error'
+        );
+
+        return;
+    }
+
+    // Limpiar selección anterior
+    if (highlighter) {
+
+        try {
+            await highlighter.clear('select');
+        } catch (e) {
+            console.warn(
+                '⚠️ Error limpiando highlighter:',
+                e
+            );
+        }
+    }
+
+    // Highlight del elemento
+    const modelIdMap = {};
+
+    modelIdMap[model.modelId] = new Set([
+        localId
+    ]);
+
+    if (highlighter) {
+
+        try {
+
+            await highlighter.highlightByID(
+                'select',
+                modelIdMap,
+                false
+            );
+
+        } catch (e) {
+
+            console.warn(
+                '⚠️ Error al hacer highlight:',
+                e
+            );
+        }
+    }
+
+    selectedBimElement = {
+        model,
+        localId
+    };
+
+    // Construir la información
+    const info = {
+        localId:
+            data._localId?.value,
+
+        guid:
+            data._guid?.value,
+
+        category:
+            data._category?.value,
+
+        name:
+            data.Name?.value,
+
+        objectType:
+            data.ObjectType?.value,
+
+        tag:
+            data.Tag?.value,
+    };
+
+    const propertySets =
+        extractPropertySets(data);
+
+    // Mostrar panel
+    buildBimInfoPanelAR({
+        info,
+        propertySets
+    });
+
+    showToast(
+        `✅ Seleccionado: ${info.name || info.category || 'Elemento'}`,
+        'success',
+        3000
+    );
+}
+
+
+async function getElementInfo(model, localId) {
+
+    const data = await model.getItemsData(
+        [localId],
+        {
+            attributesDefault: true,
+
+            relations: {
+                IsDefinedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+
+                IsTypedBy: {
+                    attributes: true,
+                    relations: true,
+                },
+            },
+        }
+    );
+
+    if (!data.length) {
+        return null;
+    }
+
+    return data[0];
+}
+
+
+// =====================================================
+// CONSTRUIR PANEL DE INFORMACIÓN BIM (AR)
+// =====================================================
+
+function buildBimInfoPanelAR({ info, propertySets }) {
+
+    const body =
+        document.getElementById(
+            'ar-bim-info-body'
+        );
+
+    if (!body) {
+        return;
+    }
+
+    body.innerHTML = '';
+
+
+    // =========================
+    // TÍTULO
+    // =========================
+
+    const title =
+        document.createElement('div');
+
+    title.className =
+        'ar-bim-info-title';
+
+    title.textContent =
+        info.name || info.category || 'Elemento BIM';
+
+    body.appendChild(title);
+
+
+    // =========================
+    // INFORMACIÓN BÁSICA
+    // =========================
+
+    const basic =
+        document.createElement('div');
+
+    const basicFields = [
+        ['Categoría', info.category],
+        ['Nombre', info.name],
+        ['Tipo', info.objectType],
+        ['GUID', info.guid],
+        ['Tag', info.tag],
+        ['ID', info.localId],
+    ];
+
+    for (const [label, value] of basicFields) {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ''
+        ) {
+            continue;
+        }
+
+        basic.innerHTML += `
+<div class="ar-bim-info-row">
+    <div class="ar-bim-info-label">
+        ${escapeHtml(label)}
+    </div>
+    <div class="ar-bim-info-value">
+        ${escapeHtml(String(value))}
+    </div>
+</div>
+`;
+    }
+
+    body.appendChild(basic);
+
+
+    // =========================
+    // PROPERTY SETS
+    // =========================
+
+    for (const [setName, properties] of propertySets) {
+
+        const section =
+            document.createElement('div');
+
+        section.className =
+            'ar-bim-info-section';
+
+        const header =
+            document.createElement('div');
+
+        header.className =
+            'ar-bim-info-section-header';
+
+        header.innerHTML = `
+<span>${escapeHtml(setName)}</span>
+<i class="bi bi-chevron-down"></i>
+`;
+
+        const sectionBody =
+            document.createElement('div');
+
+        sectionBody.className =
+            'ar-bim-info-section-body';
+
+        for (const property of properties) {
+
+            sectionBody.innerHTML += `
+<div class="ar-bim-info-row">
+    <div class="ar-bim-info-label">
+        ${escapeHtml(property.name)}
+    </div>
+    <div class="ar-bim-info-value">
+        ${escapeHtml(
+            property.value !== null
+                ? String(property.value)
+                : '-'
+        )}
+    </div>
+</div>
+`;
+        }
+
+        header.addEventListener('click', (e) => {
+
+            e.stopPropagation();
+
+            const hidden =
+                sectionBody.classList.toggle('d-none');
+
+            const icon =
+                header.querySelector('i');
+
+            icon.className = hidden
+                ? 'bi bi-chevron-right'
+                : 'bi bi-chevron-down';
+        });
+
+        section.appendChild(header);
+        section.appendChild(sectionBody);
+
+        body.appendChild(section);
+    }
+
+
+    // =========================
+    // ABRIR PANEL
+    // =========================
+
+    closeAllPanels();
+
+    const panel =
+        document.getElementById(
+            'ar-panel-bim-info'
+        );
+
+    if (panel) {
+
+        panel.classList.add(
+            'ar-panel-open'
+        );
+    }
+}
+
+
+// =====================================================
+// CONFIGURAR BOTÓN BIM SELECT
+// =====================================================
+
+function setupBimSelect() {
+
+    const btnBimSelect =
+        document.getElementById(
+            'ar-btn-bim-select'
+        );
+
+    if (btnBimSelect) {
+
+        btnBimSelect.addEventListener(
+            'click',
+            (e) => {
+
+                e.stopPropagation();
+
+                if (!modelLoaded) {
+
+                    showToast(
+                        '⚠️ Primero carga y coloca el modelo',
+                        'error'
+                    );
+
+                    return;
+                }
+
+                toggleBimSelectMode();
+            }
+        );
+    }
+
+
+    // Cerrar info BIM también limpia selección
+    const closeInfoBtn =
+        document.getElementById(
+            'ar-close-bim-info'
+        );
+
+    if (closeInfoBtn) {
+
+        closeInfoBtn.addEventListener(
+            'click',
+            async (e) => {
+
+                e.stopPropagation();
+
+                await clearBimSelection();
+
+                closeAllPanels();
+            }
+        );
+    }
+}
+
+
+// =====================================================
 // INICIALIZAR VISOR
 // =====================================================
 
@@ -902,6 +1477,64 @@ async function initViewer() {
 
 
     // =================================================
+    // HIGHLIGHTER
+    // =================================================
+
+    try {
+
+        highlighter =
+            components.get(
+                OBF.Highlighter
+            );
+
+        highlighter.setup({
+            world,
+
+            selectMaterialDefinition: {
+                color: new THREE.Color('#f59e0b'),
+                opacity: 1,
+                transparent: false,
+                renderedFaces: 0,
+            },
+        });
+
+        console.log(
+            '✅ Highlighter configurado'
+        );
+
+    } catch (e) {
+
+        console.warn(
+            '⚠️ No se pudo configurar el Highlighter:',
+            e
+        );
+
+        highlighter = null;
+    }
+
+
+    // =================================================
+    // RAYCASTERS
+    // =================================================
+
+    try {
+
+        components.get(OBC.Raycasters).get(world);
+
+        console.log(
+            '✅ Raycasters configurados'
+        );
+
+    } catch (e) {
+
+        console.warn(
+            '⚠️ No se pudo configurar Raycasters:',
+            e
+        );
+    }
+
+
+    // =================================================
     // CUANDO SE CARGA EL MODELO
     // =================================================
 
@@ -955,6 +1588,29 @@ async function initViewer() {
                 '✅ Modelo registrado en escena:',
                 loadedModelId
             );
+        }
+    );
+
+
+    // =================================================
+    // MATERIALS (POLYGON OFFSET)
+    // =================================================
+
+    fragments.core.models.materials.list.onItemSet.add(
+        ({ value: material }) => {
+
+            if (
+                !(
+                    'isLodMaterial' in material &&
+                    material.isLodMaterial
+                )
+            ) {
+
+                material.polygonOffset = true;
+                material.polygonOffsetUnits = 1;
+                material.polygonOffsetFactor =
+                    Math.random();
+            }
         }
     );
 
@@ -1042,14 +1698,21 @@ async function initViewer() {
 
 
     // =================================================
-    // 🆕 NUEVO — GUARDA GLOBAL ANTI-PROPAGACIÓN
+    // CONFIGURAR BIM SELECT
+    // =================================================
+
+    setupBimSelect();
+
+
+    // =================================================
+    // GUARDA GLOBAL ANTI-PROPAGACIÓN
     // =================================================
 
     setupGlobalUIGuard();
 
 
     // =================================================
-    // 🆕 NUEVO — MEDIR ALTURA DEL FAB BAR
+    // MEDIR ALTURA DEL FAB BAR
     // =================================================
 
     updateFabBarHeightVar();
@@ -1191,7 +1854,39 @@ async function initViewer() {
 
 
             uiPointerActive =
-                false; // 🆕 NUEVO
+                false;
+
+
+            // Resetear modo BIM select al iniciar AR
+            bimSelectMode = false;
+            selectedBimElement = null;
+
+            const bimBtn =
+                document.getElementById(
+                    'ar-btn-bim-select'
+                );
+
+            if (bimBtn) {
+                bimBtn.classList.remove('active');
+            }
+
+            const indicator =
+                document.getElementById(
+                    'ar-bim-select-indicator'
+                );
+
+            if (indicator) {
+                indicator.classList.remove('visible');
+            }
+
+            const crosshair =
+                document.getElementById(
+                    'ar-crosshair'
+                );
+
+            if (crosshair) {
+                crosshair.classList.remove('visible');
+            }
 
 
             closeAllPanels();
@@ -1229,8 +1924,6 @@ async function initViewer() {
             }
 
 
-            // 🆕 NUEVO — recalcular altura del FAB bar
-            // una vez que la UI es visible de nuevo
             requestAnimationFrame(
                 updateFabBarHeightVar
             );
@@ -1251,7 +1944,7 @@ async function initViewer() {
 
     renderer.xr.addEventListener(
         'sessionend',
-        () => {
+        async () => {
 
             console.log(
                 'AR finalizado'
@@ -1283,7 +1976,40 @@ async function initViewer() {
 
 
             uiPointerActive =
-                false; // 🆕 NUEVO
+                false;
+
+
+            // Resetear BIM select
+            bimSelectMode = false;
+
+            await clearBimSelection();
+
+            const bimBtn =
+                document.getElementById(
+                    'ar-btn-bim-select'
+                );
+
+            if (bimBtn) {
+                bimBtn.classList.remove('active');
+            }
+
+            const indicator =
+                document.getElementById(
+                    'ar-bim-select-indicator'
+                );
+
+            if (indicator) {
+                indicator.classList.remove('visible');
+            }
+
+            const crosshair =
+                document.getElementById(
+                    'ar-crosshair'
+                );
+
+            if (crosshair) {
+                crosshair.classList.remove('visible');
+            }
 
 
             closeAllPanels();
@@ -2443,11 +3169,7 @@ async function onARSelect() {
     }
 
 
-    // 🆕 NUEVO — GUARDA PRINCIPAL ANTI-PROPAGACIÓN
-    // Si el dedo está (o acaba de estar) sobre algún
-    // control de la UI, ignoramos este 'select' por
-    // completo, sin importar si vino "sintetizado"
-    // por Chrome de forma independiente al DOM.
+    // GUARDA PRINCIPAL ANTI-PROPAGACIÓN
     if (uiPointerActive) {
 
         console.log(
@@ -2457,6 +3179,81 @@ async function onARSelect() {
         return;
     }
 
+
+    // =================================================
+    // MODO BIM SELECT ACTIVO
+    // =================================================
+
+    if (bimSelectMode && modelLoaded && modelPlaced) {
+
+        console.log(
+            '🎯 BIM Select: ejecutando raycast...'
+        );
+
+        // Obtener la posición del centro de la pantalla
+        // En AR, el toque no da coordenadas fiables del
+        // raycaster interno de XR para fragments, así que
+        // lanzamos un ray desde el centro de la pantalla
+        // (donde está el crosshair).
+
+        const domRect =
+            renderer.domElement.getBoundingClientRect();
+
+        const centerX =
+            domRect.left + domRect.width / 2;
+
+        const centerY =
+            domRect.top + domRect.height / 2;
+
+        try {
+
+            const result =
+                await raycastFragments(
+                    centerX,
+                    centerY
+                );
+
+            if (result) {
+
+                console.log(
+                    '🎯 Raycast hit, localId:',
+                    result.localId
+                );
+
+                await selectBimElementAR(
+                    result.fragmentsModel,
+                    result.localId
+                );
+
+            } else {
+
+                showToast(
+                    '⚠️ No se detectó ningún elemento. Apunta al modelo con el crosshair.',
+                    'info',
+                    3000
+                );
+            }
+
+        } catch (e) {
+
+            console.error(
+                '❌ Error en raycast BIM:',
+                e
+            );
+
+            showToast(
+                '❌ Error al intentar seleccionar el elemento',
+                'error'
+            );
+        }
+
+        return;
+    }
+
+
+    // =================================================
+    // COMPORTAMIENTO NORMAL (COLOCAR MODELO)
+    // =================================================
 
     if (!hitTestEnabled) {
         return;
@@ -2516,6 +3313,13 @@ async function onARSelect() {
 
         disableHitTest();
 
+        // Construir meshes de raycast después de colocar
+        buildRaycastMeshes().catch(e => {
+            console.warn(
+                '⚠️ Error construyendo meshes de raycast:',
+                e
+            );
+        });
 
         return;
     }
@@ -2717,6 +3521,14 @@ async function onARSelect() {
 
 
             disableHitTest();
+
+            // Construir meshes de raycast
+            buildRaycastMeshes().catch(e => {
+                console.warn(
+                    '⚠️ Error construyendo meshes de raycast:',
+                    e
+                );
+            });
         }
 
     } catch (error) {

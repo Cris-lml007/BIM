@@ -5,7 +5,6 @@
             inset: 0;
             pointer-events: none;
             z-index: 1;
-            /* 🆕 NUEVO — variable dinámica con la altura real del FAB bar */
             --ar-fab-height: 92px;
         }
 
@@ -65,8 +64,6 @@
         .ar-floating-panel {
             position: absolute;
             left: 50%;
-            /* ✏️ CAMBIADO — ya no es un valor fijo, se calcula desde
-               la altura real del FAB bar + un margen de seguridad */
             bottom: calc(var(--ar-fab-height) + 14px);
             transform: translateX(-50%) translateY(16px);
             width: min(92vw, 380px);
@@ -89,8 +86,6 @@
             visibility: visible;
             transform: translateX(-50%) translateY(0);
             pointer-events: auto;
-            /* 🆕 NUEVO — por si queda algún solape residual,
-               el panel abierto siempre gana por encima del FAB bar */
             z-index: 26;
         }
 
@@ -133,9 +128,6 @@
             gap: 12px;
             pointer-events: auto;
             z-index: 25;
-            /* ✏️ CAMBIADO — ya NO hace wrap a 2 filas (eso rompía
-               el cálculo de posición del panel). Si no entra todo,
-               se desplaza horizontalmente con scroll. */
             flex-wrap: nowrap;
             overflow-x: auto;
             max-width: 95vw;
@@ -417,6 +409,153 @@
             background: rgba(37, 99, 235, 0.15);
             color: #60a5fa;
         }
+
+        /* =====================================================
+           BIM ELEMENT INFO PANEL (AR)
+           ===================================================== */
+
+        #ar-panel-bim-info {
+            max-height: 55vh;
+        }
+
+        .ar-bim-info-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f59e0b;
+            margin-bottom: 12px;
+            word-break: break-word;
+        }
+
+        .ar-bim-info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 12px;
+        }
+
+        .ar-bim-info-label {
+            color: rgba(255, 255, 255, 0.55);
+            flex-shrink: 0;
+            max-width: 40%;
+        }
+
+        .ar-bim-info-value {
+            color: white;
+            text-align: right;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .ar-bim-info-section {
+            margin-top: 12px;
+        }
+
+        .ar-bim-info-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .ar-bim-info-section-header:active {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .ar-bim-info-section-body {
+            padding: 4px 10px;
+        }
+
+        .ar-bim-select-indicator {
+            position: absolute;
+            top: max(60px, env(safe-area-inset-top, 16px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(245, 158, 11, 0.9);
+            color: #000;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 16px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 28;
+            display: none;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .ar-bim-select-indicator.visible {
+            display: block;
+            pointer-events: auto;
+        }
+
+        /* =====================================================
+           CROSSHAIR CENTRAL (para modo selección)
+           ===================================================== */
+
+        #ar-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 15;
+            display: none;
+        }
+
+        #ar-crosshair.visible {
+            display: block;
+        }
+
+        #ar-crosshair::before,
+        #ar-crosshair::after {
+            content: '';
+            position: absolute;
+            background: #f59e0b;
+            border-radius: 1px;
+        }
+
+        #ar-crosshair::before {
+            /* línea horizontal */
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+
+        #ar-crosshair::after {
+            /* línea vertical */
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+
+        /* Punto central */
+        #ar-crosshair-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #f59e0b;
+            box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+        }
     </style>
 
     <div id="viewer"
@@ -429,6 +568,16 @@
 
         <!-- TOASTS -->
         <div id="ar-toast-container"></div>
+
+        <!-- INDICADOR DE MODO SELECCIÓN -->
+        <div id="ar-bim-select-indicator" class="ar-bim-select-indicator">
+            🎯 Toca un elemento para ver sus propiedades
+        </div>
+
+        <!-- CROSSHAIR CENTRAL -->
+        <div id="ar-crosshair">
+            <div id="ar-crosshair-dot"></div>
+        </div>
 
         <!-- PANEL: OPACIDAD -->
         <div id="ar-panel-opacity" class="ar-floating-panel">
@@ -457,7 +606,7 @@
             </div>
         </div>
 
-        <!-- PANEL: PROPIEDADES -->
+        <!-- PANEL: PROPIEDADES (FILTROS) -->
         <div id="ar-panel-properties" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-funnel me-2"></i>Propiedades</span>
@@ -510,7 +659,6 @@
 
             <div class="ar-panel-body">
                 <div id="ar-categories-container" class="ar-categories-scroll">
-                    <!-- Se llena dinámicamente -->
                 </div>
             </div>
         </div>
@@ -614,6 +762,22 @@
             </div>
         </div>
 
+        <!-- PANEL: INFORMACIÓN BIM DEL ELEMENTO SELECCIONADO -->
+        <div id="ar-panel-bim-info" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-info-circle me-2"></i>Elemento BIM</span>
+                <button type="button" class="ar-panel-close" id="ar-close-bim-info">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body" id="ar-bim-info-body">
+                <div class="small text-white-50 text-center py-3">
+                    Selecciona un elemento para ver sus propiedades
+                </div>
+            </div>
+        </div>
+
         <!-- FAB BAR -->
         <div id="ar-fab-bar">
 
@@ -633,6 +797,10 @@
 
             <button type="button" class="ar-fab" data-panel="position" title="Ajustar posición">
                 <i class="bi bi-arrows-move"></i>
+            </button>
+
+            <button type="button" id="ar-btn-bim-select" class="ar-fab" title="Seleccionar elemento BIM">
+                <i class="bi bi-cursor"></i>
             </button>
 
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">
