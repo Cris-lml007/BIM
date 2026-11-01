@@ -912,6 +912,72 @@ function openIncidentDetail(incidentId) {
     }
 }
 
+/* ───────── Lista de incidencias en el panel ───────── */
+
+function renderIncidentList() {
+    const body = document.getElementById('ar-incidents-body');
+    if (!body) return;
+
+    const allMarks = [
+        ...incidentsData.map(i => ({ ...i, _type: 'incident' })),
+        ...anchorsData.map(a => ({ ...a, _type: 'anchor' })),
+    ];
+
+    if (allMarks.length === 0) {
+        body.innerHTML =
+            '<p style="color:rgba(255,255,255,.5);font-size:12px;text-align:center;padding:24px 0;">' +
+            'No hay marcas todavía</p>';
+        return;
+    }
+
+    body.innerHTML = '';
+
+    allMarks.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'ar-mark-item';
+
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.ar-mark-del')) return;
+            markUIPointerActive();
+            openIncidentDetail(item.id);
+            markUIPointerInactiveSoon();
+        });
+
+        const dot = document.createElement('span');
+        dot.className = `ar-mark-dot ${item._type}`;
+
+        const info = document.createElement('div');
+        info.className = 'ar-mark-info';
+
+        const title = document.createElement('div');
+        title.className = 'ar-mark-title';
+        title.textContent = item.title || `#${item.id}`;
+
+        const meta = document.createElement('div');
+        meta.className = 'ar-mark-meta';
+        meta.textContent =
+            `${item._type === 'incident' ? '🔴 Incidencia' : '🔵 Anclaje'}` +
+            ` · (${Number(item.x).toFixed(2)}, ${Number(item.y).toFixed(2)}, ${Number(item.z).toFixed(2)})`;
+
+        info.append(title, meta);
+
+        const del = document.createElement('button');
+        del.className = 'ar-mark-del';
+        del.innerHTML = '<i class="bi bi-trash3"></i>';
+        del.title = 'Eliminar';
+        del.addEventListener('click', (e) => {
+            e.stopPropagation();
+            markUIPointerActive();
+            deleteMark(item.id, item._type);
+            markUIPointerInactiveSoon();
+        });
+
+        row.append(dot, info, del);
+        body.appendChild(row);
+    });
+}
+
+
 // ---- Formulario modal ----
 function showIncidentForm(localPos, localNormal) {
     pendingIncidentPos = localPos.clone();
