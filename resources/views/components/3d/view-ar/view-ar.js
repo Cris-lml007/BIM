@@ -1890,19 +1890,12 @@ function placeModelAt(position) {
 // =====================================================
 
 function rotateModel(direction) {
-
     if (!isAR) return;
 
     if (!arModel || !arModel.visible) {
         showToast('⚠️ Coloca primero el modelo para poder rotarlo', 'error');
         return;
     }
-
-    if (direction !== 'left' && direction !== 'right') return;
-
-    // -------------------------------------------------
-    // 1. CALCULAR LA POSICIÓN MUNDIAL DEL ANCLAJE
-    // -------------------------------------------------
 
     const anchorOffsetBefore = anchorPosition.clone()
         .multiply(arModel.scale)
@@ -1911,40 +1904,43 @@ function rotateModel(direction) {
     const anchorWorldPosition = arModel.position.clone()
         .add(anchorOffsetBefore);
 
-    // -------------------------------------------------
-    // 2. CALCULAR SENTIDO DE ROTACIÓN
-    // -------------------------------------------------
+    let axis;
+    let angle;
 
-    // Izquierda: +2 grados
-    // Derecha:   -2 grados
+    switch (direction) {
+        case 'left':
+            axis = arRotationAxis;
+            angle = rotationStep;
+            break;
 
-    const angle = direction === 'left'
-        ? rotationStep
-        : -rotationStep;
+        case 'right':
+            axis = arRotationAxis;
+            angle = -rotationStep;
+            break;
 
-    // -------------------------------------------------
-    // 3. ROTAR SOBRE EL EJE DE LA SUPERFICIE
-    // -------------------------------------------------
+        case 'up':
+            axis = new THREE.Vector3(1, 0, 0);
+            angle = rotationStep;
+            break;
 
-    arModel.rotateOnWorldAxis(
-        arRotationAxis,
-        angle
-    );
+        case 'down':
+            axis = new THREE.Vector3(1, 0, 0);
+            angle = -rotationStep;
+            break;
 
-    // -------------------------------------------------
-    // 4. CORREGIR POSICIÓN PARA CONSERVAR EL ANCLAJE
-    // -------------------------------------------------
+        default:
+            return;
+    }
 
+    arModel.rotateOnWorldAxis(axis, angle);
+
+    // Mantener fijo el punto original del anclaje
     const anchorOffsetAfter = anchorPosition.clone()
         .multiply(arModel.scale)
         .applyQuaternion(arModel.quaternion);
 
     arModel.position.copy(anchorWorldPosition)
         .sub(anchorOffsetAfter);
-
-    // -------------------------------------------------
-    // 5. ACTUALIZAR ESCENA
-    // -------------------------------------------------
 
     arModel.updateMatrixWorld(true);
 

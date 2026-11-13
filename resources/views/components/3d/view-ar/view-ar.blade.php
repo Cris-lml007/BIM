@@ -1027,6 +1027,18 @@ data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
             Derecha
         </button>
     </div>
+                    </div>
+
+<div class="ar-rotation-buttons">
+    <button type="button" class="ar-rotate-btn" data-rotation="up">
+        <i class="bi bi-arrow-up-circle"></i>
+        Inclinar adelante
+    </button>
+
+    <button type="button" class="ar-rotate-btn" data-rotation="down">
+        <i class="bi bi-arrow-down-circle"></i>
+        Inclinar atrás
+    </button>
 </div>
 
                     <p class="ar-position-hint">
