@@ -4,9 +4,6 @@
             <h1 class="h2 fw-bold text-dark mb-0">{{ strtoupper($project->name) }}</h1>
         </div>
 
-        <small>
-            {{ $project->description ?? 'Sin descripción' }}
-        </small>
     </x-slot>
     <x-card>
         <div class="container-fluid py-4">
@@ -69,6 +66,20 @@
                                 </div>
                                 <div class="bg-success bg-opacity-10 rounded-3 p-3">
                                     <i class="fas fa-users fa-2x text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="g-4">
+                    <div class="col">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-4">
+                                <div>
+                                    <h5><strong>Acerca del Proyecto</strong></h5>
+                                </div>
+                                <div>
+                                    <p>{{ $project->description }}</p>
                                 </div>
                             </div>
                         </div>
