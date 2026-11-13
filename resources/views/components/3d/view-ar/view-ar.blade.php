@@ -793,6 +793,52 @@
             padding: 4px 8px;
             touch-action: manipulation;
         }
+/* =====================================================
+   ROTACIÓN DEL MODELO
+   ===================================================== */
+
+.ar-rotation-controls {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ar-rotation-title {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+}
+
+.ar-rotation-buttons {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.ar-rotate-btn {
+    flex: 1;
+    padding: 12px 6px;
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(37, 99, 235, 0.4);
+    color: white;
+    font-size: 12px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ar-rotate-btn i {
+    margin-right: 5px;
+    font-size: 15px;
+}
+
+.ar-rotate-btn:active {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
     </style>
 {{-- Tarjeta de información --}}
 <div class="card card-outline card-primary">
@@ -963,6 +1009,25 @@ data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
                         <button type="button" class="ar-dpad-btn ar-dpad-down" data-direction="down"><i
                                 class="bi bi-arrow-down"></i></button>
                     </div>
+<!-- ROTACIÓN DEL MODELO -->
+<div class="ar-rotation-controls">
+    <span class="ar-rotation-title">
+        <i class="bi bi-arrow-repeat me-1"></i>
+        Rotar modelo
+    </span>
+
+    <div class="ar-rotation-buttons">
+        <button type="button" class="ar-rotate-btn" data-rotation="left">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            Izquierda
+        </button>
+
+        <button type="button" class="ar-rotate-btn" data-rotation="right">
+            <i class="bi bi-arrow-clockwise"></i>
+            Derecha
+        </button>
+    </div>
+</div>
 
                     <p class="ar-position-hint">
                         Izquierda/derecha se mueven según hacia dónde apunta la cámara

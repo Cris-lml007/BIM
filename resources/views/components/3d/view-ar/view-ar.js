@@ -161,6 +161,14 @@ function setupGlobalUIGuard() {
 
 let positionStep = 0.03;
 let lastPlacedPosition = null;
+let lastPlacedQuaternion = null;
+
+// Rotación: 2 grados por movimiento
+let rotationStep = THREE.MathUtils.degToRad(2);
+
+// Eje sobre el que girará el modelo.
+// Se actualizará según la superficie detectada.
+let arRotationAxis = new THREE.Vector3(0, 1, 0);
 
 // =====================================================
 // PROPERTY SETS / FILTROS
@@ -351,14 +359,25 @@ function nudgeModel(direction) {
 }
 
 function resetModelPosition() {
+
     if (!arModel || !lastPlacedPosition) {
         showToast('⚠️ No hay una posición de anclaje guardada', 'error');
         return;
     }
+
     arModel.position.copy(lastPlacedPosition);
+
+    if (lastPlacedQuaternion) {
+        arModel.quaternion.copy(lastPlacedQuaternion);
+    }
+
     arModel.updateMatrixWorld(true);
-    if (fragments) fragments.core.update(true);
-    showToast('↩️ Posición restablecida al anclaje original', 'info');
+
+    if (fragments) {
+        fragments.core.update(true);
+    }
+
+    showToast('↩️ Posición y rotación restablecidas', 'info');
 }
 
 function setPositionStep(step) {
@@ -388,6 +407,59 @@ function setupPositionCorrection() {
         btn.addEventListener('pointercancel', stopMoving);
         btn.addEventListener('contextmenu', (e) => e.preventDefault());
     });
+
+// =====================================================
+// CONTROLES DE ROTACIÓN
+// =====================================================
+
+document.querySelectorAll('.ar-rotate-btn[data-rotation]').forEach(btn => {
+
+    let holdInterval = null;
+    let holdTimeout = null;
+
+    const startRotation = () => {
+
+        rotateModel(btn.dataset.rotation);
+
+        // Si mantiene presionado, continuar girando
+        holdTimeout = setTimeout(() => {
+
+            holdInterval = setInterval(() => {
+                rotateModel(btn.dataset.rotation);
+            }, 140);
+
+        }, 350);
+    };
+
+    const stopRotation = () => {
+
+        if (holdTimeout) {
+            clearTimeout(holdTimeout);
+            holdTimeout = null;
+        }
+
+        if (holdInterval) {
+            clearInterval(holdInterval);
+            holdInterval = null;
+        }
+    };
+
+    btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startRotation();
+    });
+
+    btn.addEventListener('pointerup', (e) => {
+        e.stopPropagation();
+        stopRotation();
+    });
+
+    btn.addEventListener('pointerleave', stopRotation);
+    btn.addEventListener('pointercancel', stopRotation);
+
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+});
 
     const resetPositionBtn = document.getElementById('ar-reset-position');
     if (resetPositionBtn) {
@@ -1753,6 +1825,7 @@ function placeModelAt(position) {
         const targetNormal = new THREE.Vector3(0, 1, 0);
 
         targetNormal.transformDirection(arReticle.matrix);
+        arRotationAxis.copy(targetNormal).normalize();
 
         // Rotación necesaria para hacer coincidir ambas normales.
         const alignmentQuaternion = new THREE.Quaternion();
@@ -1792,6 +1865,7 @@ function placeModelAt(position) {
     arModel.updateMatrixWorld(true);
 
     lastPlacedPosition = arModel.position.clone();
+    lastPlacedQuaternion = arModel.quaternion.clone();
 
     // -------------------------------------------------
     // DEBUG
@@ -1810,6 +1884,76 @@ function placeModelAt(position) {
         modelQuaternion: arModel.quaternion.toArray()
     });
 }
+
+// =====================================================
+// ROTAR MODELO SOBRE EL PUNTO DE ANCLAJE
+// =====================================================
+
+function rotateModel(direction) {
+
+    if (!isAR) return;
+
+    if (!arModel || !arModel.visible) {
+        showToast('⚠️ Coloca primero el modelo para poder rotarlo', 'error');
+        return;
+    }
+
+    if (direction !== 'left' && direction !== 'right') return;
+
+    // -------------------------------------------------
+    // 1. CALCULAR LA POSICIÓN MUNDIAL DEL ANCLAJE
+    // -------------------------------------------------
+
+    const anchorOffsetBefore = anchorPosition.clone()
+        .multiply(arModel.scale)
+        .applyQuaternion(arModel.quaternion);
+
+    const anchorWorldPosition = arModel.position.clone()
+        .add(anchorOffsetBefore);
+
+    // -------------------------------------------------
+    // 2. CALCULAR SENTIDO DE ROTACIÓN
+    // -------------------------------------------------
+
+    // Izquierda: +2 grados
+    // Derecha:   -2 grados
+
+    const angle = direction === 'left'
+        ? rotationStep
+        : -rotationStep;
+
+    // -------------------------------------------------
+    // 3. ROTAR SOBRE EL EJE DE LA SUPERFICIE
+    // -------------------------------------------------
+
+    arModel.rotateOnWorldAxis(
+        arRotationAxis,
+        angle
+    );
+
+    // -------------------------------------------------
+    // 4. CORREGIR POSICIÓN PARA CONSERVAR EL ANCLAJE
+    // -------------------------------------------------
+
+    const anchorOffsetAfter = anchorPosition.clone()
+        .multiply(arModel.scale)
+        .applyQuaternion(arModel.quaternion);
+
+    arModel.position.copy(anchorWorldPosition)
+        .sub(anchorOffsetAfter);
+
+    // -------------------------------------------------
+    // 5. ACTUALIZAR ESCENA
+    // -------------------------------------------------
+
+    arModel.updateMatrixWorld(true);
+
+    if (fragments) {
+        fragments.core.update(true);
+    }
+}
+
+
 
 // =====================================================
 // SELECT EN AR
