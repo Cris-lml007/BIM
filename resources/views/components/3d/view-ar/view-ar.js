@@ -1897,68 +1897,41 @@ function rotateModel(direction) {
         return;
     }
 
-    const anchorOffsetBefore = anchorPosition.clone()
-        .multiply(arModel.scale)
-        .applyQuaternion(arModel.quaternion);
+    // Rotaciones que ya tenemos
+    if (direction === 'left' || direction === 'right' ||
+        direction === 'up' || direction === 'down' ||
+        direction === 'tilt-left' || direction === 'tilt-right') {
 
-    const anchorWorldPosition = arModel.position.clone()
-        .add(anchorOffsetBefore);
-
-    let axis;
-    let angle;
-
-    switch (direction) {
-        // Rotación horizontal
-        case 'left':
-            axis = arRotationAxis;
-            angle = rotationStep;
-            break;
-
-        case 'right':
-            axis = arRotationAxis;
-            angle = -rotationStep;
-            break;
-
-        // Inclinación adelante / atrás
-        case 'up':
-            axis = new THREE.Vector3(1, 0, 0);
-            angle = rotationStep;
-            break;
-
-        case 'down':
-            axis = new THREE.Vector3(1, 0, 0);
-            angle = -rotationStep;
-            break;
-
-        // Inclinación hacia los costados
-        case 'tilt-left':
-            axis = new THREE.Vector3(0, 0, 1);
-            angle = rotationStep;
-            break;
-
-        case 'tilt-right':
-            axis = new THREE.Vector3(0, 0, 1);
-            angle = -rotationStep;
-            break;
-
-        default:
-            return;
+        // Mantener aquí el código de rotación e inclinación
+        // que ya te funciona.
     }
 
-    arModel.rotateOnWorldAxis(axis, angle);
+    // Nuevo movimiento orbital
+    if (direction === 'orbit-left' || direction === 'orbit-right') {
 
-    // Mantener fijo el punto del anclaje
-    const anchorOffsetAfter = anchorPosition.clone()
-        .multiply(arModel.scale)
-        .applyQuaternion(arModel.quaternion);
+        const anchorWorldPosition = arModel.localToWorld(
+            anchorPosition.clone()
+        );
 
-    arModel.position.copy(anchorWorldPosition)
-        .sub(anchorOffsetAfter);
+        const angle = direction === 'orbit-left'
+            ? rotationStep
+            : -rotationStep;
 
-    arModel.updateMatrixWorld(true);
+        const verticalAxis = new THREE.Vector3(0, 1, 0);
 
-    if (fragments) {
-        fragments.core.update(true);
+        const offset = arModel.position.clone()
+            .sub(anchorWorldPosition);
+
+        offset.applyAxisAngle(verticalAxis, angle);
+
+        arModel.position.copy(anchorWorldPosition)
+            .add(offset);
+
+        arModel.rotateOnWorldAxis(verticalAxis, angle);
+
+        arModel.updateMatrixWorld(true);
+
+        if (fragments) fragments.core.update(true);
     }
 }
 
