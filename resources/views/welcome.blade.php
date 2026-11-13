@@ -1549,404 +1549,479 @@
 </head>
 
 <body class="bg-dark text-white d-flex flex-column min-vh-100"
-    style="background: linear-gradient(rgba(10, 10, 10, 0.85), rgba(0, 0, 0, 0.95)), url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2500&auto=format&fit=crop') no-repeat center center fixed; background-size: cover;">
+    style="background: linear-gradient(rgba(10, 10, 10, .88), rgba(0, 0, 0, .96)), url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2500&auto=format&fit=crop') no-repeat center center fixed; background-size: cover;">
 
-    <!-- NAV -->
-    <header class="container pt-4 pb-2 z-3 position-relative">
-        <nav class="d-flex justify-content-between align-items-center">
-            <!-- Logo -->
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-buildings-fill fs-2 text-primary"></i>
-                <h1 class="h3 mb-0 fw-bold tracking-tight text-white">BIM<span class="text-primary">Nova</span></h1>
-            </div>
+    <style>
+        :root {
+            --bim-primary: #0d6efd;
+            --bim-dark: #101820;
+            --bim-muted: #64748b;
+        }
+        html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+        body { overflow-x: hidden; }
+        .site-header { background: rgba(8, 13, 22, .88); backdrop-filter: blur(14px); }
+        .brand-mark { color: var(--bim-primary); }
+        .hero-section { min-height: 82vh; padding: 5rem 0; }
+        .hero-copy { max-width: 720px; }
+        .hero-image { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06); }
+        .section-kicker { color: var(--bim-primary); letter-spacing: .16em; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+        .section-title { font-weight: 800; letter-spacing: -.035em; }
+        .glass-card { background: rgba(25, 34, 47, .78); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px); }
+        .feature-icon { width: 58px; height: 58px; display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; background: rgba(13,110,253,.15); color: #6ea8fe; font-size: 1.65rem; }
+        .service-card, .step-card, .reason-card { transition: transform .25s ease, border-color .25s ease; }
+        .service-card:hover, .step-card:hover, .reason-card:hover { transform: translateY(-6px); border-color: rgba(13,110,253,.65); }
+        .soft-section { background: #f8fafc; color: #172033; }
+        .soft-section .text-secondary { color: #64748b !important; }
+        .step-number { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bim-primary); color: #fff; font-weight: 800; }
+        .review-placeholder { border: 1px dashed #94a3b8; background: rgba(255,255,255,.7); }
+        .footer-link { color: rgba(255,255,255,.72); text-decoration: none; }
+        .footer-link:hover { color: #fff; }
+        @media (max-width: 991.98px) {
+            .hero-section { min-height: auto; padding: 5rem 0 4rem; }
+            .navbar-collapse { padding-top: 1rem; }
+        }
+    </style>
 
-            <!-- Navigation Links (centrados) -->
-            <ul class="nav mx-auto">
-                <li class="nav-item">
-                    <a class="nav-link text-white fw-semibold px-3 " href="#nosotros">Sobre Nosotros</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white fw-semibold px-3" href="#servicios">Servicios</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white fw-semibold px-3" href="#proyectos">Proyectos</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white fw-semibold px-3" href="#contacto">Contacto</a>
-                </li>
-            </ul>
+    <!-- NAVEGACIÓN PRINCIPAL -->
+    <header class="site-header sticky-top border-bottom border-secondary border-opacity-25">
+        <nav class="navbar navbar-expand-lg navbar-dark container py-3">
+            <a class="navbar-brand d-flex align-items-center gap-2 me-lg-4" href="#inicio" aria-label="BIMNova, inicio">
+                <i class="bi bi-buildings-fill fs-2 brand-mark"></i>
+                <span class="h3 mb-0 fw-bold">BIM<span class="text-primary">Nova</span></span>
+            </a>
 
-            <!-- Auth Links -->
-            <div>
-                @auth
-                    <a href="{{ url('/dashboard') }}"
-                        class="btn btn-outline-light rounded-pill px-4 shadow-sm">Dashboard</a>
-                @else
-                    <a href="{{ route('login') }}"
-                        class="btn btn-link text-light text-decoration-none me-3 fw-semibold">Iniciar Sesión</a>
-                    @if (Route::has('register'))
-                        <a href="{{ route('register') }}" class="btn btn-primary rounded-pill px-4 shadow">Registrarse</a>
-                    @endif
-                @endauth
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation"
+                aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menú">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="mainNavigation">
+                <ul class="navbar-nav mx-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#servicios">Servicios</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#nosotros">Sobre nosotros</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#contacto">Contacto</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#tutoriales">Tutoriales</a></li>
+                </ul>
+
+                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-3 mt-lg-0">
+                    @auth
+                        <a href="{{ url('/dashboard') }}" class="btn btn-outline-light rounded-pill px-4">Mi plataforma</a>
+                    @else
+                        <a href="{{ route('login') }}" class="btn btn-link text-white text-decoration-none fw-semibold">Iniciar sesión</a>
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}" class="btn btn-primary rounded-pill px-4">Registrarse</a>
+                        @endif
+                    @endauth
+                </div>
             </div>
         </nav>
     </header>
 
-    <!-- HERO FULLSCREEN -->
-    <main class="flex-grow-1 d-flex align-items-center position-relative z-1 mb-5" style="min-height: 80vh;">
-        <div class="container">
-            <div class="row w-100 align-items-center">
-                <!-- TEXT -->
-                <div class="col-lg-7 text-center text-lg-start animate__animated animate__fadeInUp">
-
-                    <h2 class="display-3 fw-bolder mb-4 lh-sm text-white shadow-sm"
-                        style="text-shadow: 0 4px 6px rgba(0,0,0,0.5);">
-                        Diseño y Construcción <br>
-                        <span class="text-primary">Inteligente</span>
-                    </h2>
-                    <p class="mb-5 fs-  6  text-light opacity-75 fw-light" style="max-width: 600px; margin: 0 auto;">
-                        Optimizamos cada fase de tu proyecto integrando precisión, modelado 3D interactivo y análisis de
-                        datos enfocados en la eficiencia estructural.
-                    </p>
-                    <div class="d-flex flex-column flex-sm-row justify-content-center justify-content-lg-start gap-3">
-                        @if (Route::has('register'))
-                            <a href="{{ route('register') }}"
-                                class="btn btn-primary btn-lg rounded-pill px-5 shadow-lg d-flex align-items-center justify-content-center gap-2">
-                                Ver demo <i class="bi bi-arrow-right"></i>
+    <main class="flex-grow-1">
+        <!-- PORTADA -->
+        <section id="inicio" class="hero-section d-flex align-items-center">
+            <div class="container">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-7" data-aos="fade-up">
+                        <span class="badge rounded-pill bg-primary bg-opacity-25 text-info border border-primary border-opacity-25 px-3 py-2 mb-4">
+                            BIM · INTELIGENCIA ARTIFICIAL · REALIDAD AUMENTADA
+                        </span>
+                        <div class="hero-copy">
+                            <h1 class="display-3 fw-bolder lh-sm mb-4">
+                                Construimos el futuro conectando lo
+                                <span class="text-primary">digital y lo físico.</span>
+                            </h1>
+                            <p class="fs-5 text-light opacity-75 fw-light mb-5">
+                                Llevamos la construcción al siguiente nivel conectando el mundo digital y el físico.
+                                Gracias a BIM, Inteligencia Artificial y Realidad Aumentada, visualiza el proyecto
+                                directamente sobre la obra, supervisa avances en tiempo real y garantiza una ejecución
+                                precisa, eficiente y alineada con el diseño original.
+                            </p>
+                        </div>
+                        <div class="d-flex flex-column flex-sm-row gap-3">
+                            <a href="#contacto" class="btn btn-primary btn-lg rounded-pill px-5 d-inline-flex align-items-center justify-content-center gap-2 shadow">
+                                Solicitar demo <i class="bi bi-arrow-right"></i>
                             </a>
-                        @endif
-                        <a href="#proyectos"
-                            class="btn btn-outline-light btn-lg rounded-pill px-5 d-flex align-items-center justify-content-center gap-2"
-                            style="backdrop-filter: blur(5px);">
-                            Ver proyectos <i class="bi bi-play-circle"></i>
-                        </a>
+                            <a href="#como-funciona" class="btn btn-outline-light btn-lg rounded-pill px-5 d-inline-flex align-items-center justify-content-center gap-2">
+                                Prueba ahora <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </div>
                     </div>
-                </div>
-
-                <!-- VISUAL ELEMENTS / MOCKUP -->
-                <div class="col-lg-5 d-none d-lg-block animate__animated animate__fadeInRight animate__delay-1s">
-                    <div class="position-relative">
-                        <section class="container">
-                            <div class="card shadow-sm ">
-                                <!-- Aquí colocas la imagen -->
-                                <img src="{{ asset('images/portada.png') }}" alt="Modelo 3D" class="img-fluid rounded"
-                                    style="height:100%; width:100%; object-fit:cover;">
-                            </div>
-                        </section>
+                    <div class="col-lg-5" data-aos="fade-left">
+                        <div class="hero-image rounded-4 p-2 shadow-lg">
+                            <img src="{{ asset('images/portada.png') }}" alt="Visualización de un proyecto BIM en 3D"
+                                class="img-fluid rounded-3 w-100" style="max-height: 480px; object-fit: cover;">
+                        </div>
+                        <div class="d-flex justify-content-center gap-4 mt-4 text-white-50 small">
+                            <span><i class="bi bi-boxes text-primary me-1"></i> Modelado BIM</span>
+                            <span><i class="bi bi-phone text-primary me-1"></i> Experiencia AR</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </main><!-- CONTENT WRAPPER -->
-    <div class="text-dark ">
-        <!-- SOBRE NOSOTROS -->
-        <section id="nosotros" class="py-5 bg-white">
+        </section>
+
+        <!-- BENEFICIOS / PROPUESTA DE VALOR -->
+        <section class="py-5">
             <div class="container py-5">
-                <div class="row align-items-center g-5">
-                    <div class="col-lg-6 position-relative" data-aos="fade-right">
-                        <div class="position-absolute top-0 start-0 bg-warning rounded-circle blur-3xl opacity-25"
-                            style="width: 300px; height: 300px; filter: blur(60px); z-index: 0;"></div>
-                        <img src="{{ asset('images/portada.png') }}" alt="Modelo 3D" class="img-fluid rounded">
-                        <div class="position-absolute bottom-0 end-0 bg-dark text-white p-4 rounded-4 shadow-lg z-2 me-n4 mb-n4 d-none d-md-block"
-                            style="transform: translate(-20px, -20px);">
-                            <h4 class="fw-bold mb-0 text-primary">15+</h4>
-                            <p class="mb-0 small">Años de experiencia</p>
-                        </div>
+                <div class="text-center mb-5" data-aos="fade-up">
+                    <span class="section-kicker">Una nueva forma de construir</span>
+                    <h2 class="section-title display-5 text-white mt-2">Tecnología que transforma cada proyecto</h2>
+                    <p class="text-light opacity-75 fs-5 mx-auto" style="max-width: 760px;">
+                        Integramos información, visualización y gestión para tomar mejores decisiones durante todo el proceso constructivo.
+                    </p>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up">
+                        <article class="glass-card service-card rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-cash-coin"></i></div>
+                            <h3 class="h4 fw-bold text-white">Optimización de costos y tiempos</h3>
+                            <p class="text-light opacity-75 mb-0">La coordinación interdisciplinaria y la detección temprana de conflictos permiten minimizar retrabajos y desperdicios. El resultado: proyectos más ágiles, con una gestión eficiente de recursos y un ahorro significativo en inversión.</p>
+                        </article>
                     </div>
-                    <div class="col-lg-6 ps-lg-5 " data-aos="fade-left">
-                        <h2 class="display-5 fw-bolder mb-4">Construyendo el futuro con <span
-                                class="text-primary">precisión</span></h2>
-                        <p class="fs-5 text-secondary mb-4 lh-relaxed">
-                            Somos una empresa líder en construcción moderna, especializada en la implementación de
-                            tecnologías BIM para optimizar procesos, prever errores y reducir costos de manera drástica.
-                        </p>
-                        <p class="text-secondary mb-5">
-                            Nuestra misión es transformar ideas audaces en proyectos tangibles, garantizando calidad
-                            estructural, sostenibilidad y eficiencia en cada etapa del desarrollo.
-                        </p>
-                        <div class="d-flex justify-content-center gap-4 p-3 align-items-center">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
-                                    <i class="bi bi-bullseye fs-4"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold mb-0">Precisión</h6>
-                                    <small class="text-secondary">Milimétrica</small>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success">
-                                    <i class="bi bi-leaf fs-4"></i>
-                                </div>
-                                <div>
-                                    <h6 class="fw-bold mb-0">Sostenible</h6>
-                                    <small class="text-secondary">Eco-amigable</small>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="80">
+                        <article class="glass-card service-card rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-phone"></i></div>
+                            <h3 class="h4 fw-bold text-white">Visualización interactiva en Realidad Aumentada</h3>
+                            <p class="text-light opacity-75 mb-0">Los clientes pueden explorar su obra antes de construirla, interactuando con modelos 3D aumentados que facilitan la comprensión del diseño. Esto mejora la comunicación con inversionistas y usuarios finales, generando confianza y claridad.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="160">
+                        <article class="glass-card service-card rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-kanban"></i></div>
+                            <h3 class="h4 fw-bold text-white">Gestión integral del proyecto</h3>
+                            <p class="text-light opacity-75 mb-0">Desde la planificación hasta la ejecución, se ofrece un acompañamiento estratégico que asegura calidad en cada fase. La trazabilidad digital permite monitorear avances y tomar decisiones informadas en tiempo real.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up">
+                        <article class="glass-card service-card rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-cpu"></i></div>
+                            <h3 class="h4 fw-bold text-white">Innovación tecnológica aplicada</h3>
+                            <p class="text-light opacity-75 mb-0">La combinación de modelado digital y realidad aumentada convierte la planificación en una experiencia inmersiva. Esto moderniza la presentación de proyectos y fortalece la competitividad frente a propuestas tradicionales.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="80">
+                        <article class="glass-card service-card rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-person-check"></i></div>
+                            <h3 class="h4 fw-bold text-white">Soporte estratégico y personalizado</h3>
+                            <p class="text-light opacity-75 mb-0">Cada cliente recibe soluciones adaptadas a sus necesidades específicas. El enfoque no es solo técnico, sino también comercial y visual, garantizando que el proyecto sea atractivo, rentable y sostenible.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="160">
+                        <article class="glass-card service-card rounded-4 p-4 h-100 d-flex flex-column justify-content-center align-items-start">
+                            <div class="feature-icon mb-4"><i class="bi bi-stars"></i></div>
+                            <h3 class="h4 fw-bold text-white">Lleva tu proyecto al siguiente nivel</h3>
+                            <p class="text-light opacity-75">Conoce cómo BIMNova puede ayudarte a visualizar y gestionar tu obra.</p>
+                            <a href="#contacto" class="btn btn-outline-primary rounded-pill px-4">Solicitar asesoría <i class="bi bi-arrow-right ms-1"></i></a>
+                        </article>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- SERVICIOS -->
-        <section id="servicios" class="py-5 text-white position-relative overflow-hidden"
-            style="background-color: transparent;">
-            <!-- Decoración de fondo -->
-            <div class="position-absolute top-50 start-50 translate-middle w-100 h-100 opacity-10"
-                style="background: radial-gradient(circle, rgba(13,110,253,0.3) 0%, rgba(0,0,0,0) 70%); pointer-events: none;">
-            </div>
-
-            <div class="container py-5 position-relative z-1">
+        <section id="servicios" class="soft-section py-5">
+            <div class="container py-5">
                 <div class="text-center mb-5" data-aos="fade-up">
-
-                    <h2 class="display-5 fw-bolder mb-3">Nuestros Servicios</h2>
-                    <p class="text-light opacity-75 mx-auto fs-5" style="max-width: 600px;">Soluciones integrales que
-                        combinan ingeniería avanzada y diseño vanguardista.</p>
+                    <span class="section-kicker">Qué hacemos</span>
+                    <h2 class="section-title display-5 mt-2">Nuestros servicios</h2>
+                    <p class="text-secondary fs-5 mx-auto" style="max-width: 700px;">Soluciones integrales para planificar, construir, supervisar y presentar proyectos con tecnología.</p>
                 </div>
-
-                <div class="row g-4 justify-content-center" data-aos="fade-right">
-                    <!-- Servicio 1 -->
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 border border-secondary border-opacity-25 shadow-lg rounded-4 p-4 text-white"
-                            style="background: rgba(33, 37, 41, 0.6); backdrop-filter: blur(6px);">
-                            <div class="card-body d-flex flex-column">
-                                <div class="bg-primary bg-gradient rounded-3 p-3 d-inline-block shadow-sm mb-4"
-                                    style="width: fit-content;">
-                                    <i class="bi bi-layers text-white fs-2"></i>
-                                </div>
-                                <h4 class="card-title fw-bold mb-3 opacity-100">Asesorías BIM</h4>
-                                <p class="card-text text-light opacity-75 flex-grow-1">Planificación y ejecución
-                                    integral de proyectos con modelado BIM avanzado para asegurar eficiencia,
-                                    simulaciones 4D y control total del ciclo de vida.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Servicio 2 -->
-                    <div class="col-lg-4 col-md-6" data-aos="fade-up">
-                        <div class="card h-100 border border-secondary border-opacity-25 shadow-lg rounded-4 p-4 text-white"
-                            style="background: rgba(33, 37, 41, 0.6); backdrop-filter: blur(6px);">
-                            <div class="card-body d-flex flex-column">
-                                <div class="bg-info bg-gradient rounded-3 p-3 d-inline-block shadow-sm mb-4"
-                                    style="width: fit-content;">
-                                    <i class="bi bi-house-door text-white fs-2"></i>
-                                </div>
-                                <h4 class="card-title fw-bold mb-3">Construcción Residencial</h4>
-                                <p class="card-text text-light opacity-75 flex-grow-1">Proyectos de viviendas modernas y
-                                    personalizadas, priorizando el diseño arquitectónico, recursos sostenibles y calidad
-                                    estructural superior.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Servicio 3 -->
-                    <div class="col-lg-4 col-md-6" data-aos="fade-right">
-                        <div class="card h-100 border border-secondary border-opacity-25 shadow-lg rounded-4 p-4 text-white"
-                            style="background: rgba(33, 37, 41, 0.6); backdrop-filter: blur(6px);">
-                            <div class="card-body d-flex flex-column">
-                                <div class="bg-success bg-gradient rounded-3 p-3 d-inline-block shadow-sm mb-4"
-                                    style="width: fit-content;">
-                                    <i class="bi bi-buildings text-white fs-2"></i>
-                                </div>
-                                <h4 class="card-title fw-bold mb-3">Proyectos Comerciales</h4>
-                                <p class="card-text text-light opacity-75 flex-grow-1">Desarrollo de sedes corporativas
-                                    y espacios comerciales orientados a maximizar la funcionalidad, el flujo de usuarios
-                                    y la eficiencia energética.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- PROYECTOS -->
-        <section id="proyectos" class="py-5 bg-light">
-            <div class="container py-5" data-aos="fade-up">
-                <div class="d-flex justify-content-between align-items-end mb-5">
-                    <div>
-                        <h2 class="display-5 fw-bolder mb-0">Proyectos Recientes</h2>
-                    </div>
-                    <a href="#"
-                        class="btn btn-outline-primary rounded-pill px-4 d-none d-md-inline-flex align-items-center gap-2 shadow-sm">Ver
-                        todos <i class="bi bi-arrow-right"></i></a>
-                </div>
-
                 <div class="row g-4">
-                    <!-- Proyecto 1 -->
-                    <div class="col-md-4">
-                        <div
-                            class="card h-100 border-0 rounded-4 overflow-hidden shadow-sm hover-shadow transition-all group">
-                            <div class="position-relative overflow-hidden" style="height: 250px;">
-                                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1000&auto=format&fit=crop"
-                                    class="w-100 h-100 object-fit-cover transition-all"
-                                    style="object-fit: cover; transition: transform 0.5s ease;" alt="Edificio Alpha"
-                                    onmouseover="this.style.transform='scale(1.1)'"
-                                    onmouseout="this.style.transform='scale(1)'">
-                                <div
-                                    class="position-absolute top-0 end-0 m-3 badge bg-white text-dark rounded-pill px-3 py-2 shadow-sm fw-bold">
-                                    Comercial</div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-layers"></i></div>
+                            <h3 class="h4 fw-bold">Asesorías BIM</h3>
+                            <p class="text-secondary mb-0">Planificación integral con modelado avanzado, simulaciones 4D y control del ciclo de vida del proyecto.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="60">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-phone-landscape"></i></div>
+                            <h3 class="h4 fw-bold">Aplicación de Realidad Aumentada</h3>
+                            <p class="text-secondary mb-0">Visualización interactiva de proyectos antes de construir, presentaciones inmersivas para clientes e inversionistas y reducción de errores en obra.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="120">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-building"></i></div>
+                            <h3 class="h4 fw-bold">Construcciones en general</h3>
+                            <p class="text-secondary mb-0">Desarrollo de proyectos residenciales, comerciales e industriales con calidad estructural, sostenibilidad y eficiencia en recursos.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-6" data-aos="fade-up">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-clipboard2-check"></i></div>
+                            <h3 class="h4 fw-bold">Supervisión y Gestión de Proyectos</h3>
+                            <p class="text-secondary mb-0">Coordinación interdisciplinaria, control de calidad conforme a normativas NB/ISO, monitoreo de avances y resolución de problemas en obra. Garantiza eficiencia, cumplimiento y resultados confiables en cada fase.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-6" data-aos="fade-up" data-aos-delay="80">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-badge-3d"></i></div>
+                            <h3 class="h4 fw-bold">Visualización Inmersiva con RA</h3>
+                            <p class="text-secondary mb-0">Experiencias digitales diseñadas para mostrar departamentos y proyectos de manera clara y atractiva. La visualización inmersiva permite transmitir confianza, destacar el diseño y acelerar la decisión de compra, convirtiéndose en una herramienta clave para la venta inmobiliaria.</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CÓMO SE USA LA PLATAFORMA -->
+        <section id="como-funciona" class="py-5">
+            <div class="container py-5">
+                <div class="text-center mb-5" data-aos="fade-up">
+                    <span class="section-kicker">Empieza en pocos pasos</span>
+                    <h2 class="section-title display-5 text-white mt-2">¿Cómo se usa la plataforma?</h2>
+                    <p class="text-white-50 fs-5">Una experiencia sencilla para llevar tus modelos digitales al entorno real.</p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-sm-6 col-lg-3" data-aos="fade-up">
+                        <article class="glass-card step-card rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <span class="step-number">1</span><i class="bi bi-eyeglasses fs-1 text-primary"></i>
                             </div>
-                            <div class="card-body p-4 bg-white">
-                                <h5 class="card-title fw-bold mb-2">Edificio Corporativo Alpha</h5>
-                                <p class="text-secondary small mb-3"><i
-                                        class="bi bi-geo-alt text-primary me-1"></i>Ciudad Financiera</p>
-                                <p class="card-text text-secondary">Complejo de oficinas sostenibles. Reducción del 20%
-                                    en costos de materiales.</p>
+                            <h3 class="h5 fw-bold text-white">Explora la experiencia AR</h3>
+                            <p class="text-white-50 mb-0">Accede a nuestra aplicación y descubre cómo tu proyecto cobra vida en realidad aumentada.</p>
+                        </article>
+                    </div>
+                    <div class="col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="60">
+                        <article class="glass-card step-card rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <span class="step-number">2</span><i class="bi bi-cloud-arrow-up fs-1 text-primary"></i>
+                            </div>
+                            <h3 class="h5 fw-bold text-white">Carga tu proyecto digital</h3>
+                            <p class="text-white-50 mb-0">Sube tus modelos desde cualquier software compatible y visualízalos en segundos.</p>
+                        </article>
+                    </div>
+                    <div class="col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="120">
+                        <article class="glass-card step-card rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <span class="step-number">3</span><i class="bi bi-hand-index-thumb fs-1 text-primary"></i>
+                            </div>
+                            <h3 class="h5 fw-bold text-white">Interactúa en tiempo real</h3>
+                            <p class="text-white-50 mb-0">Recorre tu obra, detecta detalles y ajusta decisiones directamente en el entorno aumentado.</p>
+                        </article>
+                    </div>
+                    <div class="col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="180">
+                        <article class="glass-card step-card rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <span class="step-number">4</span><i class="bi bi-people fs-1 text-primary"></i>
+                            </div>
+                            <h3 class="h5 fw-bold text-white">Comparte y colabora</h3>
+                            <p class="text-white-50 mb-0">Invita a clientes e inversionistas a vivir la experiencia, mejorando comunicación y confianza.</p>
+                        </article>
+                    </div>
+                </div>
+                <div class="text-center mt-5">
+                    @auth
+                        <a href="{{ url('/dashboard') }}" class="btn btn-primary btn-lg rounded-pill px-5">Ir a la plataforma <i class="bi bi-arrow-right ms-2"></i></a>
+                    @else
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-5">Crear una cuenta <i class="bi bi-arrow-right ms-2"></i></a>
+                        @else
+                            <a href="#contacto" class="btn btn-primary btn-lg rounded-pill px-5">Solicitar información <i class="bi bi-arrow-right ms-2"></i></a>
+                        @endif
+                    @endauth
+                </div>
+            </div>
+        </section>
+
+        <!-- SOBRE NOSOTROS -->
+        <section id="nosotros" class="soft-section py-5">
+            <div class="container py-5">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-5" data-aos="fade-right">
+                        <div class="position-relative">
+                            <img src="{{ asset('images/portada.png') }}" alt="Tecnología BIMNova aplicada a proyectos"
+                                class="img-fluid rounded-4 shadow-lg w-100" style="max-height: 560px; object-fit: cover;">
+                            <div class="position-absolute bottom-0 start-0 translate-middle-y ms-3 bg-primary text-white rounded-4 p-3 shadow">
+                                <i class="bi bi-building-check fs-2"></i>
+                                <div class="fw-bold">BIMNova</div>
+                                <small>Proyectos Integrales</small>
                             </div>
                         </div>
                     </div>
-                    <!-- Proyecto 2 -->
-                    <div class="col-md-4">
-                        <div
-                            class="card h-100 border-0 rounded-4 overflow-hidden shadow-sm hover-shadow transition-all group">
-                            <div class="position-relative overflow-hidden" style="height: 250px;">
-                                <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000&auto=format&fit=crop"
-                                    class="w-100 h-100 object-fit-cover transition-all"
-                                    style="object-fit: cover; transition: transform 0.5s ease;" alt="Residencial Beta"
-                                    onmouseover="this.style.transform='scale(1.1)'"
-                                    onmouseout="this.style.transform='scale(1)'">
-                                <div
-                                    class="position-absolute top-0 end-0 m-3 badge bg-white text-dark rounded-pill px-3 py-2 shadow-sm fw-bold">
-                                    Residencial</div>
-                            </div>
-                            <div class="card-body p-4 bg-white">
-                                <h5 class="card-title fw-bold mb-2">Torre Residencial Beta</h5>
-                                <p class="text-secondary small mb-3"><i class="bi bi-geo-alt text-primary me-1"></i>Zona
-                                    Norte VIP</p>
-                                <p class="card-text text-secondary">120 apartamentos de lujo con optimización térmica
-                                    automatizada y diseño de vanguardia.</p>
-                            </div>
+                    <div class="col-lg-7" data-aos="fade-left">
+                        <span class="section-kicker">Quiénes somos</span>
+                        <h2 class="section-title display-5 mt-2 mb-4">Sobre nosotros</h2>
+                        <p class="fs-5 text-secondary">
+                            En BIMNova Proyectos Integrales somos especialistas en BIM Management y tecnologías digitales aplicadas a la construcción. Nuestra misión es transformar la manera en que se planifican y gestionan los proyectos, integrando modelado avanzado, coordinación interdisciplinaria y experiencias interactivas en Realidad Aumentada.
+                        </p>
+                        <p class="text-secondary mb-4">
+                            Nos enfocamos en ofrecer soluciones que combinan innovación, eficiencia y claridad, asegurando que cada cliente pueda visualizar, comprender y decidir con confianza antes de ejecutar su obra.
+                        </p>
+                        <p class="text-secondary mb-0">
+                            Con un enfoque estratégico y tecnológico, convertimos la complejidad de los proyectos en procesos más simples, accesibles y rentables.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- POR QUÉ ELEGIRNOS -->
+        <section class="soft-section pt-0 pb-5">
+            <div class="container pb-5">
+                <div class="text-center mb-5" data-aos="fade-up">
+                    <span class="section-kicker">Nuestro compromiso</span>
+                    <h2 class="section-title display-5 mt-2">¿Por qué elegirnos?</h2>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up">
+                        <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
+                            <i class="bi bi-clock-history fs-2 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Ahorro en costos y tiempos</h3>
+                            <p class="text-secondary mb-0">Detectamos conflictos antes de la ejecución, optimizamos recursos y reducimos retrabajos, logrando proyectos más ágiles y rentables.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="50">
+                        <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
+                            <i class="bi bi-mouse fs-2 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Facilidad de uso</h3>
+                            <p class="text-secondary mb-0">Nuestras soluciones digitales están diseñadas para ser intuitivas y accesibles, permitiendo que cualquier cliente o equipo interactúe con los modelos sin necesidad de conocimientos técnicos avanzados.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                        <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
+                            <i class="bi bi-lightbulb fs-2 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Innovación tecnológica</h3>
+                            <p class="text-secondary mb-0">Aplicamos Realidad Aumentada para visualizar tu obra antes de construirla, mejorando comunicación y confianza con clientes e inversionistas.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up">
+                        <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
+                            <i class="bi bi-clipboard-data fs-2 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Gestión integral y supervisión</h3>
+                            <p class="text-secondary mb-0">Ofrecemos coordinación interdisciplinaria, control de calidad y monitoreo constante que aseguran eficiencia y cumplimiento normativo.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="50">
+                        <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
+                            <i class="bi bi-person-heart fs-2 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Enfoque personalizado</h3>
+                            <p class="text-secondary mb-0">Cada cliente recibe soluciones adaptadas a sus necesidades, con propuestas claras, creativas y estratégicas.</p>
+                        </article>
+                    </div>
+                    <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                        <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
+                            <i class="bi bi-shield-check fs-2 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Confianza y transparencia</h3>
+                            <p class="text-secondary mb-0">Trabajamos con reportes técnicos, comparativas visuales y comunicación constante para que cada paso del proyecto sea seguro y verificable.</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESEÑAS -->
+        <section id="resenas" class="py-5">
+            <div class="container py-5">
+                <div class="text-center mb-5" data-aos="fade-up">
+                    <span class="section-kicker">La experiencia de nuestros clientes</span>
+                    <h2 class="section-title display-5 text-white mt-2">Confianza construida en equipo</h2>
+                    <p class="text-white-50 fs-5 mx-auto" style="max-width: 680px;">
+                        Queremos que cada experiencia con BIMNova se refleje en resultados, comunicación y confianza.
+                    </p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-4" data-aos="fade-up">
+                        <div class="review-placeholder rounded-4 p-4 h-100 text-center">
+                            <i class="bi bi-chat-square-quote fs-1 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Experiencias de clientes</h3>
+                            <p class="text-secondary mb-0">Aquí se publicarán reseñas verificadas de clientes y colaboradores.</p>
                         </div>
                     </div>
-                    <!-- Proyecto 3 -->
-                    <div class="col-md-4">
-                        <div
-                            class="card h-100 border-0 rounded-4 overflow-hidden shadow-sm hover-shadow transition-all group">
-                            <div class="position-relative overflow-hidden" style="height: 250px;">
-                                <img src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1000&auto=format&fit=crop"
-                                    class="w-100 h-100 object-fit-cover transition-all"
-                                    style="object-fit: cover; transition: transform 0.5s ease;" alt="Centro Mall Gamma"
-                                    onmouseover="this.style.transform='scale(1.1)'"
-                                    onmouseout="this.style.transform='scale(1)'">
-                                <div
-                                    class="position-absolute top-0 end-0 m-3 badge bg-white text-dark rounded-pill px-3 py-2 shadow-sm fw-bold">
-                                    Infraestructura</div>
-                            </div>
-                            <div class="card-body p-4 bg-white">
-                                <h5 class="card-title fw-bold mb-2">Centro Comercial Gamma</h5>
-                                <p class="text-secondary small mb-3"><i
-                                        class="bi bi-geo-alt text-primary me-1"></i>Distrito Central</p>
-                                <p class="card-text text-secondary">Más de 50,000m² de área comercial planificada
-                                    integralmente con tecnología VDC.</p>
-                            </div>
+                    <div class="col-md-4" data-aos="fade-up" data-aos-delay="70">
+                        <div class="review-placeholder rounded-4 p-4 h-100 text-center">
+                            <i class="bi bi-star-half fs-1 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Resultados y satisfacción</h3>
+                            <p class="text-secondary mb-0">Este espacio permitirá destacar opiniones sobre el servicio y los resultados de cada proyecto.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-aos="fade-up" data-aos-delay="140">
+                        <div class="review-placeholder rounded-4 p-4 h-100 text-center">
+                            <i class="bi bi-people fs-1 text-primary mb-3 d-block"></i>
+                            <h3 class="h5 fw-bold">Construyamos juntos</h3>
+                            <p class="text-secondary mb-0">¿Trabajaste con nosotros? Contáctanos para compartir tu experiencia.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-
-    </div>
-
-    <!-- FOOTER PREMIUM -->
-    <footer id="contacto"
-        class="bg-dark text-white pt-5 pb-4 mt-auto position-relative border-top border-primary border-opacity-25"
-        style="background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(15,15,15,0.95) 100%) !important;">
-        <div class="container position-relative z-1">
-            <div class="row gy-5 mb-5 px-3">
-                <!-- BRAND & INFO -->
-                <div class="col-xl-4 col-lg-5 mb-4 mb-lg-0 pe-lg-5" data-aos="fade-right">
-                    <div class="d-flex align-items-center gap-2 mb-4">
-                        <i class="bi bi-buildings-fill fs-2 text-primary"></i>
-                        <h3 class="fw-bold mb-0 tracking-tight text-white">BIM<span class="text-primary">Nova</span>
-                        </h3>
+        <!-- TUTORIALES -->
+        <section id="tutoriales" class="soft-section py-5">
+            <div class="container py-5">
+                <div class="text-center mb-5" data-aos="fade-up">
+                    <span class="section-kicker">Aprende con BIMNova</span>
+                    <h2 class="section-title display-5 mt-2">Tutoriales y formación</h2>
+                    <p class="text-secondary fs-5">Recursos para conocer la plataforma y aprovechar las herramientas digitales.</p>
+                </div>
+                <div class="row g-4 justify-content-center">
+                    <div class="col-md-6 col-lg-5" data-aos="fade-up">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-play-btn"></i></div>
+                            <h3 class="h4 fw-bold">Tutorial BIM AR</h3>
+                            <p class="text-secondary flex-grow-1">Accede a una guía para conocer el funcionamiento de la plataforma y explorar proyectos mediante Realidad Aumentada.</p>
+                            <a href="#contacto" class="btn btn-outline-primary rounded-pill align-self-start px-4">Solicitar tutorial <i class="bi bi-arrow-right ms-1"></i></a>
+                        </article>
                     </div>
-                    <p class="text-light opacity-75 mb-4 pe-lg-4 fs-6">
-                        Liderando la revolución de la construcción digital. Aportamos innovación, solidez y precisión a
-                        cada milímetro de tu proyecto con tecnologías constructivas de vanguardia.
-                    </p>
-                    <div class="d-flex text-primary">
-                        <i class="bi bi-star-fill me-1"></i><i class="bi bi-star-fill me-1"></i><i
-                            class="bi bi-star-fill me-1"></i><i class="bi bi-star-fill me-1"></i><i
-                            class="bi bi-star-fill"></i>
-                        <span class="ms-2 text-light opacity-75 small font-monospace">Excelencia Certificada</span>
+                    <div class="col-md-6 col-lg-5" data-aos="fade-up" data-aos-delay="80">
+                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="feature-icon mb-4"><i class="bi bi-mortarboard"></i></div>
+                            <h3 class="h4 fw-bold">Cursos</h3>
+                            <p class="text-secondary flex-grow-1">Formación y acompañamiento en metodologías BIM, visualización digital y tecnologías aplicadas a la construcción.</p>
+                            <a href="#contacto" class="btn btn-outline-primary rounded-pill align-self-start px-4">Consultar cursos <i class="bi bi-arrow-right ms-1"></i></a>
+                        </article>
                     </div>
                 </div>
+            </div>
+        </section>
+    </main>
 
-                <!-- LINKS CONTACTO -->
-                <div class="col-xl-2 col-lg-3 col-md-4 mb-4 mb-md-0" data-aos="fade-right">
-                    <h5 class="fw-bold mb-4 text-white">Contacto</h5>
-                    <ul class="list-unstyled d-flex flex-column gap-3 mb-0 text-light opacity-75">
-                        <li class="d-flex align-items-center gap-2"><i class="bi bi-envelope text-primary"></i> <a
-                                href="#" class="text-light text-decoration-none hover-opacity">info@bimnova.com</a></li>
-                        <li class="d-flex align-items-center gap-2"><i class="bi bi-telephone text-primary"></i> +1
-                            (234) 567-890</li>
-                        <li class="d-flex align-items-start gap-2"><i class="bi bi-geo-alt text-primary mt-1"></i>
-                            <span>Av. Tecnológica 1024,<br>Distrito Financiero</span>
-                        </li>
+    <!-- CONTACTO / PIE DE PÁGINA -->
+    <footer id="contacto" class="bg-black text-white pt-5 pb-4 border-top border-primary border-opacity-25">
+        <div class="container">
+            <div class="row gy-4 mb-5">
+                <div class="col-lg-5">
+                    <a href="#inicio" class="d-inline-flex align-items-center gap-2 text-decoration-none mb-3">
+                        <i class="bi bi-buildings-fill fs-2 text-primary"></i>
+                        <span class="h3 fw-bold mb-0 text-white">BIM<span class="text-primary">Nova</span></span>
+                    </a>
+                    <p class="text-white-50 mb-0">
+                        BIMNova Proyectos Integrales. Innovación, modelado digital y Realidad Aumentada para una construcción más clara, eficiente y conectada.
+                    </p>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <h2 class="h5 fw-bold mb-3">Navegación</h2>
+                    <ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+                        <li><a class="footer-link" href="#servicios">Servicios</a></li>
+                        <li><a class="footer-link" href="#nosotros">Sobre nosotros</a></li>
+                        <li><a class="footer-link" href="#tutoriales">Tutoriales</a></li>
+                        <li><a class="footer-link" href="#resenas">Reseñas</a></li>
                     </ul>
                 </div>
-
-                <!-- HORARIOS -->
-                <div class="col-xl-3 col-md-4 mb-4 mb-md-0" data-aos="fade-left">
-                    <h5 class="fw-bold mb-4 text-white">Horario</h5>
-                    <div
-                        class="bg-white bg-opacity-10 rounded-3 p-3 border border-secondary border-opacity-10 shadow-sm">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-light opacity-75">Lunes - Viernes</span>
-                            <span class="text-white fw-medium">9:00 - 18:00</span>
-                        </div>
-                        <hr class="border-secondary opacity-25 my-2">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-light opacity-75">Sábados</span>
-                            <span class="text-white fw-medium text-primary">10:00 - 14:00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- REDES SOCIALES -->
-                <div class="col-xl-3 col-md-4" data-aos="fade-left">
-                    <h5 class="fw-bold mb-4 text-white">Únete a nosotros</h5>
-                    <p class="text-light opacity-75 small mb-3">Síguenos en nuestras redes para ver nuestras últimas
-                        obras y novedades.</p>
-                    <div class="d-flex gap-2">
-                        <a href="#"
-                            class="btn btn-outline-secondary text-light border-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center transition-all bg-primary-hover"
-                            style="width:40px;height:40px;"><i class="bi bi-facebook"></i></a>
-                        <a href="#"
-                            class="btn btn-outline-secondary text-light border-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center transition-all bg-primary-hover"
-                            style="width:40px;height:40px;"><i class="bi bi-twitter-x"></i></a>
-                        <a href="#"
-                            class="btn btn-outline-secondary text-light border-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center transition-all bg-primary-hover"
-                            style="width:40px;height:40px;"><i class="bi bi-instagram"></i></a>
-                        <a href="#"
-                            class="btn btn-outline-secondary text-light border-opacity-25 rounded-circle p-2 d-flex align-items-center justify-content-center transition-all bg-primary-hover"
-                            style="width:40px;height:40px;"><i class="bi bi-linkedin"></i></a>
-                    </div>
+                <div class="col-sm-6 col-lg-4">
+                    <h2 class="h5 fw-bold mb-3">Hablemos de tu proyecto</h2>
+                    <p class="text-white-50">Solicita una demostración o consulta por nuestros servicios y cursos.</p>
+                    <a href="mailto:{{ config('mail.from.address') }}" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-envelope me-2"></i>Solicitar información
+                    </a>
                 </div>
             </div>
-
-            <div
-                class="pt-4 border-top border-secondary border-opacity-25 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-                <p class="text-light opacity-50 small mb-0">
-                    © 2026 <strong>BIM Nova</strong>. Todos los derechos reservados.
-                </p>
-                <div class="d-flex gap-3 small text-light opacity-50">
-                    <a href="#"
-                        class="text-decoration-none text-light opacity-75 hover-opacity-100 transition-all">Términos de
-                        Servicio</a>
-                    <span>|</span>
-                    <a href="#"
-                        class="text-decoration-none text-light opacity-75 hover-opacity-100 transition-all">Política de
-                        Privacidad</a>
-                </div>
+            <div class="border-top border-secondary border-opacity-25 pt-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                <p class="text-white-50 small mb-0">© {{ date('Y') }} <strong>BIMNova Proyectos Integrales</strong>. Todos los derechos reservados.</p>
+                <a href="#inicio" class="footer-link small">Volver al inicio <i class="bi bi-arrow-up ms-1"></i></a>
             </div>
         </div>
     </footer>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         AOS.init({
-            duration: 1000,
-            once: false,
+            duration: 800,
+            once: true,
+            offset: 80,
         });
     </script>
 
