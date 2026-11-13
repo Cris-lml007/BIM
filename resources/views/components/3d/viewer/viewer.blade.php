@@ -1,7 +1,5 @@
 <div>
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
     <style>
         /* =========================================
@@ -84,21 +82,16 @@
         </div>
 
         <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-dark"
-                data-bs-toggle="modal"
-                data-bs-target="#modal-models">
+            <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#modal-models">
                 Cargar Modelos
             </button>
 
-            <button data-bs-toggle="modal"
-                data-bs-target="#modal-views"
-                class="btn btn-sm btn-dark">
+            <button data-bs-toggle="modal" data-bs-target="#modal-views" class="btn btn-sm btn-dark">
                 Vista
             </button>
 
 
-            <a class="btn btn-sm btn-danger"
-                href="{{ route('app.project.model3d', $project->id) }}">
+            <a class="btn btn-sm btn-danger" href="{{ route('app.project.model3d', $project->id) }}">
                 Salir
             </a>
         </div>
@@ -116,8 +109,7 @@
                 {{-- CAPAS --}}
                 <div class="collapsible-section">
 
-                    <div class="panel-title collapsible-header"
-                        data-collapse="layers-content">
+                    <div class="panel-title collapsible-header" data-collapse="layers-content">
 
                         <span>
                             <i class="fas fa-layer-group mr-2"></i>
@@ -130,9 +122,7 @@
                     <div id="layers-content" class="collapsible-content">
                         <div class="collapsible-content-inner">
 
-                            <button class="btn btn-dark w-100 panel-title mb-3"
-                                type="button"
-                                id="btn-reset-isolate">
+                            <button class="btn btn-dark w-100 panel-title mb-3" type="button" id="btn-reset-isolate">
                                 Reiniciar
                             </button>
 
@@ -148,8 +138,7 @@
                 {{-- PROPIEDADES --}}
                 <div class="collapsible-section">
 
-                    <div class="panel-title collapsible-header"
-                        data-collapse="properties-content">
+                    <div class="panel-title collapsible-header" data-collapse="properties-content">
 
                         <span>
                             <i class="fas fa-filter mr-2"></i>
@@ -164,13 +153,11 @@
 
                             <div class="mb-2">
 
-                                <label for="property-key"
-                                    class="form-label small mb-1">
+                                <label for="property-key" class="form-label small mb-1">
                                     Clave
                                 </label>
 
-                                <select id="property-key"
-                                    class="form-control form-control-sm">
+                                <select id="property-key" class="form-control form-control-sm">
 
                                     <option value="">
                                         Seleccionar propiedad
@@ -182,14 +169,11 @@
 
                             <div class="mb-2">
 
-                                <label for="property-value"
-                                    class="form-label small mb-1">
+                                <label for="property-value" class="form-label small mb-1">
                                     Valor
                                 </label>
 
-                                <select id="property-value"
-                                    class="form-control form-control-sm"
-                                    disabled>
+                                <select id="property-value" class="form-control form-control-sm" disabled>
 
                                     <option value="">
                                         Seleccionar valor
@@ -201,16 +185,12 @@
 
                             <div class="d-flex gap-1">
 
-                                <button type="button"
-                                    id="btn-apply-property"
-                                    class="btn btn-primary btn-sm flex-grow-1"
-                                    disabled>
+                                <button type="button" id="btn-apply-property"
+                                    class="btn btn-primary btn-sm flex-grow-1" disabled>
                                     Aplicar
                                 </button>
 
-                                <button type="button"
-                                    id="btn-clear-property"
-                                    class="btn btn-secondary btn-sm">
+                                <button type="button" id="btn-clear-property" class="btn btn-secondary btn-sm">
                                     Limpiar
                                 </button>
 
@@ -218,8 +198,7 @@
 
                             <div id="property-filters" class="mt-3"></div>
 
-                            <div id="property-filter-info"
-                                class="small text-secondary mt-2">
+                            <div id="property-filter-info" class="small text-secondary mt-2">
                             </div>
 
                         </div>
@@ -237,8 +216,7 @@
             {{-- VIEWPORT --}}
             {{-- ========================================= --}}
 
-            <div class="viewer-container position-relative p-0"
-                id="viewer-wrapper">
+            <div class="viewer-container position-relative p-0" id="viewer-wrapper">
 
                 {{-- SPLASH LOADING --}}
                 <div id="loading" class="loading-splash">
@@ -249,14 +227,11 @@
                 </div>
 
                 {{-- VIEWPORT --}}
-                <div class="viewport"
-                    id="viewer"
-                    data-url="{{ route('app.Attachment', $model->model->id) }}"
+                <div class="viewport" id="viewer" data-url="{{ route('app.Attachment', $model->model->id) }}"
                     data-type="{{ $model->model->type }}">
 
                     {{-- PANEL INFORMACIÓN BIM --}}
-                    <div id="element-info-panel"
-                        class="element-info-panel d-none">
+                    <div id="element-info-panel" class="element-info-panel d-none">
 
                         <div class="element-info-header">
 
@@ -266,23 +241,19 @@
                                     Elemento BIM
                                 </small>
 
-                                <div id="element-info-title"
-                                    class="fw-semibold text-truncate">
+                                <div id="element-info-title" class="fw-semibold text-truncate">
                                     Elemento
                                 </div>
 
                             </div>
 
-                            <button type="button"
-                                id="close-element-info"
-                                class="btn btn-sm btn-dark">
+                            <button type="button" id="close-element-info" class="btn btn-sm btn-dark">
                                 <i class="bi bi-x-lg"></i>
                             </button>
 
                         </div>
 
-                        <div id="element-info-content"
-                            class="element-info-content">
+                        <div id="element-info-content" class="element-info-content">
                         </div>
 
                     </div>
@@ -319,9 +290,7 @@
 
                             <span>Secciones de Corte</span>
 
-                            <button type="button"
-                                id="btn-reset-clipper"
-                                class="btn btn-sm btn-outline-light">
+                            <button type="button" id="btn-reset-clipper" class="btn btn-sm btn-outline-light">
 
                                 <i class="bi bi-arrow-counterclockwise"></i>
                                 Reset
@@ -371,20 +340,69 @@
 
                         <div class="bottom-content">
 
-                            <table class="table table-dark table table-hover mb-0">
+                            {{-- Pestañas --}}
+                            <ul class="nav nav-tabs" id="bottomTabs" role="tablist">
 
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Tipo</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link active" id="anchors-tab" data-bs-toggle="tab"
+                                        data-bs-target="#anchors-content" role="tab" aria-controls="anchors-content"
+                                        aria-selected="true">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        Anclajes
+                                        <span class="badge badge-primary" id="anchors-count">0</span>
+                                    </a>
+                                </li>
 
-                                <tbody id="anchors-table"></tbody>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" id="incidents-tab" data-bs-toggle="tab"
+                                        data-bs-target="#incidents-content" role="tab" aria-controls="incidents-content"
+                                        aria-selected="false">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        Incidencias
+                                        <span class="badge badge-danger" id="incidents-count">0</span>
+                                    </a>
+                                </li>
 
-                            </table>
+                            </ul>
+
+                            {{-- Contenido de las pestañas --}}
+                            <div class="tab-content" id="bottomTabsContent">
+
+                                {{-- ANCLAJES --}}
+                                <div class="tab-pane fade show active" id="anchors-content" role="tabpanel"
+                                    aria-labelledby="anchors-tab">
+                                    <table class="table table-dark table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Tipo</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody id="anchors-table"></tbody>
+                                    </table>
+                                </div>
+
+                                {{-- INCIDENCIAS --}}
+                                <div class="tab-pane fade" id="incidents-content" role="tabpanel"
+                                    aria-labelledby="incidents-tab">
+                                    <table class="table table-dark table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Tipo</th>
+                                                <th>Estado</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody id="incidents-table"></tbody>
+                                    </table>
+                                </div>
+
+                            </div>
 
                         </div>
 
@@ -406,8 +424,7 @@
                 {{-- NIVELES --}}
                 <div class="collapsible-section">
 
-                    <div class="panel-title collapsible-header"
-                        data-collapse="levels-content">
+                    <div class="panel-title collapsible-header" data-collapse="levels-content">
 
                         <span>
                             <i class="fas fa-building mr-2"></i>
@@ -421,9 +438,7 @@
                     <div id="levels-content" class="collapsible-content">
                         <div class="collapsible-content-inner">
 
-                            <button class="btn btn-dark w-100 panel-title mb-3"
-                                type="button"
-                                id="btn-reset-levels">
+                            <button class="btn btn-dark w-100 panel-title mb-3" type="button" id="btn-reset-levels">
                                 Reiniciar
                             </button>
 
@@ -439,8 +454,7 @@
                 {{-- MODELOS --}}
                 <div class="collapsible-section">
 
-                    <div class="panel-title collapsible-header"
-                        data-collapse="models-content">
+                    <div class="panel-title collapsible-header" data-collapse="models-content">
 
                         <span>
                             <i class="fas fa-cubes mr-2"></i>
@@ -470,10 +484,7 @@
     {{-- MODAL INCIDENCIA --}}
     {{-- ========================================= --}}
 
-    <div class="modal fade"
-        id="incidentDetailModal"
-        tabindex="-1"
-        aria-hidden="true">
+    <div class="modal fade" id="incidentDetailModal" tabindex="-1" aria-hidden="true">
 
         <div class="modal-dialog modal-xl modal-dialog-centered">
 
@@ -485,18 +496,14 @@
                         Detalle de incidencia
                     </h5>
 
-                    <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
                     </button>
 
                 </div>
 
                 <div class="modal-body">
 
-                    <livewire:app.incident-detail
-                        modal_name="modal-incident-detail"
-                        :project="$project" />
+                    <livewire:app.incident-detail modal_name="modal-incident-detail" :project="$project" />
 
                 </div>
 
@@ -506,10 +513,7 @@
 
     </div>
 
-    <button type="button"
-        id="open-incident-modal"
-        class="d-none"
-        data-bs-toggle="modal"
+    <button type="button" id="open-incident-modal" class="d-none" data-bs-toggle="modal"
         data-bs-target="#incidentDetailModal">
     </button>
 
@@ -517,10 +521,7 @@
     {{-- MODAL VISTAS --}}
     {{-- ========================================= --}}
 
-    <div class="modal fade"
-        tabindex="-1"
-        id="modal-views"
-        data-bs-theme="dark">
+    <div class="modal fade" tabindex="-1" id="modal-views" data-bs-theme="dark">
 
         <div class="modal-dialog modal-md modal-dialog-centered">
 
@@ -535,9 +536,7 @@
 
                     </h5>
 
-                    <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
                     </button>
 
                 </div>
@@ -547,63 +546,49 @@
                     <div class="row g-3 text-center">
 
                         <div class="col-4">
-                            <div class="view-card"
-                                data-view="top"
-                                data-bs-dismiss="modal">
+                            <div class="view-card" data-view="top" data-bs-dismiss="modal">
                                 ⬆️
                                 <div>Top</div>
                             </div>
                         </div>
 
                         <div class="col-4">
-                            <div class="view-card"
-                                data-view="front"
-                                data-bs-dismiss="modal">
+                            <div class="view-card" data-view="front" data-bs-dismiss="modal">
                                 ⬛
                                 <div>Front</div>
                             </div>
                         </div>
 
                         <div class="col-4">
-                            <div class="view-card"
-                                data-view="left"
-                                data-bs-dismiss="modal">
+                            <div class="view-card" data-view="left" data-bs-dismiss="modal">
                                 ⬅️
                                 <div>Left</div>
                             </div>
                         </div>
 
                         <div class="col-4">
-                            <div class="view-card"
-                                data-view="right"
-                                data-bs-dismiss="modal">
+                            <div class="view-card" data-view="right" data-bs-dismiss="modal">
                                 ➡️
                                 <div>Right</div>
                             </div>
                         </div>
 
                         <div class="col-4">
-                            <div class="view-card"
-                                data-view="back"
-                                data-bs-dismiss="modal">
+                            <div class="view-card" data-view="back" data-bs-dismiss="modal">
                                 🔲
                                 <div>Back</div>
                             </div>
                         </div>
 
                         <div class="col-4">
-                            <div class="view-card"
-                                data-view="iso"
-                                data-bs-dismiss="modal">
+                            <div class="view-card" data-view="iso" data-bs-dismiss="modal">
                                 🔳
                                 <div>3D</div>
                             </div>
                         </div>
 
                         <div class="col-12 mt-2">
-                            <div class="view-card fit"
-                                data-view="fit"
-                                data-bs-dismiss="modal">
+                            <div class="view-card fit" data-view="fit" data-bs-dismiss="modal">
                                 🔍 Ajustar vista
                             </div>
                         </div>
@@ -622,10 +607,7 @@
     {{-- MODAL MODELOS --}}
     {{-- ========================================= --}}
 
-    <div class="modal fade"
-        tabindex="-1"
-        id="modal-models"
-        data-bs-theme="dark">
+    <div class="modal fade" tabindex="-1" id="modal-models" data-bs-theme="dark">
 
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
 
@@ -640,9 +622,7 @@
 
                     </h5>
 
-                    <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
                     </button>
 
                 </div>
@@ -652,13 +632,11 @@
                     <div class="row g-3">
 
                         @foreach ($models as $item)
-
                             <div class="col-md-6 col-lg-4">
 
                                 <div class="model-card p-3 h-100 d-flex flex-column justify-content-between"
                                     data-url="{{ route('app.Attachment', $item->id) }}"
-                                    data-name="{{ $item->name . '|' . $item->id }}"
-                                    name="loadIfc"
+                                    data-name="{{ $item->name . '|' . $item->id }}" name="loadIfc"
                                     data-bs-dismiss="modal">
 
                                     <div class="text-center mb-2">
@@ -677,7 +655,6 @@
                                 </div>
 
                             </div>
-
                         @endforeach
 
                     </div>
@@ -694,10 +671,7 @@
     {{-- MODAL MARK --}}
     {{-- ========================================= --}}
 
-    <div class="modal fade"
-        tabindex="-1"
-        id="modal-mark"
-        data-bs-theme="dark">
+    <div class="modal fade" tabindex="-1" id="modal-mark" data-bs-theme="dark">
 
         <div class="modal-dialog modal-dialog-scrollable">
 
@@ -712,9 +686,7 @@
 
                     </h5>
 
-                    <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
                     </button>
 
                 </div>
@@ -724,14 +696,11 @@
                     <div class="row g-3">
 
                         @foreach ($models as $item)
-
                             <div class="col-md-6 col-lg-4">
 
                                 <div class="model-card p-3 h-100 d-flex flex-column justify-content-between"
-                                    data-url="{{ route('app.Attachment', $item->id) }}"
-                                    data-name="asa"
-                                    name="loadIfc"
-                                    data-bs-dismiss="modal">
+                                    data-url="{{ route('app.Attachment', $item->id) }}" data-name="asa"
+                                    name="loadIfc" data-bs-dismiss="modal">
 
                                     <div class="text-center mb-2">
                                         <i class="nf nf-fa-cube model-icon"></i>
@@ -749,7 +718,6 @@
                                 </div>
 
                             </div>
-
                         @endforeach
 
                     </div>

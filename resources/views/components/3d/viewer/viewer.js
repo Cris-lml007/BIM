@@ -439,7 +439,7 @@ async function ifcLoader(url,id){
             normalX: parseFloat(w[i].normal_x ?? 0) ?? 0,
             normalY: parseFloat(w[i].normal_y ?? 1) ?? 1,
             normalZ: parseFloat(w[i].normal_z ?? 0) ?? 0,
-            status: w[i].is_active ? 'activo': 'inhabilitado'
+            status: w[i].status ? 'Abierto': 'Cerrado'
         };
         anchors.push(item);
         createMarker(item);
@@ -1047,34 +1047,79 @@ async function onRaycastClickResult(result) {
 
     const { point, normal } = result;
 
-    const name = prompt(`Nombre del ${activeTool}:`);
-    if (!name) return;
+    const name = prompt(
+        `Nombre del ${activeTool === 'anchor' ? 'anclaje' : 'incidencia'}:`
+    );
 
-    let model = result.fragments.object.name;
+    if (!name || !name.trim()) return;
+
+    const model = result.fragments.object.name;
+
+    // Unificar el tipo
+    const type = activeTool === 'anchor' ? 'anchor' : 'incident';
+
     const item = {
         id: Date.now(),
-        name,
+        name: name.trim(),
         model,
-        type: activeTool,
+        type,
+
         x: point.x,
         y: point.y,
         z: point.z,
+
         normalX: normal?.x ?? 0,
         normalY: normal?.y ?? 1,
         normalZ: normal?.z ?? 0,
+
         status: 'activo'
     };
+
     createMarker(item);
 
-    let r = await $wire.saveMark(item.name,item.model,item.type,item.x,item.y,item.z, item.normalX, item.normalY, item.normalZ)
-    if(r != 'fail'){
-        Swal.fire({icon: 'success',title: 'Creado Correctamente'})
-    }else{
-        Swal.fire({icon: 'error',title: 'Falla al Crear'})
+    try {
+
+        const r = await $wire.saveMark(
+            item.name,
+            item.model,
+            item.type,
+            item.x,
+            item.y,
+            item.z,
+            item.normalX,
+            item.normalY,
+            item.normalZ
+        );
+
+        if (r === 'fail') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Falla al Crear'
+            });
+
+            return;
+        }
+
+        item.id = r;
+
+        anchors.push(item);
+        addToTable(item);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Creado Correctamente'
+        });
+
+    } catch (error) {
+
+        console.error('Error al crear elemento:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Falla al Crear',
+            text: 'No se pudo guardar el elemento.'
+        });
     }
-    item.id = r;
-    anchors.push(item);
-    addToTable(item);
 }
 
 
@@ -1280,28 +1325,48 @@ Estado: ${item.status}
     }
 }
 
+function updateBottomCounters() {
+
+    const anchorsCount = document.getElementById('anchors-table')?.children.length ?? 0;
+    const incidentsCount = document.getElementById('incidents-table')?.children.length ?? 0;
+
+    document.getElementById('anchors-count').textContent = anchorsCount;
+    document.getElementById('incidents-count').textContent = incidentsCount;
+}
+
 function addToTable(item) {
 
-    const tbody =
-    document.getElementById('anchors-table');
+    // Determinar tabla según el tipo
+    const tbody = document.getElementById(
+        item.type === 'incident'
+            ? 'incidents-table'
+            : 'anchors-table'
+    );
 
-    const tr =
-    document.createElement('tr');
+    if (!tbody) return;
+
+    const tr = document.createElement('tr');
 
     tr.innerHTML = `
-<td>${item.name}</td>
-<td>${item.type}</td>
-<td>${item.status}</td>
-<td class="d-flex gap-1">
-    <button class="btn btn-primary btn-sm btn-view">
-        <i class="nf nf-fa-eye"></i>
-    </button>
+        <td>${item.name ?? ''}</td>
+        <td>${item.type === 'incident' ? 'Incidencia' : 'Anclaje'}</td>
+        <td>
+            <span class="badge ${item.status === 'activo' ? 'badge-success' : 'badge-secondary'}">
+                ${item.status}
+            </span>
+        </td>
+        <td class="d-flex gap-1">
 
-    <button class="btn btn-danger btn-sm btn-delete">
-        <i class="nf nf-fa-trash"></i>
-    </button>
-</td>
-`;
+            <button class="btn btn-primary btn-sm btn-view" title="Ver elemento">
+                <i class="nf nf-fa-eye"></i>
+            </button>
+
+            <button class="btn btn-danger btn-sm btn-delete" title="Eliminar elemento">
+                <i class="nf nf-fa-trash"></i>
+            </button>
+
+        </td>
+    `;
 
     // Click en la fila
     tr.addEventListener('click', (e) => {
@@ -1315,51 +1380,49 @@ function addToTable(item) {
     });
 
     // Ver
-    tr.querySelector('.btn-view')
-        .addEventListener('click', (e) => {
-            e.stopPropagation();
-            viewItem(item);
-        });
+    tr.querySelector('.btn-view').addEventListener('click', (e) => {
+        e.stopPropagation();
+        viewItem(item);
+    });
 
-    tr.querySelector('.btn-view')
-        .addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-        });
+    tr.querySelector('.btn-view').addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+    });
 
     // Eliminar
-    tr.querySelector('.btn-delete')
-        .addEventListener('click', (e) => {
+    tr.querySelector('.btn-delete').addEventListener('click', (e) => {
 
-            e.stopPropagation();
+        e.stopPropagation();
 
-            if (confirm('¿Eliminar elemento?')) {
-                removeItem(item, tr);
-            }
-        });
+        if (confirm('¿Eliminar elemento?')) {
+            removeItem(item, tr);
+        }
+    });
 
-    tr.querySelector('.btn-delete')
-        .addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-        });
+    tr.querySelector('.btn-delete').addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+    });
 
-    // Hover
+    // Hover sobre el marcador
     tr.addEventListener('mouseenter', () => {
 
         if (item._marker?.element) {
-            item._marker.element.style.transform =
-                'scale(1.5)';
+            item._marker.element.style.transform = 'scale(1.5)';
         }
     });
 
     tr.addEventListener('mouseleave', () => {
 
         if (item._marker?.element) {
-            item._marker.element.style.transform =
-                'scale(1)';
+            item._marker.element.style.transform = 'scale(1)';
         }
     });
 
+    // Agregar fila
     tbody.appendChild(tr);
+
+    // Actualizar contador
+    updateBottomCounters();
 }
 
 
