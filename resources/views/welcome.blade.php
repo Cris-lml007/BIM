@@ -1984,129 +1984,85 @@
             <p class="text-secondary fs-5">Recursos para conocer la plataforma y aprovechar las herramientas digitales.</p>
         </div>
 
-        <div id="tutorialesCarousel" class="carousel slide tutoriales-carousel" data-bs-ride="carousel" data-aos="fade-up">
-            <div class="carousel-inner px-5">
+        @if($tutorials->isNotEmpty())
+            @php
+                $chunks = $tutorials->chunk(3);
+            @endphp
 
-                <!-- Slide 1 -->
-                <div class="carousel-item active">
-                    <div class="row g-4 justify-content-center">
-                        <div class="col-md-6 col-lg-4">
-                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                <div class="tutorial-img-wrapper">
-                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Introducción BIM" class="w-100">
-                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
-                                </div>
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <h3 class="h5 fw-bold">Introducción a BIM</h3>
-                                    <p class="text-secondary flex-grow-1">Conoce los fundamentos del modelado BIM y sus aplicaciones en la construcción.</p>
-                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
-                                        <i class="bi bi-youtube me-2"></i>Ver video
-                                    </a>
-                                </div>
-                            </article>
+            <div id="tutorialesCarousel" class="carousel slide tutoriales-carousel" data-bs-ride="carousel" data-aos="fade-up">
+                <div class="carousel-inner px-5">
+
+                    @foreach($chunks as $chunkIndex => $chunk)
+                        <div class="carousel-item {{ $chunkIndex === 0 ? 'active' : '' }}">
+                            <div class="row g-4 justify-content-center">
+                                @foreach($chunk as $tutorial)
+                                    <div class="col-md-6 col-lg-4">
+                                        <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                            <div class="tutorial-img-wrapper">
+                                                <img src="{{ $tutorial->thumbnail_url }}"
+                                                     alt="{{ $tutorial->title }}"
+                                                     class="w-100">
+                                                <span class="tutorial-play">
+                                                    <i class="bi bi-play-circle-fill"></i>
+                                                </span>
+                                            </div>
+                                            <div class="card-body p-4 d-flex flex-column">
+                                                <h3 class="h5 fw-bold">{{ $tutorial->title }}</h3>
+                                                <p class="text-secondary flex-grow-1">{{ $tutorial->description }}</p>
+                                                <a href="{{ $tutorial->youtube_url }}"
+                                                   target="_blank"
+                                                   rel="noopener"
+                                                   class="btn btn-danger rounded-pill align-self-start px-4">
+                                                    <i class="bi bi-youtube me-2"></i>Ver video
+                                                </a>
+                                            </div>
+                                        </article>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
-                        <div class="col-md-6 col-lg-4">
-                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                <div class="tutorial-img-wrapper">
-                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Realidad Aumentada" class="w-100">
-                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
-                                </div>
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <h3 class="h5 fw-bold">Realidad Aumentada en obra</h3>
-                                    <p class="text-secondary flex-grow-1">Aprende a visualizar tus proyectos sobre el terreno real con la plataforma AR.</p>
-                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
-                                        <i class="bi bi-youtube me-2"></i>Ver video
-                                    </a>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                <div class="tutorial-img-wrapper">
-                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Carga de modelos" class="w-100">
-                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
-                                </div>
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <h3 class="h5 fw-bold">Carga tu modelo 3D</h3>
-                                    <p class="text-secondary flex-grow-1">Guía paso a paso para subir y visualizar modelos digitales en la plataforma.</p>
-                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
-                                        <i class="bi bi-youtube me-2"></i>Ver video
-                                    </a>
-                                </div>
-                            </article>
-                        </div>
-                    </div>
+                    @endforeach
+
                 </div>
 
-                <!-- Slide 2 -->
-                <div class="carousel-item">
-                    <div class="row g-4 justify-content-center">
-                        <div class="col-md-6 col-lg-4">
-                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                <div class="tutorial-img-wrapper">
-                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Coordinación BIM" class="w-100">
-                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
-                                </div>
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <h3 class="h5 fw-bold">Coordinación interdisciplinaria</h3>
-                                    <p class="text-secondary flex-grow-1">Detecta conflictos y mejora la comunicación entre especialidades usando BIM.</p>
-                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
-                                        <i class="bi bi-youtube me-2"></i>Ver video
-                                    </a>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                <div class="tutorial-img-wrapper">
-                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Simulación 4D" class="w-100">
-                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
-                                </div>
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <h3 class="h5 fw-bold">Simulación 4D del proyecto</h3>
-                                    <p class="text-secondary flex-grow-1">Planifica y visualiza el avance de obra en el tiempo con simulaciones 4D.</p>
-                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
-                                        <i class="bi bi-youtube me-2"></i>Ver video
-                                    </a>
-                                </div>
-                            </article>
-                        </div>
-                        <div class="col-md-6 col-lg-4">
-                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                <div class="tutorial-img-wrapper">
-                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Presentación cliente" class="w-100">
-                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
-                                </div>
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <h3 class="h5 fw-bold">Presentaciones inmersivas</h3>
-                                    <p class="text-secondary flex-grow-1">Cómo preparar una experiencia AR impactante para clientes e inversionistas.</p>
-                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
-                                        <i class="bi bi-youtube me-2"></i>Ver video
-                                    </a>
-                                </div>
-                            </article>
-                        </div>
+                <!-- Controles (solo si hay más de 1 slide) -->
+                @if($chunks->count() > 1)
+                    <button class="carousel-control-prev tutorial-control" type="button"
+                            data-bs-target="#tutorialesCarousel" data-bs-slide="prev">
+                        <span class="tutorial-arrow"><i class="bi bi-chevron-left"></i></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next tutorial-control" type="button"
+                            data-bs-target="#tutorialesCarousel" data-bs-slide="next">
+                        <span class="tutorial-arrow"><i class="bi bi-chevron-right"></i></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
+                @endif
+
+                <!-- Indicadores dinámicos -->
+                @if($chunks->count() > 1)
+                    <div class="carousel-indicators position-static mt-4">
+                        @foreach($chunks as $i => $chunk)
+                            <button type="button"
+                                    data-bs-target="#tutorialesCarousel"
+                                    data-bs-slide-to="{{ $i }}"
+                                    class="{{ $i === 0 ? 'active' : '' }} bg-primary"
+                                    aria-current="{{ $i === 0 ? 'true' : 'false' }}"
+                                    aria-label="Slide {{ $i + 1 }}">
+                            </button>
+                        @endforeach
                     </div>
-                </div>
-
+                @endif
             </div>
 
-            <!-- Controles -->
-            <button class="carousel-control-prev tutorial-control" type="button" data-bs-target="#tutorialesCarousel" data-bs-slide="prev">
-                <span class="tutorial-arrow"><i class="bi bi-chevron-left"></i></span>
-                <span class="visually-hidden">Anterior</span>
-            </button>
-            <button class="carousel-control-next tutorial-control" type="button" data-bs-target="#tutorialesCarousel" data-bs-slide="next">
-                <span class="tutorial-arrow"><i class="bi bi-chevron-right"></i></span>
-                <span class="visually-hidden">Siguiente</span>
-            </button>
-
-            <!-- Indicadores -->
-            <div class="carousel-indicators position-static mt-4">
-                <button type="button" data-bs-target="#tutorialesCarousel" data-bs-slide-to="0" class="active bg-primary" aria-current="true" aria-label="Slide 1"></button>
-                <button type="button" data-bs-target="#tutorialesCarousel" data-bs-slide-to="1" class="bg-primary" aria-label="Slide 2"></button>
+        @else
+            <!-- Estado vacío -->
+            <div class="text-center py-5" data-aos="fade-up">
+                <i class="bi bi-collection-play fs-1 text-primary mb-3 d-block"></i>
+                <h3 class="h5 fw-bold">Próximamente</h3>
+                <p class="text-secondary">Estamos preparando los tutoriales. ¡Vuelve pronto!</p>
             </div>
-        </div>
+        @endif
     </div>
 </section>
     </main>

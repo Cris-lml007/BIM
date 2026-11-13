@@ -6,18 +6,24 @@ use App\Http\Controllers\DocumentsController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\InvitationController;
+use App\Livewire\Admin\TutorialManager;
 use App\Livewire\Admin\UsersForm;
 use App\Livewire\App\AnchorsView;
 use App\Livewire\App\IncidentDetail;
 use App\Livewire\App\Model3dView;
 use App\Livewire\App\ProjectsView;
 use App\Livewire\App\ProjectView;
+use App\Models\Tutorial;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 
 Route::get('/', function () {
-    return view('welcome');
+    $tutorials = Tutorial::where('is_active', true)
+        ->orderBy('order')
+        ->get();
+
+    return view('welcome', compact('tutorials'));
 });
 
 Auth::routes();
@@ -41,6 +47,7 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
         });
         Route::get('/users/{id}', UsersForm::class)->name('administration.users.form');
         Route::get('/access', [App\Http\Controllers\AccessController::class, 'show'])->name('administration.access');
+        Route::get('/tutorial-manager',TutorialManager::class)->name('administration.tutorials');
     });
 
 

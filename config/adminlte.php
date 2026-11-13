@@ -330,6 +330,12 @@ return [
             'icon' => 'fa fa-users',
             'can' => 'isAdministration'
         ],
+        [
+            'text' => 'Gestión de Tutoriales',
+            'route' => 'administration.tutorials',
+            'icon' => 'fa fa-video',
+            'can' => 'isAdministration'
+        ],
         ['header' => 'CONFIGURACIÓN DE CUENTA'],
         [
             'text' => 'Perfil',
