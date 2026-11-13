@@ -1897,41 +1897,99 @@ function rotateModel(direction) {
         return;
     }
 
-    // Rotaciones que ya tenemos
-    if (direction === 'left' || direction === 'right' ||
-        direction === 'up' || direction === 'down' ||
-        direction === 'tilt-left' || direction === 'tilt-right') {
+    let axis;
+    let angle;
 
-        // Mantener aquí el código de rotación e inclinación
-        // que ya te funciona.
+    // -------------------------------------------------
+    // DEFINIR EJE Y SENTIDO DE ROTACIÓN
+    // -------------------------------------------------
+
+    switch (direction) {
+
+        // ROTACIÓN SOBRE LA NORMAL DE LA SUPERFICIE
+        case 'left':
+            axis = arRotationAxis.clone().normalize();
+            angle = rotationStep;
+            break;
+
+        case 'right':
+            axis = arRotationAxis.clone().normalize();
+            angle = -rotationStep;
+            break;
+
+        // INCLINACIÓN ADELANTE / ATRÁS
+        case 'up':
+            axis = new THREE.Vector3(1, 0, 0);
+            angle = rotationStep;
+            break;
+
+        case 'down':
+            axis = new THREE.Vector3(1, 0, 0);
+            angle = -rotationStep;
+            break;
+
+        // GIRO SOBRE EL PLANO HORIZONTAL
+        // Como un cubo colocado sobre un plato giratorio.
+        case 'orbit-left':
+            axis = new THREE.Vector3(0, 1, 0);
+            angle = rotationStep;
+            break;
+
+        case 'orbit-right':
+            axis = new THREE.Vector3(0, 1, 0);
+            angle = -rotationStep;
+            break;
+
+        default:
+            return;
     }
 
-    // Nuevo movimiento orbital
-    if (direction === 'orbit-left' || direction === 'orbit-right') {
+    // -------------------------------------------------
+    // OBTENER EL PUNTO DEL ANCLAJE EN EL MUNDO
+    // -------------------------------------------------
 
-        const anchorWorldPosition = arModel.localToWorld(
-            anchorPosition.clone()
+    arModel.updateMatrixWorld(true);
+
+    const anchorWorldPosition = arModel.localToWorld(
+        anchorPosition.clone()
+    );
+
+    // Posición mundial del origen del modelo.
+    const modelWorldPosition = arModel.getWorldPosition(
+        new THREE.Vector3()
+    );
+
+    // -------------------------------------------------
+    // CALCULAR LA NUEVA POSICIÓN AL GIRAR
+    // -------------------------------------------------
+
+    const rotationQuaternion = new THREE.Quaternion()
+        .setFromAxisAngle(axis, angle);
+
+    const newWorldPosition = modelWorldPosition
+        .sub(anchorWorldPosition)
+        .applyQuaternion(rotationQuaternion)
+        .add(anchorWorldPosition);
+
+    // -------------------------------------------------
+    // APLICAR ROTACIÓN
+    // -------------------------------------------------
+
+    arModel.rotateOnWorldAxis(axis, angle);
+
+    // Mantener el punto del anclaje en su posición.
+    if (arModel.parent) {
+        arModel.position.copy(
+            arModel.parent.worldToLocal(newWorldPosition)
         );
+    } else {
+        arModel.position.copy(newWorldPosition);
+    }
 
-        const angle = direction === 'orbit-left'
-            ? rotationStep
-            : -rotationStep;
+    arModel.updateMatrixWorld(true);
 
-        const verticalAxis = new THREE.Vector3(0, 1, 0);
-
-        const offset = arModel.position.clone()
-            .sub(anchorWorldPosition);
-
-        offset.applyAxisAngle(verticalAxis, angle);
-
-        arModel.position.copy(anchorWorldPosition)
-            .add(offset);
-
-        arModel.rotateOnWorldAxis(verticalAxis, angle);
-
-        arModel.updateMatrixWorld(true);
-
-        if (fragments) fragments.core.update(true);
+    if (fragments) {
+        fragments.core.update(true);
     }
 }
 

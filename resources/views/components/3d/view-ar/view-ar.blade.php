@@ -1042,14 +1042,14 @@ data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
                     </div>
 
 <div class="ar-rotation-buttons">
-    <button type="button" class="ar-rotate-btn" data-rotation="tilt-left">
-        <i class="bi bi-arrow-left-circle"></i>
-        Inclinar izquierda
+    <button type="button" class="ar-rotate-btn" data-rotation="orbit-left">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        Girar izquierda
     </button>
 
-    <button type="button" class="ar-rotate-btn" data-rotation="tilt-right">
-        <i class="bi bi-arrow-right-circle"></i>
-        Inclinar derecha
+    <button type="button" class="ar-rotate-btn" data-rotation="orbit-right">
+        <i class="bi bi-arrow-clockwise"></i>
+        Girar derecha
     </button>
 </div>
 
