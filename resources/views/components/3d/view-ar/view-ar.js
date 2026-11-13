@@ -41,6 +41,23 @@ const anchorPosition = new THREE.Vector3(
 
 const hasAnchorPosition = anchorPosition.lengthSq() > 0;
 
+// =====================================================
+// DIRECCIÓN / NORMAL DEL ANCLAJE
+// =====================================================
+
+const anchorNormal = new THREE.Vector3(
+    parseFloat(container.dataset.anchorNormalX) || 0,
+    parseFloat(container.dataset.anchorNormalY) || 0,
+    parseFloat(container.dataset.anchorNormalZ) || 0
+);
+
+const hasAnchorNormal = anchorNormal.lengthSq() > 0.000001;
+
+if (hasAnchorNormal) {
+    anchorNormal.normalize();
+}
+
+
 let incidentsData = [];
 try { incidentsData = JSON.parse(container.dataset.incidents || '[]'); } catch (e) {}
 
@@ -1706,14 +1723,92 @@ function setModelOpacity(opacity) {
 // donde está el reticle (la superficie detectada).
 // =====================================================
 
+// =====================================================
+// COLOCAR MODELO ALINEADO CON LA NORMAL DEL ANCLAJE
+// =====================================================
+
 function placeModelAt(position) {
-    arModel.position.copy(position);
-    if (hasAnchorPosition) {
-        arModel.position.sub(anchorPosition);
+
+    if (!arModel) return;
+
+    const targetPosition = position.clone();
+
+    // -------------------------------------------------
+    // 1. RESTABLECER ROTACIÓN
+    // -------------------------------------------------
+
+    arModel.quaternion.identity();
+
+    // -------------------------------------------------
+    // 2. ALINEAR NORMAL DEL ANCLAJE CON LA SUPERFICIE AR
+    // -------------------------------------------------
+
+    if (hasAnchorNormal && arReticle) {
+
+        // Dirección original guardada en el modelo IFC.
+        const sourceNormal = anchorNormal.clone().normalize();
+
+        // La normal de la superficie detectada por WebXR
+        // corresponde al eje Y local del retículo.
+        const targetNormal = new THREE.Vector3(0, 1, 0);
+
+        targetNormal.transformDirection(arReticle.matrix);
+
+        // Rotación necesaria para hacer coincidir ambas normales.
+        const alignmentQuaternion = new THREE.Quaternion();
+
+        alignmentQuaternion.setFromUnitVectors(
+            sourceNormal,
+            targetNormal
+        );
+
+        arModel.quaternion.copy(alignmentQuaternion);
     }
+
+    // -------------------------------------------------
+    // 3. CORREGIR POSICIÓN DESPUÉS DE ROTAR
+    // -------------------------------------------------
+
+    // Aplicamos primero la escala y después la rotación
+    // al punto local del anclaje.
+    const rotatedAnchor = anchorPosition.clone()
+        .multiply(arModel.scale)
+        .applyQuaternion(arModel.quaternion);
+
+    // El punto del anclaje debe coincidir exactamente
+    // con la posición detectada por el hit-test.
+    arModel.position.copy(targetPosition);
+
+    if (hasAnchorPosition) {
+        arModel.position.sub(rotatedAnchor);
+    }
+
+    // -------------------------------------------------
+    // 4. ACTUALIZAR MODELO
+    // -------------------------------------------------
+
     arModel.visible = true;
+
     arModel.updateMatrixWorld(true);
+
     lastPlacedPosition = arModel.position.clone();
+
+    // -------------------------------------------------
+    // DEBUG
+    // -------------------------------------------------
+
+    console.log('📍 Modelo colocado y alineado:', {
+        anchorPosition: anchorPosition.toArray(),
+        anchorNormal: anchorNormal.toArray(),
+        targetNormal: hasAnchorNormal
+            ? new THREE.Vector3(0, 1, 0)
+                .transformDirection(arReticle.matrix)
+                .toArray()
+            : null,
+        modelPosition: arModel.position.toArray(),
+        modelRotation: arModel.rotation.toArray(),
+        modelQuaternion: arModel.quaternion.toArray()
+    });
 }
 
 // =====================================================

@@ -819,7 +819,9 @@
     <div id="viewer" class="viewport" data-url="{{ route('app.Attachment', $model->model->id) }}"
         data-type="{{ $model->model->type }}" data-anchor-x="{{ $currentAnchor['x'] ?? 0 }}"
         data-anchor-y="{{ $currentAnchor['y'] ?? 0 }}" data-anchor-z="{{ $currentAnchor['z'] ?? 0 }}"
-        data-incidents='@json($incidents)' data-anchors='@json($anchors)'>
+        data-incidents='@json($incidents)' data-anchors='@json($anchors)' data-anchor-normal-x="{{ $currentAnchor['normal_x'] ?? 0 }}"
+data-anchor-normal-y="{{ $currentAnchor['normal_y'] ?? 0 }}"
+data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
     </div>
 
     <div id="ar-ui-container">
