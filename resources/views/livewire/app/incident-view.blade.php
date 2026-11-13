@@ -31,7 +31,7 @@
     <livewire:table :heads="$heads" wire:model.live="actions" icon="nf nf-cod-issue_reopened text-primary"
         title="Incidentes">
         @php
-        $i = 1;
+            $i = 1;
         @endphp
         @foreach ($incidents as $item)
             <tr wire:key="{{ $item->id }}">
@@ -65,10 +65,12 @@
 
                 <td>
                     @if (!$project->is_active)
-                            <i class="nf nf-fa-lock text-danger">
-                                Proyecto Bloqueado
-                            </i>
+                        <i class="nf nf-fa-lock text-danger">
+                            Proyecto Bloqueado
+                        </i>
                     @else
+                <button data-bs-toggle="modal" data-bs-target="#modal-edit" class="btn btn-sm btn-secondary" wire:click="editIncident({{ $item->id }})"><i
+                                class="fa fa-pen"></i></button>
                         <button class="btn btn-sm btn-primary" wire:click="getIncident({{ $item->id }})">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -83,7 +85,7 @@
         </x-slot>
     </livewire:table>
 
-    <x-modal id="modal-incident-detail" title="Detalles de la incidencia" class="modal-lg" >
+    <x-modal id="modal-incident-detail" title="Detalles de la incidencia" class="modal-lg">
         <livewire:app.incident-detail modal_name="modal-incident-detail" :project="$project" />
     </x-modal>
 </div>

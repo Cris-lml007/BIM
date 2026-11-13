@@ -5,7 +5,6 @@
             inset: 0;
             pointer-events: none;
             z-index: 1;
-            /* 🆕 NUEVO — variable dinámica con la altura real del FAB bar */
             --ar-fab-height: 92px;
         }
 
@@ -65,13 +64,11 @@
         .ar-floating-panel {
             position: absolute;
             left: 50%;
-            /* ✏️ CAMBIADO — ya no es un valor fijo, se calcula desde
-               la altura real del FAB bar + un margen de seguridad */
             bottom: calc(var(--ar-fab-height) + 14px);
             transform: translateX(-50%) translateY(16px);
             width: min(92vw, 380px);
             max-height: 50vh;
-            background: rgba(17, 17, 17, 0.92);
+            background: rgba(17, 17, 17, 0.94);
             border-radius: 14px;
             color: white;
             overflow: hidden;
@@ -89,8 +86,6 @@
             visibility: visible;
             transform: translateX(-50%) translateY(0);
             pointer-events: auto;
-            /* 🆕 NUEVO — por si queda algún solape residual,
-               el panel abierto siempre gana por encima del FAB bar */
             z-index: 26;
         }
 
@@ -118,6 +113,7 @@
             padding: 14px 16px;
             overflow-y: auto;
             touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* =====================================================
@@ -133,9 +129,6 @@
             gap: 12px;
             pointer-events: auto;
             z-index: 25;
-            /* ✏️ CAMBIADO — ya NO hace wrap a 2 filas (eso rompía
-               el cálculo de posición del panel). Si no entra todo,
-               se desplaza horizontalmente con scroll. */
             flex-wrap: nowrap;
             overflow-x: auto;
             max-width: 95vw;
@@ -175,6 +168,20 @@
             border-color: #2563eb;
         }
 
+        /* Botón BIM select activo → ámbar */
+        #ar-btn-bim-select.active {
+            background: #f59e0b;
+            border-color: #f59e0b;
+            color: #111;
+        }
+
+        /* 🆕 Botón modo incidencia activo → rojo */
+        #ar-btn-incident-mode.active {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #fff;
+        }
+
         .ar-fab-badge {
             position: absolute;
             top: -4px;
@@ -190,11 +197,6 @@
             align-items: center;
             justify-content: center;
             border: 2px solid #111;
-        }
-
-        .ar-fab.ar-fab-locked {
-            background: rgba(34, 197, 94, 0.25);
-            border-color: rgba(34, 197, 94, 0.6);
         }
 
         /* =====================================================
@@ -248,19 +250,10 @@
             touch-action: manipulation;
         }
 
-        .ar-filter-chip .ar-filter-remove:hover {
-            color: #ef4444;
-        }
-
         .ar-category-item {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 6px;
             margin-bottom: 6px;
-            transition: background 0.2s;
-        }
-
-        .ar-category-item:hover {
-            background: rgba(255, 255, 255, 0.1);
         }
 
         .ar-category-item input {
@@ -311,7 +304,6 @@
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-            transition: background 0.15s ease;
         }
 
         .ar-dpad-btn:active {
@@ -417,18 +409,464 @@
             background: rgba(37, 99, 235, 0.15);
             color: #60a5fa;
         }
-    </style>
 
-    <div id="viewer"
-         class="viewport"
-         data-url="{{ route('app.Attachment', 1) }}"
-         data-type="{{ $model->model->type }}">
+        /* =====================================================
+           PANEL INFO BIM
+           ===================================================== */
+
+        .ar-bim-info-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #f59e0b;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+
+        .ar-bim-info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 12px;
+        }
+
+        .ar-bim-info-label {
+            color: rgba(255, 255, 255, 0.55);
+            flex-shrink: 0;
+            max-width: 42%;
+        }
+
+        .ar-bim-info-value {
+            color: white;
+            text-align: right;
+            word-break: break-word;
+            flex: 1;
+        }
+
+        .ar-bim-info-section {
+            margin-top: 10px;
+        }
+
+        .ar-bim-info-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .ar-bim-info-section-header:active {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .ar-bim-info-section-body {
+            padding: 2px 10px;
+        }
+
+        .ar-bim-deselect-btn {
+            width: 100%;
+            margin-top: 14px;
+            padding: 9px;
+            border-radius: 6px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+            font-size: 12px;
+            touch-action: manipulation;
+        }
+
+        /* =====================================================
+           INDICADOR MODO SELECCIÓN + CROSSHAIR
+           ===================================================== */
+
+        .ar-bim-select-indicator {
+            position: absolute;
+            top: max(64px, calc(env(safe-area-inset-top) + 56px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(245, 158, 11, 0.92);
+            color: #111;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 16px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 28;
+            display: none;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
+        }
+
+        .ar-bim-select-indicator.visible {
+            display: block;
+        }
+
+        #ar-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 18;
+            display: none;
+        }
+
+        #ar-crosshair.visible {
+            display: block;
+        }
+
+        #ar-crosshair .ch-line-h,
+        #ar-crosshair .ch-line-v {
+            position: absolute;
+            background: #f59e0b;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+        }
+
+        #ar-crosshair .ch-line-h {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            margin-top: -1px;
+        }
+
+        #ar-crosshair .ch-line-v {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            margin-left: -1px;
+        }
+
+        #ar-crosshair .ch-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            margin: -4px 0 0 -4px;
+            border-radius: 50%;
+            background: #f59e0b;
+            border: 1px solid rgba(0, 0, 0, 0.5);
+        }
+
+        #ar-crosshair.busy .ch-dot {
+            background: #22c55e;
+        }
+
+        /* =====================================================
+           🆕 INDICADOR + CROSSHAIR DE MODO INCIDENCIA
+           ===================================================== */
+
+        .ar-incident-indicator {
+            position: absolute;
+            top: max(64px, calc(env(safe-area-inset-top) + 56px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.92);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 7px 16px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 28;
+            display: none;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
+        }
+
+        .ar-incident-indicator.visible {
+            display: block;
+        }
+
+        #ar-incident-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 18;
+            display: none;
+        }
+
+        #ar-incident-crosshair.visible {
+            display: block;
+        }
+
+        #ar-incident-crosshair .ch-line-h,
+        #ar-incident-crosshair .ch-line-v {
+            position: absolute;
+            background: #ef4444;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+        }
+
+        #ar-incident-crosshair .ch-line-h {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            margin-top: -1px;
+        }
+
+        #ar-incident-crosshair .ch-line-v {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            margin-left: -1px;
+        }
+
+        #ar-incident-crosshair .ch-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            margin: -4px 0 0 -4px;
+            border-radius: 50%;
+            background: #ef4444;
+            border: 1px solid rgba(0, 0, 0, 0.5);
+        }
+
+        #ar-incident-crosshair.busy .ch-dot {
+            background: #22c55e;
+        }
+
+        /* =====================================================
+           🆕 MODAL FORMULARIO DE INCIDENCIA / ANCLAJE
+           ===================================================== */
+
+        #ar-incident-form {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 40;
+            pointer-events: auto;
+            padding: 16px;
+        }
+
+        #ar-incident-form.open {
+            display: flex;
+        }
+
+        .ar-incident-card {
+            background: #1c1c1e;
+            color: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            width: min(340px, 94vw);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .ar-incident-card h3 {
+            margin: 0 0 14px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .ar-incident-card select,
+        .ar-incident-card input {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            touch-action: manipulation;
+        }
+
+        .ar-incident-card select option {
+            background: #1c1c1e;
+            color: #fff;
+        }
+
+        .ar-incident-card input:focus {
+            border-color: #ef4444;
+        }
+
+        .ar-incident-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .ar-incident-actions button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            touch-action: manipulation;
+        }
+
+        #ar-incident-cancel {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #ar-incident-save {
+            background: #ef4444;
+            border: none;
+            color: #fff;
+        }
+
+        #ar-incident-save:disabled {
+            opacity: 0.5;
+        }
+
+        /* =====================================================
+           🆕 LISTADO DE INCIDENCIAS / ANCLAJES
+           ===================================================== */
+
+        .ar-mark-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .ar-mark-item:last-child {
+            border-bottom: none;
+        }
+
+        .ar-mark-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ar-mark-dot.incident {
+            background: #ef4444;
+        }
+
+        .ar-mark-dot.anchor {
+            background: #3b82f6;
+        }
+
+        .ar-mark-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ar-mark-title {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ar-mark-meta {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 2px;
+        }
+
+        .ar-mark-del {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: 15px;
+            padding: 4px 8px;
+            touch-action: manipulation;
+        }
+    </style>
+{{-- Tarjeta de información --}}
+<div class="card card-outline card-primary">
+    <div class="card-body text-center">
+            <h5 class="font-weight-bold mb-2">{{ $anchor->title }}</h5>
+
+        <p class="text-muted mb-1">
+            <i class="fas fa-cube mr-1"></i>
+        {{ $model->name }}
+        </p>
+
+        <p class="text-muted mb-0">
+            <i class="fas fa-calendar-alt mr-1"></i>
+                {{ $anchor->create_at }}
+        </p>
+    </div>
+</div>
+    {{-- =====================================================
+         CONTENEDOR DEL VISOR
+         data-anchor-*  → coordenadas del anclaje actual
+         data-incidents → incidencias del modelo (JSON)
+         data-anchors   → todos los anclajes del modelo (JSON)
+         ===================================================== --}}
+    <div id="viewer" class="viewport" data-url="{{ route('app.Attachment', $model->model->id) }}"
+        data-type="{{ $model->model->type }}" data-anchor-x="{{ $currentAnchor['x'] ?? 0 }}"
+        data-anchor-y="{{ $currentAnchor['y'] ?? 0 }}" data-anchor-z="{{ $currentAnchor['z'] ?? 0 }}"
+        data-incidents='@json($incidents)' data-anchors='@json($anchors)'>
     </div>
 
     <div id="ar-ui-container">
 
         <!-- TOASTS -->
         <div id="ar-toast-container"></div>
+
+        <!-- INDICADOR MODO SELECCIÓN BIM -->
+        <div id="ar-bim-select-indicator" class="ar-bim-select-indicator">
+            🎯 Apunta y toca para seleccionar
+        </div>
+
+        <!-- CROSSHAIR BIM -->
+        <div id="ar-crosshair">
+            <div class="ch-line-h"></div>
+            <div class="ch-line-v"></div>
+            <div class="ch-dot"></div>
+        </div>
+
+        <!-- 🆕 INDICADOR MODO INCIDENCIA -->
+        <div id="ar-incident-indicator" class="ar-incident-indicator">
+            🚩 Toca sobre el modelo para crear una marca
+        </div>
+
+        <!-- 🆕 CROSSHAIR INCIDENCIA -->
+        <div id="ar-incident-crosshair">
+            <div class="ch-line-h"></div>
+            <div class="ch-line-v"></div>
+            <div class="ch-dot"></div>
+        </div>
+
+        <!-- 🆕 MODAL: NUEVA INCIDENCIA / ANCLAJE -->
+        <div id="ar-incident-form">
+            <div class="ar-incident-card">
+                <h3 id="ar-incident-form-title">🚩 Nueva marca</h3>
+                <select id="ar-incident-type">
+                    <option value="incident">🚩 Incidencia</option>
+                    <option value="anchor">📌 Anclaje (link compartible)</option>
+                </select>
+                <input type="text" id="ar-incident-title" maxlength="120" placeholder="Título de la marca..."
+                    autocomplete="off">
+                <div class="ar-incident-actions">
+                    <button type="button" id="ar-incident-cancel">Cancelar</button>
+                    <button type="button" id="ar-incident-save">Guardar</button>
+                </div>
+            </div>
+        </div>
 
         <!-- PANEL: OPACIDAD -->
         <div id="ar-panel-opacity" class="ar-floating-panel">
@@ -441,26 +879,17 @@
 
             <div class="ar-panel-body">
                 <div class="d-flex align-items-center gap-3">
-                    <input
-                        type="range"
-                        id="ar-opacity"
-                        min="0"
-                        max="100"
-                        value="100"
-                        step="1"
-                        style="flex: 1; touch-action: manipulation;"
-                    >
-                    <span id="ar-opacity-value" style="min-width: 48px; text-align: right;">
-                        100%
-                    </span>
+                    <input type="range" id="ar-opacity" min="0" max="100" value="100" step="1"
+                        style="flex: 1; touch-action: manipulation;">
+                    <span id="ar-opacity-value" style="min-width: 48px; text-align: right;">100%</span>
                 </div>
             </div>
         </div>
 
-        <!-- PANEL: PROPIEDADES -->
+        <!-- PANEL: FILTRO POR PROPIEDADES -->
         <div id="ar-panel-properties" class="ar-floating-panel">
             <div class="ar-panel-header">
-                <span><i class="bi bi-funnel me-2"></i>Propiedades</span>
+                <span><i class="bi bi-funnel me-2"></i>Filtrar propiedades</span>
                 <button type="button" class="ar-panel-close">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -476,25 +905,13 @@
                 </select>
 
                 <div class="ar-filter-buttons">
-                    <button
-                        type="button"
-                        id="ar-apply-property"
-                        class="btn btn-primary btn-sm"
-                        disabled>
-                        Aplicar
-                    </button>
-                    <button
-                        type="button"
-                        id="ar-clear-property"
-                        class="btn btn-secondary btn-sm">
-                        Limpiar
-                    </button>
+                    <button type="button" id="ar-apply-property" class="btn btn-primary btn-sm"
+                        disabled>Aplicar</button>
+                    <button type="button" id="ar-clear-property" class="btn btn-secondary btn-sm">Limpiar</button>
                 </div>
 
                 <div id="ar-property-filters" class="mt-3">
-                    <div class="small text-white-50">
-                        Sin filtros activos
-                    </div>
+                    <div class="small text-white-50">Sin filtros activos</div>
                 </div>
             </div>
         </div>
@@ -509,13 +926,11 @@
             </div>
 
             <div class="ar-panel-body">
-                <div id="ar-categories-container" class="ar-categories-scroll">
-                    <!-- Se llena dinámicamente -->
-                </div>
+                <div id="ar-categories-container" class="ar-categories-scroll"></div>
             </div>
         </div>
 
-        <!-- PANEL: CORRECCIÓN DE POSICIÓN -->
+        <!-- PANEL: POSICIÓN -->
         <div id="ar-panel-position" class="ar-floating-panel">
             <div class="ar-panel-header">
                 <span><i class="bi bi-arrows-move me-2"></i>Ajustar posición</span>
@@ -525,7 +940,6 @@
             </div>
 
             <div class="ar-panel-body">
-
                 <div class="ar-dpad-wrapper">
 
                     <p id="ar-position-status" class="ar-position-status searching">
@@ -533,84 +947,90 @@
                     </p>
 
                     <div class="ar-dpad">
+                        <button type="button" class="ar-dpad-btn ar-dpad-up" data-direction="up"><i
+                                class="bi bi-arrow-up"></i></button>
 
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-up"
-                            data-direction="up"
-                            title="Subir">
-                            <i class="bi bi-arrow-up"></i>
-                        </button>
+                        <button type="button" class="ar-dpad-btn ar-dpad-left" data-direction="left"><i
+                                class="bi bi-arrow-left"></i></button>
 
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-left"
-                            data-direction="left"
-                            title="Izquierda">
-                            <i class="bi bi-arrow-left"></i>
-                        </button>
+                        <div class="ar-dpad-center">Mantén<br>presionado</div>
 
-                        <div class="ar-dpad-center">
-                            Mantén<br>presionado
-                        </div>
+                        <button type="button" class="ar-dpad-btn ar-dpad-right" data-direction="right"><i
+                                class="bi bi-arrow-right"></i></button>
 
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-right"
-                            data-direction="right"
-                            title="Derecha">
-                            <i class="bi bi-arrow-right"></i>
-                        </button>
-
-                        <button
-                            type="button"
-                            class="ar-dpad-btn ar-dpad-down"
-                            data-direction="down"
-                            title="Bajar">
-                            <i class="bi bi-arrow-down"></i>
-                        </button>
-
+                        <button type="button" class="ar-dpad-btn ar-dpad-down" data-direction="down"><i
+                                class="bi bi-arrow-down"></i></button>
                     </div>
 
                     <p class="ar-position-hint">
-                        Izquierda/derecha se mueven según hacia
-                        dónde apunta la cámara
+                        Izquierda/derecha se mueven según hacia dónde apunta la cámara
                     </p>
 
                     <div class="ar-step-group">
-                        <button type="button" class="ar-step-btn" data-step="0.01">
-                            Fino<br>1cm
-                        </button>
-                        <button type="button" class="ar-step-btn active" data-step="0.03">
-                            Normal<br>3cm
-                        </button>
-                        <button type="button" class="ar-step-btn" data-step="0.08">
-                            Grueso<br>8cm
-                        </button>
+                        <button type="button" class="ar-step-btn" data-step="0.01">Fino<br>1cm</button>
+                        <button type="button" class="ar-step-btn active" data-step="0.03">Normal<br>3cm</button>
+                        <button type="button" class="ar-step-btn" data-step="0.08">Grueso<br>8cm</button>
                     </div>
 
                     <div class="ar-position-actions">
-
-                        <button
-                            type="button"
-                            id="ar-reset-position"
-                            class="ar-position-reset-btn">
+                        <button type="button" id="ar-reset-position" class="ar-position-reset-btn">
                             <i class="bi bi-arrow-counterclockwise me-2"></i>
                             Volver al anclaje original
                         </button>
 
-                        <button
-                            type="button"
-                            id="ar-relocate-model"
-                            class="ar-position-relocate-btn">
+                        <button type="button" id="ar-relocate-model" class="ar-position-relocate-btn">
                             <i class="bi bi-geo-alt me-2"></i>
                             Reubicar en otra superficie
                         </button>
-
                     </div>
 
                 </div>
+            </div>
+        </div>
 
+        <!-- PANEL: INFO DEL ELEMENTO BIM -->
+        <div id="ar-panel-bim-info" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-info-circle me-2"></i>Elemento BIM</span>
+                <button type="button" class="ar-panel-close" id="ar-close-bim-info">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body" id="ar-bim-info-body">
+                <div class="small text-white-50 text-center py-3">
+                    Selecciona un elemento para ver sus propiedades
+                </div>
+            </div>
+        </div>
+
+        <!-- 🆕 PANEL: LISTADO DE INCIDENCIAS Y ANCLAJES -->
+        <div id="ar-panel-incidents" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Marcas del modelo</span>
+                <button type="button" class="ar-panel-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body" id="ar-incidents-body">
+                <div class="small text-white-50 text-center py-3">
+                    Cargando...
+                </div>
+            </div>
+        </div>
+
+        <!-- chat / detalle de incidencia -->
+        <div id="ar-panel-chat" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-chat-dots-fill me-2"></i>Detalle</span>
+                <button type="button" class="ar-panel-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body" id="ar-chat-body">
+                <livewire:app.incident-detail modal_name="modal-incident-detail" :project="$project" />
             </div>
         </div>
 
@@ -626,13 +1046,34 @@
                 <span class="ar-fab-badge" id="ar-fab-badge-categories">0</span>
             </button>
 
-            <button type="button" class="ar-fab" data-panel="properties" title="Propiedades">
+            <button type="button" class="ar-fab" data-panel="properties" title="Filtrar">
                 <i class="bi bi-funnel"></i>
                 <span class="ar-fab-badge" id="ar-fab-badge-properties">0</span>
             </button>
 
             <button type="button" class="ar-fab" data-panel="position" title="Ajustar posición">
                 <i class="bi bi-arrows-move"></i>
+            </button>
+
+            <!-- BOTÓN SELECCIÓN BIM -->
+            <button type="button" id="ar-btn-bim-select" class="ar-fab" title="Seleccionar elemento BIM">
+                <i class="bi bi-crosshair"></i>
+            </button>
+
+            <!-- BOTÓN VER INFO BIM -->
+            <button type="button" class="ar-fab" data-panel="bim-info" title="Info elemento">
+                <i class="bi bi-info-circle"></i>
+            </button>
+
+            <!-- 🆕 BOTÓN MODO CREAR MARCA -->
+            <button type="button" id="ar-btn-incident-mode" class="ar-fab" title="Crear incidencia / anclaje">
+                <i class="bi bi-geo-alt-fill"></i>
+            </button>
+
+            <!-- 🆕 BOTÓN LISTADO DE MARCAS -->
+            <button type="button" class="ar-fab" data-panel="incidents" title="Ver marcas">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span class="ar-fab-badge" id="ar-fab-badge-incidents">0</span>
             </button>
 
             <button type="button" id="ar-reset-filters" class="ar-fab" title="Reiniciar filtros">

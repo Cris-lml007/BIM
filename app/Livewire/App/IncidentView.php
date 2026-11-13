@@ -23,13 +23,17 @@ public $heads = [
             'Prioridad' => 'max_projects',
             'Estado' => 'max_users',
             'Fecha y hora' => 'max_storage',
-          
+
             'Opciones' => null
         ];
 public function mount()
 {
     $this->loadStats();
-}
+    }
+
+    public function editIncident($id){
+        $this->dispatch('getIncident',$id)->to(EditIncident::class);
+    }
 
     public function render()
     {
@@ -45,9 +49,9 @@ public function mount()
             $this->actions['sortField'],
             $this->actions['sortDirection']
         );
-            
-   
-        $incidents = $query->get(); 
+
+
+        $incidents = $query->get();
 
         return view('livewire.app.incident-view', compact( 'incidents'));
     }
@@ -81,7 +85,7 @@ public function loadStats()
         }   catch (\Exception $e) {
             $msg = 'Error al eliminar la incidencia';
             $icon = 'error';
-        } 
+        }
         $this->js("
             Swal.fire({
                 toast: true,

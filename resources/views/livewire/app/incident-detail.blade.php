@@ -44,7 +44,7 @@
 
                 <div class="d-flex justify-content-center mb-3">
                     <span class="badge bg-secondary">
-                        <i class="fas fa-clock me-1"></i>
+                        <i class="nf nf-fa-clock me-1"></i>
                         {{ \Carbon\Carbon::parse($date)->translatedFormat('d M Y : H:i:s') }}
                     </span>
                 </div>
@@ -95,7 +95,7 @@
 
                                         <a href="{{ route('attachments.show', $attachment->id) }}" target="_blank"
                                             class="expand-icon">
-                                            <i class="fas fa-expand"></i>
+                                            <i class="nf nf-md-arrow_expand"></i>
                                         </a>
 
                                     </div>
@@ -134,7 +134,7 @@
 
                                         <a href="{{ route('attachments.show', $attachment->id) }}" target="_blank"
                                             class="expand-icon">
-                                            <i class="fas fa-expand"></i>
+                                            <i class="nf nf-md-arrow_expand"></i>
                                         </a>
 
                                     </div>
@@ -157,15 +157,15 @@
                         <button class="btn btn-@if ($image) btn-success @else btn-secondary @endif"
                             @disabled($status === 0) onclick="document.getElementById('fileInput').click()"
                             wire:loading.attr="disabled" wire:target="image">
-                            <i class="fas fa-image" wire:loading.remove wire:target="image"></i>
-                            <i class="fas fa-spinner fa-spin" wire:loading wire:target="image"></i>
+                            <i class="nf nf-fa-image" wire:loading.remove wire:target="image"></i>
+                            <i class="nf nf-fa-spinner nf-fa-spin" wire:loading wire:target="image"></i>
                         </button>
 
                         <!-- BOTÓN RESET (X) -->
                         @if ($image)
                             <button class="btn btn-danger ms-1" wire:click="removeImage" wire:loading.attr="disabled"
                                 wire:target="image" title="Quitar imagen">
-                                <i class="fas fa-times"></i>
+                                <i class="nf nf-fa-times"></i>
                             </button>
                         @endif <!-- INPUT OCULTO -->
 
@@ -179,7 +179,7 @@
                         <!-- BOTÓN ENVIAR -->
                         <button wire:click="addComment({{ $incident->id ?? '' }})" class="btn btn-primary"
                             @disabled($status === 0) wire:loading.attr="disabled" wire:target="image">
-                            <i class="fas fa-paper-plane"></i>
+                            <i class="nf nf-fa-paper_plane"></i>
                         </button>
 
                     </div>

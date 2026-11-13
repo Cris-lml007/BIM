@@ -12,7 +12,7 @@
         <livewire:table :heads="$heads" wire:model.live="list" title="Mis Proyectos"
             icon="fas fa-folder-open text-primary" message-search="Buscar Proyecto...">
             @foreach ($data as $item)
-                <tr>
+            <tr>
                     <td>{{ Str::upper($item->name) }}</td>
                     <td>
                         @if (strlen($item->description) < 15)
@@ -32,10 +32,12 @@
 
                         </span>
                     </td>
-                    @if ($showOptions)
-                        <td class="text-center">
+                    <td>
                             <a href="{{ route('app.project', $item->id) }}" class="btn btn-sm btn-primary"><i
                                     class="nf nf-fa-eye"></i></a>
+                    </td>
+                    @if ($showOptions)
+                        <td class="text-center">
 
                             <button wire:click="changeState({{ $item->id }})"
                                 class="btn btn-sm {{ $item->is_active ? 'btn-success' : 'btn-danger' }}">
