@@ -925,11 +925,26 @@ function updateIncidentMarkers() {
 }
 
 function updateIncidentBadge() {
+
     const badge = document.getElementById('ar-fab-badge-incidents');
-    if (!badge) return;
+
     const total = incidentsData.length + anchorsData.length;
-    badge.textContent = total;
-    badge.style.display = total > 0 ? 'flex' : 'none';
+
+    if (badge) {
+        badge.textContent = total;
+        badge.style.display = total > 0 ? 'flex' : 'none';
+    }
+
+    const incidentsCount = document.getElementById('ar-count-incidents');
+    const anchorsCount = document.getElementById('ar-count-anchors');
+
+    if (incidentsCount) {
+        incidentsCount.textContent = incidentsData.length;
+    }
+
+    if (anchorsCount) {
+        anchorsCount.textContent = anchorsData.length;
+    }
 }
 
 /* ───────── Detalle de incidencia (panel chat) ───────── */
@@ -1004,37 +1019,72 @@ function openIncidentDetail(incidentId) {
 /* ───────── Lista de incidencias en el panel ───────── */
 
 function renderIncidentList() {
-    const body = document.getElementById('ar-incidents-body');
+    renderMarkLists();
+}
+
+function renderMarkLists() {
+
+    const incidentsBody = document.getElementById('ar-list-incidents');
+    const anchorsBody = document.getElementById('ar-list-anchors');
+
+    const incidentsCount = document.getElementById('ar-count-incidents');
+    const anchorsCount = document.getElementById('ar-count-anchors');
+
+    if (incidentsCount) {
+        incidentsCount.textContent = incidentsData.length;
+    }
+
+    if (anchorsCount) {
+        anchorsCount.textContent = anchorsData.length;
+    }
+
+    renderMarkList(incidentsBody, incidentsData, 'incident');
+    renderMarkList(anchorsBody, anchorsData, 'anchor');
+}
+
+function renderMarkList(body, items, type) {
+
     if (!body) return;
 
-    const allMarks = [
-        ...incidentsData.map(i => ({ ...i, _type: 'incident' })),
-        ...anchorsData.map(a => ({ ...a, _type: 'anchor' })),
-    ];
+    if (!items.length) {
 
-    if (allMarks.length === 0) {
-        body.innerHTML =
-            '<p style="color:rgba(255,255,255,.5);font-size:12px;text-align:center;padding:24px 0;">' +
-            'No hay marcas todavía</p>';
+        body.innerHTML = `
+            <p style="
+                color:rgba(255,255,255,.5);
+                font-size:12px;
+                text-align:center;
+                padding:24px 0;
+            ">
+                ${type === 'incident'
+                    ? 'No hay incidencias registradas'
+                    : 'No hay anclajes registrados'}
+            </p>
+        `;
+
         return;
     }
 
     body.innerHTML = '';
 
-    allMarks.forEach(item => {
+    items.forEach(item => {
+
         const row = document.createElement('div');
         row.className = 'ar-mark-item';
 
-    row.addEventListener('click', (e) => {
-        if (e.target.closest('.ar-mark-del')) return;
-        if (item._type !== 'incident') return;   // ← solo incidencias
-        markUIPointerActive();
-        openIncidentDetail(item.id);
-        markUIPointerInactiveSoon();
-    });
+        // Abrir detalle únicamente para incidencias
+        row.addEventListener('click', (e) => {
+
+            if (e.target.closest('.ar-mark-del')) return;
+
+            if (type !== 'incident') return;
+
+            markUIPointerActive();
+            openIncidentDetail(item.id);
+            markUIPointerInactiveSoon();
+        });
 
         const dot = document.createElement('span');
-        dot.className = `ar-mark-dot ${item._type}`;
+        dot.className = `ar-mark-dot ${type}`;
 
         const info = document.createElement('div');
         info.className = 'ar-mark-info';
@@ -1045,9 +1095,12 @@ function renderIncidentList() {
 
         const meta = document.createElement('div');
         meta.className = 'ar-mark-meta';
+
         meta.textContent =
-            `${item._type === 'incident' ? '🔴 Incidencia' : '🔵 Anclaje'}` +
-            ` · (${Number(item.x).toFixed(2)}, ${Number(item.y).toFixed(2)}, ${Number(item.z).toFixed(2)})`;
+            `${type === 'incident' ? '🔴 Incidencia' : '🔵 Anclaje'}` +
+            ` · (${Number(item.x).toFixed(2)}, ` +
+            `${Number(item.y).toFixed(2)}, ` +
+            `${Number(item.z).toFixed(2)})`;
 
         info.append(title, meta);
 
@@ -1055,14 +1108,18 @@ function renderIncidentList() {
         del.className = 'ar-mark-del';
         del.innerHTML = '<i class="bi bi-trash3"></i>';
         del.title = 'Eliminar';
+
         del.addEventListener('click', (e) => {
+
             e.stopPropagation();
+
             markUIPointerActive();
-            deleteMark(item.id, item._type);
+            deleteMark(item.id, type);
             markUIPointerInactiveSoon();
         });
 
         row.append(dot, info, del);
+
         body.appendChild(row);
     });
 }
@@ -1176,6 +1233,40 @@ function setupIncidentUI() {
             toggleIncidentMode();
         });
     }
+// =====================================================
+// PESTAÑAS: INCIDENCIAS / ANCLAJES
+// =====================================================
+
+document.querySelectorAll('[data-ar-mark-tab]').forEach(tab => {
+
+    tab.addEventListener('click', (e) => {
+
+        e.stopPropagation();
+
+        const selected = tab.dataset.arMarkTab;
+
+        document.querySelectorAll('[data-ar-mark-tab]').forEach(btn => {
+            btn.classList.toggle(
+                'active',
+                btn.dataset.arMarkTab === selected
+            );
+        });
+
+        const incidents = document.getElementById('ar-list-incidents');
+        const anchors = document.getElementById('ar-list-anchors');
+
+        if (incidents) {
+            incidents.style.display =
+                selected === 'incidents' ? 'block' : 'none';
+        }
+
+        if (anchors) {
+            anchors.style.display =
+                selected === 'anchors' ? 'block' : 'none';
+        }
+    });
+
+});
 
     const form = document.getElementById('ar-incident-form');
     const cancelBtn = document.getElementById('ar-incident-cancel');

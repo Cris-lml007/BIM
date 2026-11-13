@@ -1096,20 +1096,59 @@ data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
         </div>
 
         <!-- 🆕 PANEL: LISTADO DE INCIDENCIAS Y ANCLAJES -->
-        <div id="ar-panel-incidents" class="ar-floating-panel">
-            <div class="ar-panel-header">
-                <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Marcas del modelo</span>
-                <button type="button" class="ar-panel-close">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
+<!-- PANEL: ANCLAJES E INCIDENCIAS -->
+<div id="ar-panel-incidents" class="ar-floating-panel">
+    <div class="ar-panel-header">
+        <span>
+            <i class="bi bi-geo-alt-fill me-2"></i>
+            Registros del modelo
+        </span>
+        <button type="button" class="ar-panel-close">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
 
-            <div class="ar-panel-body" id="ar-incidents-body">
-                <div class="small text-white-50 text-center py-3">
-                    Cargando...
-                </div>
+    <div class="ar-panel-body">
+
+        <!-- PESTAÑAS -->
+        <ul class="nav nav-tabs nav-fill mb-3" id="ar-mark-tabs">
+            <li class="nav-item">
+                <button type="button"
+                    class="nav-link active"
+                    data-ar-mark-tab="incidents">
+                    <i class="bi bi-exclamation-triangle-fill text-danger mr-1"></i>
+                    Incidencias
+                    <span class="badge badge-danger ml-1" id="ar-count-incidents">0</span>
+                </button>
+            </li>
+
+            <li class="nav-item">
+                <button type="button"
+                    class="nav-link"
+                    data-ar-mark-tab="anchors">
+                    <i class="bi bi-geo-alt-fill text-primary mr-1"></i>
+                    Anclajes
+                    <span class="badge badge-primary ml-1" id="ar-count-anchors">0</span>
+                </button>
+            </li>
+        </ul>
+
+        <!-- CONTENIDO INCIDENCIAS -->
+        <div id="ar-list-incidents">
+            <div class="small text-white-50 text-center py-3">
+                Cargando incidencias...
             </div>
         </div>
+
+        <!-- CONTENIDO ANCLAJES -->
+        <div id="ar-list-anchors" style="display:none;">
+            <div class="small text-white-50 text-center py-3">
+                Cargando anclajes...
+            </div>
+        </div>
+
+    </div>
+</div>
 
         <!-- chat / detalle de incidencia -->
         <div id="ar-panel-chat" class="ar-floating-panel">
