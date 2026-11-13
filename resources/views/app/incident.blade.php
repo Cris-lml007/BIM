@@ -26,5 +26,10 @@
 
     <x-modal id="modal-incident" class="modal-md" title="Registrar Incidencia" wire:ignore="">
         <livewire:app.incident-form :project="$project" wire:key="modal-incident"></livewire:app.incident-form>
-    </x-modal>
+</x-modal>
+
+<x-modal id="modal-edit" class="modal-md" title="Editar Incidencia">
+    <livewire:app.edit-incident :project="$project">
+    </livewire:app.edit-incident>
+</x-modal>
 @endsection
