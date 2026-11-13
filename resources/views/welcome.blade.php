@@ -1580,6 +1580,31 @@
             .hero-section { min-height: auto; padding: 5rem 0 4rem; }
             .navbar-collapse { padding-top: 1rem; }
         }
+
+/* Tutoriales - Carrusel */
+.tutoriales-carousel .tutorial-card { transition: transform .25s ease, box-shadow .25s ease; }
+.tutoriales-carousel .tutorial-card:hover { transform: translateY(-6px); box-shadow: 0 1rem 2rem rgba(0,0,0,.12) !important; }
+.tutorial-img-wrapper { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #000; }
+.tutorial-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.tutorial-card:hover .tutorial-img-wrapper img { transform: scale(1.06); }
+.tutorial-play {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 3.5rem; background: rgba(0,0,0,.25);
+    opacity: .85; transition: opacity .25s ease, background .25s ease;
+}
+.tutorial-card:hover .tutorial-play { opacity: 1; background: rgba(0,0,0,.4); }
+.tutorial-control {
+    width: 3rem; opacity: 1;
+}
+.tutorial-arrow {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--bim-primary); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    transition: background .2s ease;
+}
+.tutorial-arrow:hover { background: #0b5ed7; }
+.carousel-indicators [data-bs-target] { width: 10px; height: 10px; border-radius: 50%; border: 0; }
     </style>
 
     <!-- NAVEGACIÓN PRINCIPAL -->
@@ -1950,34 +1975,140 @@
             </div>
         </section>
 
-        <!-- TUTORIALES -->
-        <section id="tutoriales" class="soft-section py-5">
-            <div class="container py-5">
-                <div class="text-center mb-5" data-aos="fade-up">
-                    <span class="section-kicker">Aprende con BIMNova</span>
-                    <h2 class="section-title display-5 mt-2">Tutoriales y formación</h2>
-                    <p class="text-secondary fs-5">Recursos para conocer la plataforma y aprovechar las herramientas digitales.</p>
-                </div>
-                <div class="row g-4 justify-content-center">
-                    <div class="col-md-6 col-lg-5" data-aos="fade-up">
-                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
-                            <div class="feature-icon mb-4"><i class="bi bi-play-btn"></i></div>
-                            <h3 class="h4 fw-bold">Tutorial BIM AR</h3>
-                            <p class="text-secondary flex-grow-1">Accede a una guía para conocer el funcionamiento de la plataforma y explorar proyectos mediante Realidad Aumentada.</p>
-                            <a href="#contacto" class="btn btn-outline-primary rounded-pill align-self-start px-4">Solicitar tutorial <i class="bi bi-arrow-right ms-1"></i></a>
-                        </article>
+<!-- TUTORIALES -->
+<section id="tutoriales" class="soft-section py-5">
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <span class="section-kicker">Aprende con BIMNova</span>
+            <h2 class="section-title display-5 mt-2">Tutoriales y formación</h2>
+            <p class="text-secondary fs-5">Recursos para conocer la plataforma y aprovechar las herramientas digitales.</p>
+        </div>
+
+        <div id="tutorialesCarousel" class="carousel slide tutoriales-carousel" data-bs-ride="carousel" data-aos="fade-up">
+            <div class="carousel-inner px-5">
+
+                <!-- Slide 1 -->
+                <div class="carousel-item active">
+                    <div class="row g-4 justify-content-center">
+                        <div class="col-md-6 col-lg-4">
+                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="tutorial-img-wrapper">
+                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Introducción BIM" class="w-100">
+                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h3 class="h5 fw-bold">Introducción a BIM</h3>
+                                    <p class="text-secondary flex-grow-1">Conoce los fundamentos del modelado BIM y sus aplicaciones en la construcción.</p>
+                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
+                                        <i class="bi bi-youtube me-2"></i>Ver video
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="tutorial-img-wrapper">
+                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Realidad Aumentada" class="w-100">
+                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h3 class="h5 fw-bold">Realidad Aumentada en obra</h3>
+                                    <p class="text-secondary flex-grow-1">Aprende a visualizar tus proyectos sobre el terreno real con la plataforma AR.</p>
+                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
+                                        <i class="bi bi-youtube me-2"></i>Ver video
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="tutorial-img-wrapper">
+                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Carga de modelos" class="w-100">
+                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h3 class="h5 fw-bold">Carga tu modelo 3D</h3>
+                                    <p class="text-secondary flex-grow-1">Guía paso a paso para subir y visualizar modelos digitales en la plataforma.</p>
+                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
+                                        <i class="bi bi-youtube me-2"></i>Ver video
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
                     </div>
-                    <div class="col-md-6 col-lg-5" data-aos="fade-up" data-aos-delay="80">
-                        <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
-                            <div class="feature-icon mb-4"><i class="bi bi-mortarboard"></i></div>
-                            <h3 class="h4 fw-bold">Cursos</h3>
-                            <p class="text-secondary flex-grow-1">Formación y acompañamiento en metodologías BIM, visualización digital y tecnologías aplicadas a la construcción.</p>
-                            <a href="#contacto" class="btn btn-outline-primary rounded-pill align-self-start px-4">Consultar cursos <i class="bi bi-arrow-right ms-1"></i></a>
-                        </article>
+                </div>
+
+                <!-- Slide 2 -->
+                <div class="carousel-item">
+                    <div class="row g-4 justify-content-center">
+                        <div class="col-md-6 col-lg-4">
+                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="tutorial-img-wrapper">
+                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Coordinación BIM" class="w-100">
+                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h3 class="h5 fw-bold">Coordinación interdisciplinaria</h3>
+                                    <p class="text-secondary flex-grow-1">Detecta conflictos y mejora la comunicación entre especialidades usando BIM.</p>
+                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
+                                        <i class="bi bi-youtube me-2"></i>Ver video
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="tutorial-img-wrapper">
+                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Simulación 4D" class="w-100">
+                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h3 class="h5 fw-bold">Simulación 4D del proyecto</h3>
+                                    <p class="text-secondary flex-grow-1">Planifica y visualiza el avance de obra en el tiempo con simulaciones 4D.</p>
+                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
+                                        <i class="bi bi-youtube me-2"></i>Ver video
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                <div class="tutorial-img-wrapper">
+                                    <img src="https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" alt="Tutorial Presentación cliente" class="w-100">
+                                    <span class="tutorial-play"><i class="bi bi-play-circle-fill"></i></span>
+                                </div>
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <h3 class="h5 fw-bold">Presentaciones inmersivas</h3>
+                                    <p class="text-secondary flex-grow-1">Cómo preparar una experiencia AR impactante para clientes e inversionistas.</p>
+                                    <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener" class="btn btn-danger rounded-pill align-self-start px-4">
+                                        <i class="bi bi-youtube me-2"></i>Ver video
+                                    </a>
+                                </div>
+                            </article>
+                        </div>
                     </div>
                 </div>
+
             </div>
-        </section>
+
+            <!-- Controles -->
+            <button class="carousel-control-prev tutorial-control" type="button" data-bs-target="#tutorialesCarousel" data-bs-slide="prev">
+                <span class="tutorial-arrow"><i class="bi bi-chevron-left"></i></span>
+                <span class="visually-hidden">Anterior</span>
+            </button>
+            <button class="carousel-control-next tutorial-control" type="button" data-bs-target="#tutorialesCarousel" data-bs-slide="next">
+                <span class="tutorial-arrow"><i class="bi bi-chevron-right"></i></span>
+                <span class="visually-hidden">Siguiente</span>
+            </button>
+
+            <!-- Indicadores -->
+            <div class="carousel-indicators position-static mt-4">
+                <button type="button" data-bs-target="#tutorialesCarousel" data-bs-slide-to="0" class="active bg-primary" aria-current="true" aria-label="Slide 1"></button>
+                <button type="button" data-bs-target="#tutorialesCarousel" data-bs-slide-to="1" class="bg-primary" aria-label="Slide 2"></button>
+            </div>
+        </div>
+    </div>
+</section>
     </main>
 
     <!-- CONTACTO / PIE DE PÁGINA -->
