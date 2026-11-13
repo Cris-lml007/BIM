@@ -1908,6 +1908,7 @@ function rotateModel(direction) {
     let angle;
 
     switch (direction) {
+        // Rotación horizontal
         case 'left':
             axis = arRotationAxis;
             angle = rotationStep;
@@ -1918,6 +1919,7 @@ function rotateModel(direction) {
             angle = -rotationStep;
             break;
 
+        // Inclinación adelante / atrás
         case 'up':
             axis = new THREE.Vector3(1, 0, 0);
             angle = rotationStep;
@@ -1928,13 +1930,24 @@ function rotateModel(direction) {
             angle = -rotationStep;
             break;
 
+        // Inclinación hacia los costados
+        case 'tilt-left':
+            axis = new THREE.Vector3(0, 0, 1);
+            angle = rotationStep;
+            break;
+
+        case 'tilt-right':
+            axis = new THREE.Vector3(0, 0, 1);
+            angle = -rotationStep;
+            break;
+
         default:
             return;
     }
 
     arModel.rotateOnWorldAxis(axis, angle);
 
-    // Mantener fijo el punto original del anclaje
+    // Mantener fijo el punto del anclaje
     const anchorOffsetAfter = anchorPosition.clone()
         .multiply(arModel.scale)
         .applyQuaternion(arModel.quaternion);
