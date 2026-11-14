@@ -194,6 +194,7 @@
                         @if (!$access)
                             <h3 class="fw-bold text-danger">Sin Acceso</h3>
                             <small class="text-muted">No tienes una licencia asignada</small>
+                            <a class="text-muted" href="mailto:admin@bimnova.com">Solicitar Membresia</a>
                         @elseif(!$access->is_active)
                             <h3 class="fw-bold text-warning">Bloqueado</h3>
                             <h6 class="text-secondary">Acceso suspendido por administrador</h6>
