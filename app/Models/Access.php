@@ -13,6 +13,7 @@ class Access extends Model
         'is_active',
         'available',
         'available_end',
+        'max_models'
     ];
 
     protected $casts = [

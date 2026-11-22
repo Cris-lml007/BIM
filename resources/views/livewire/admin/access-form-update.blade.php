@@ -36,9 +36,10 @@
                         <span class="text-danger small">{{ $message }}</span>
                     @enderror
                 </div>
-
+            </div>
+            <div class="row g-4 mb-4">
                 <!-- Espacio -->
-                <div class="col-md-4">
+                <div class="col">
                     <label class="form-label fw-semibold ">
                         <i class="fas fa-database me-1"></i> Espacio máximo *
                     </label>
@@ -56,6 +57,16 @@
                         <span class="text-danger small">{{ $message }}</span>
                     @enderror
                 </div>
+                <div class="col">
+                    <label class="form-label fw-semibold ">
+                        <i class="fas fa-cube me-1"></i> Modelos Maximos *
+                    </label>
+                    <input class="form-control" wire:model="max_models">
+                    @error('max_models')
+                        <span class="text-danger small">{{ $message }}</span>
+                    @enderror
+                </div>
+
             </div>
 
             <div class="row mb-3">

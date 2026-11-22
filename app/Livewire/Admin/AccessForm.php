@@ -23,6 +23,7 @@ class AccessForm extends Component
     public $available;
     public $available_end;
     public $userSearch = '';
+    public $max_models;
     public Access $access;
 
     public $modal_name = null;
@@ -56,6 +57,7 @@ class AccessForm extends Component
         $this->max_projects = $access->max_projects;
         $this->max_users = $access->max_users;
         $this->max_space = $access->max_storage;
+        $this->max_models = $access->max_models;
 
         $this->is_active = $access->is_active;
         $this->available = $access->available ? date('Y-m-d', strtotime($access->available)) : null;
@@ -72,8 +74,9 @@ class AccessForm extends Component
             'unit' => 'required|integer',
             'is_active' => 'required|boolean',
             'available_end' => 'required|date|after_or_equal:available',
+            'max_models' => 'required|integer|min:1'
         ]);
-    
+
         $this->validate([
             'available' => $this->typeForm ? 'required|date|after_or_equal:today' : 'required|date',
         ]);
@@ -87,6 +90,7 @@ class AccessForm extends Component
         $this->access->user_id = $this->user_id;
         $this->access->max_projects = $this->max_projects;
         $this->access->max_users = $this->max_users;
+        $this->access->max_models = $this->max_models;
 
         $this->access->is_active = $this->is_active;
         $this->access->available = $this->available;

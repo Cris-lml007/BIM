@@ -12,13 +12,15 @@
                             <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                         @endforeach
                     </select>
-                    @error('user_id') <span class="text-danger">{{ $message }}</span> @enderror
+                    @error('user_id')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
                 </div>
             </div>
 
             <div class="row g-4 mb-4">
                 <!-- Proyectos -->
-                <div class="col-md-4">
+                <div class="col">
                     <label class="form-label fw-semibold ">
                         <i class="fas fa-folder-open me-1"></i> Proyectos *
                     </label>
@@ -29,7 +31,7 @@
                 </div>
 
                 <!-- Usuarios -->
-                <div class="col-md-4">
+                <div class="col">
                     <label class="form-label fw-semibold ">
                         <i class="fas fa-users me-1"></i> Usuarios *
                     </label>
@@ -39,13 +41,17 @@
                     @enderror
                 </div>
 
+            </div>
+
+            <div class="row g-4 mb-4">
                 <!-- Espacio -->
-                <div class="col-md-4">
+                <div class="col">
                     <label class="form-label fw-semibold ">
                         <i class="fas fa-database me-1"></i> Espacio máximo *
                     </label>
                     <div class="input-group">
-                        <input type="number" class="form-control" wire:model="max_space" placeholder="1024" min="1">
+                        <input type="number" class="form-control" wire:model="max_space" placeholder="1024"
+                            min="1">
                         <select name="unit" id="" class="form-select" wire:model="unit">
                             @foreach ($unit_space as $key => $value)
                                 <option value="{{ $key }}">{{ $value }}</option>
@@ -57,18 +63,34 @@
                         <span class="text-danger small">{{ $message }}</span>
                     @enderror
                 </div>
+                <div class="col">
+                    <label class="form-label fw-semibold ">
+                        <i class="fas fa-cube me-1"></i> Modelos Maximos *
+                            </label>
+                            <input class="form-control" wire:model="max_models">
+                    @error('max_models')
+                        <span class="text-danger small">{{ $message }}</span>
+                    @enderror
+
+                </div>
+
             </div>
 
-            <div class="row mb-3">                    <div class="col-md-6">
-                        <label for="available">Fecha Inicio*</label>
-                        <input type="date" class="form-control" wire:model="available">
-                        @error('available') <span class="text-danger">{{ $message }}</span> @enderror
-                    </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="available">Fecha Inicio*</label>
+                    <input type="date" class="form-control" wire:model="available">
+                    @error('available')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
 
                 <div class="col-md-6">
                     <label for="available_end">Fecha Fin*</label>
                     <input type="date" class="form-control" wire:model="available_end">
-                    @error('available_end') <span class="text-danger">{{ $message }}</span> @enderror
+                    @error('available_end')
+                        <span class="text-danger">{{ $message }}</span>
+                    @enderror
                 </div>
             </div>
         </div>
@@ -80,10 +102,10 @@
 </div>
 
 @script
-<script>
-
-    this.$js.closeModal = () => {
-        $("#" + $wire.modal_name).modal('hide');
-    };
-</script>
+    <script>
+        this.$js.closeModal = () => {
+            $("#" + $wire.modal_name).modal('hide');
+        };
+    </script>
 @endscript
+

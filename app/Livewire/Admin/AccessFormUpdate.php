@@ -25,6 +25,7 @@ class AccessFormUpdate extends Component
     public $available;
     public $available_end;
     public Access $access;
+    public $max_models;
 
     public $modal_name = null;
 
@@ -52,10 +53,11 @@ class AccessFormUpdate extends Component
         $this->access = $access;
         $this->user_id = $access->user_id;
         $this->user = User::find($access->user_id);
-       
+
         $this->max_projects = $access->max_projects;
         $this->max_users = $access->max_users;
         $this->max_space = $access->max_storage;
+        $this->max_models = $access->max_models;
 
         $this->is_active = $access->is_active;
         $this->available = $access->available ? date('Y-m-d', strtotime($access->available)) : null;
@@ -72,17 +74,18 @@ class AccessFormUpdate extends Component
             'unit' => 'required|integer',
             'is_active' => 'required|boolean',
             'available_end' => 'required|date|after_or_equal:available',
+            'max_models' => 'required|integer|min:1'
         ]);
-    
+
         if( ($this->max_projects < $this->access->max_projects) || ($this->max_users < $this->access->max_users) || ($this->max_space < $this->access->max_storage))
-        {           
+        {
             $projects = Project::where('user_id', $this->access->user_id)
                 ->withCount(['members', 'invitations'])
                 ->with('documents')
                 ->get();
-            
+
             $totalProjectsActual = $projects->count();
-                
+
             if($this->max_projects < $totalProjectsActual){
                 $this->js("
                     Swal.fire({
@@ -94,7 +97,7 @@ class AccessFormUpdate extends Component
                 ");
                 return;
             }
-            
+
             $totalUsers = $projects->sum('members_count') + $projects->sum('invitations_count');
             if($this->max_users < $totalUsers/$totalProjectsActual){
                 $this->js("
@@ -136,9 +139,9 @@ class AccessFormUpdate extends Component
                         });
                     ");
                 return;
-                }            
+                }
             }
-            
+
         }
 
         $this->access->max_projects = $this->max_projects;
@@ -146,14 +149,15 @@ class AccessFormUpdate extends Component
         $this->access->max_users = $this->max_users;
         $this->access->available = $this->available;
         $this->access->available_end = $this->available_end;
-            
+        $this->access->max_models = $this->max_models;
+
         $this->access->max_storage = $this->unit == 1
             ? round($this->max_space, 1) // MB
             : round($this->max_space * 1024, 1); // GB → MB
 
         $this->access->save();
         $this->dispatch( 'updateAccess')->to('admin.access-view');
-        
+
         $this->resetForm();
         $this->js('closeModal');
     }
