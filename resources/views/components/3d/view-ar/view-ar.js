@@ -1,17 +1,4 @@
 // =====================================================
-// VISOR IFC EN REALIDAD AUMENTADA (WebXR + ThatOpen)
-//
-// Incluye:
-//  - Hit-test y colocación del modelo (alineada al anclaje)
-//  - Control de opacidad
-//  - Filtros por categorías y por propiedades
-//  - Ajuste fino de posición (D-pad)
-//  - Selección BIM por raycasting + panel de propiedades
-//  - 🆕 Incidencias y anclajes: carga, marcadores 3D,
-//    creación por raycast (Livewire saveMark) y borrado
-// =====================================================
-
-// =====================================================
 // CONTENEDOR
 // =====================================================
 
@@ -84,7 +71,9 @@ let hitTestSource = null;
 let hitTestSourceRequested = false;
 let hitTestEnabled = true;
 
-let arModel = null;
+let arModel = null; // Contenedor común: todos los IFC comparten este transform
+let primaryModelId = 'main';
+let loadedModels = new Map(); // modelId -> { name, model, object }
 
 let modelLoading = false;
 let modelLoaded = false;
@@ -121,6 +110,7 @@ let incidentRaycastBusy = false;
 
 let pendingIncidentPos = null;     // THREE.Vector3 en espacio local del modelo
 let pendingIncidentNormal = null;  // THREE.Vector3 en espacio local del modelo
+let pendingIncidentModelId = 'main';
 
 // Registro de marcadores 3D: { id, type, group }
 let markerRegistry = [];
@@ -174,9 +164,12 @@ let arRotationAxis = new THREE.Vector3(0, 1, 0);
 // PROPERTY SETS / FILTROS
 // =====================================================
 
-let loadedModelId = null;
-let modelProperties = new Map();
-let modelCategories = new Map();
+let loadedModelId = null; // Se conserva como referencia al modelo inicial
+let modelProperties = new Map(); // Unión de propiedades de todos los modelos (UI)
+let modelCategories = new Map(); // Se conserva para compatibilidad; contiene categorías del modelo inicial
+let modelPropertiesById = new Map();
+let modelCategoriesById = new Map();
+let modelNamesById = new Map();
 let activePropertyFilters = [];
 let categoryVisibility = new Map();
 
@@ -832,8 +825,12 @@ function setIncidentCrosshairBusy(busy) {
 }
 
 // ---- Marcadores 3D ----
-function addMarker(item, type) {
+function addMarker(item, type, explicitModelId = null) {
     if (!arModel) return null;
+
+    const modelId = explicitModelId || item.modelId || item.model_id || item.modelKey || 'main';
+    const modelEntry = loadedModels.get(String(modelId));
+    const markerParent = modelEntry?.object || (modelId === 'main' ? fragments?.list?.get('main')?.object : null) || arModel;
 
     const color = type === 'anchor' ? 0x3b82f6 : 0xef4444;
 
@@ -872,14 +869,14 @@ function addMarker(item, type) {
 
     group.userData = { markerId: item.id, markerType: type, ring };
 
-    arModel.add(group);
-    markerRegistry.push({ id: item.id, type, group });
+    markerParent.add(group);
+    markerRegistry.push({ id: item.id, type, group, modelId: String(modelId), parent: markerParent });
 
     return group;
 }
 
 function disposeMarker(group) {
-    arModel?.remove(group);
+    group.parent?.remove(group);
     group.traverse(obj => {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
@@ -904,8 +901,8 @@ function clearAllMarkers() {
 
 function buildIncidentMarkers() {
     clearAllMarkers();
-    for (const inc of incidentsData) addMarker(inc, 'incident');
-    for (const anc of anchorsData)   addMarker(anc, 'anchor');
+    for (const inc of incidentsData) addMarker(inc, 'incident', 'main');
+    for (const anc of anchorsData)   addMarker(anc, 'anchor', 'main');
     updateIncidentBadge();
     console.log(`🚩 Marcadores creados: ${incidentsData.length} incidencias, ${anchorsData.length} anclajes`);
 }
@@ -1126,9 +1123,10 @@ function renderMarkList(body, items, type) {
 
 
 // ---- Formulario modal ----
-function showIncidentForm(localPos, localNormal) {
+function showIncidentForm(localPos, localNormal, modelId = 'main') {
     pendingIncidentPos = localPos.clone();
     pendingIncidentNormal = localNormal.clone();
+    pendingIncidentModelId = modelId || 'main';
 
     const form = document.getElementById('ar-incident-form');
     const titleInput = document.getElementById('ar-incident-title');
@@ -1143,6 +1141,7 @@ function hideIncidentForm() {
     if (form) form.classList.remove('open');
     pendingIncidentPos = null;
     pendingIncidentNormal = null;
+    pendingIncidentModelId = 'main';
     markUIPointerInactiveSoon();
 }
 
@@ -1172,7 +1171,7 @@ async function submitIncident() {
 
     try {
         const newId = await wireSaveMark(
-            title, 'main', type,
+            title, pendingIncidentModelId, type,
             +p.x.toFixed(6), +p.y.toFixed(6), +p.z.toFixed(6),
             +n.x.toFixed(6), +n.y.toFixed(6), +n.z.toFixed(6)
         );
@@ -1184,13 +1183,14 @@ async function submitIncident() {
             title,
             x: p.x, y: p.y, z: p.z,
             normal_x: n.x, normal_y: n.y, normal_z: n.z,
+            modelId: pendingIncidentModelId,
             priority: type === 'incident' ? 1 : null,
         };
 
         if (type === 'anchor') anchorsData.push(item);
         else incidentsData.push(item);
 
-        addMarker(item, type);
+        addMarker(item, type, pendingIncidentModelId);
         updateIncidentBadge();
         renderIncidentList();
 
@@ -1363,18 +1363,42 @@ async function initViewer() {
         console.warn('⚠️ No se pudo configurar polygonOffset:', error);
     }
 
-    // CUANDO SE CARGA EL MODELO
+    // CONTENEDOR ÚNICO DEL PROYECTO.
+    // El hit-test, la posición, rotación e inclinación se aplican aquí una sola vez.
+    arModel = new THREE.Group();
+    arModel.name = 'BIMNovaProjectRoot';
+    arModel.visible = false;
+    arModel.position.set(0, 0, 0);
+    arModel.quaternion.identity();
+    arModel.scale.set(1, 1, 1);
+    scene.add(arModel);
+
+    // CUANDO SE CARGA CUALQUIER MODELO: se incorpora al mismo contenedor.
     fragments.list.onItemSet.add(({ value: model }) => {
-        console.log('🟢 onItemSet disparado, modelId:', model.modelId);
+        const modelId = String(model.modelId);
+        console.log('🟢 onItemSet disparado, modelId:', modelId);
         model.useCamera(camera);
-        scene.add(model.object);
-        arModel = model.object;
-        arModel.scale.set(1, 1, 1);
-        arModel.visible = false;
-        loadedModelId = model.modelId;
-        modelLoaded = true;
-        modelLoading = false;
-        console.log('✅ Modelo registrado en escena:', loadedModelId);
+
+        if (model.object.parent !== arModel) {
+            arModel.add(model.object);
+        }
+
+        // No modificar position/quaternion/scale del IFC: conserva sus coordenadas
+        // originales respecto a los demás modelos del proyecto.
+        model.object.visible = true;
+        loadedModels.set(modelId, {
+            name: modelNamesById.get(modelId) || modelId,
+            model,
+            object: model.object,
+        });
+
+        if (modelId === primaryModelId) loadedModelId = modelId;
+        modelLoaded = loadedModels.size > 0;
+
+        // Si se agrega otro IFC después de colocar el proyecto, hereda
+        // automáticamente la transformación del contenedor común.
+        if (opacityValue < 1) setModelOpacity(opacityValue);
+        console.log('✅ Modelo incorporado al espacio AR:', modelId, 'total:', loadedModels.size);
     });
 
     // BOTÓN AR
@@ -1397,6 +1421,7 @@ async function initViewer() {
 
     // SETUP DE UI
     setupPropertyFilters();
+    setupMultipleModelLoading();
     setupARPanels();
     setupPositionCorrection();
     setupBimSelect();
@@ -1478,7 +1503,7 @@ async function initViewer() {
 
         if (arReticle) arReticle.visible = false;
         if (arUI) arUI.style.display = 'none';
-        if (arModel) arModel.visible = true;
+        if (arModel && loadedModels.size) arModel.visible = true;
     });
 
     // ANIMATION LOOP
@@ -1634,28 +1659,43 @@ function buildCategoryUI() {
     }
     cont.innerHTML = '';
 
-    for (const [groupName, categoryIds] of modelCategories) {
-        const group = document.createElement('div');
-        group.className = 'ar-category-item';
-        group.innerHTML = `
+    for (const [modelId, categories] of modelCategoriesById) {
+        const modelTitle = modelNamesById.get(modelId) || modelId;
+        const heading = document.createElement('div');
+        heading.className = 'small fw-bold text-white-50 px-2 pt-2';
+        heading.textContent = modelTitle;
+        cont.appendChild(heading);
+
+        for (const [category, categoryIds] of categories) {
+            const group = document.createElement('div');
+            group.className = 'ar-category-item';
+            const key = `${modelId}::${category}`;
+            const visible = categoryVisibility.has(key) ? categoryVisibility.get(key) : true;
+            group.innerHTML = `
 <div class="d-flex align-items-center gap-2 p-2">
-    <input type="checkbox" checked
+    <input type="checkbox" ${visible ? 'checked' : ''}
            class="form-check-input ar-category-toggle m-0"
-           data-category="${escapeHtml(groupName)}">
+           data-model-id="${escapeHtml(modelId)}"
+           data-category="${escapeHtml(category)}">
     <span class="text-truncate flex-grow-1"
-          title="${escapeHtml(groupName)}">${escapeHtml(groupName)}</span>
+          title="${escapeHtml(category)}">${escapeHtml(category)}</span>
     <span class="badge bg-secondary">${categoryIds.length}</span>
 </div>`;
-        cont.appendChild(group);
+            cont.appendChild(group);
+        }
     }
 
     cont.querySelectorAll('.ar-category-toggle').forEach(checkbox => {
         checkbox.addEventListener('change', async (e) => {
-            await toggleCategory(e.target.dataset.category, e.target.checked);
+            await toggleCategory(
+                e.target.dataset.modelId,
+                e.target.dataset.category,
+                e.target.checked
+            );
         });
     });
 
-    console.log('🧩 buildCategoryUI: categorías cargadas:', modelCategories.size);
+    console.log('🧩 Categorías cargadas para modelos:', modelCategoriesById.size);
 }
 
 function setupPropertyFilters() {
@@ -1769,8 +1809,8 @@ function renderPropertyFilters() {
     });
 }
 
-async function toggleCategory(category, visible) {
-    categoryVisibility.set(category, visible);
+async function toggleCategory(modelId, category, visible) {
+    categoryVisibility.set(`${modelId}::${category}`, visible);
     await applyAllFilters();
 }
 
@@ -1784,26 +1824,38 @@ async function resetAllFilters() {
 }
 
 async function applyAllFilters() {
-    if (!fragments || !loadedModelId || !hider) return;
-    const filteredIds = getFilteredModelIds();
-    const modelIdMap = { [loadedModelId]: filteredIds };
+    if (!fragments || !hider || !loadedModels.size) return;
+
+    const modelIdMap = {};
+    const filteredByModel = new Map();
+
+    for (const [modelId] of loadedModels) {
+        const filteredIds = getFilteredModelIds(modelId);
+        filteredByModel.set(modelId, filteredIds);
+        modelIdMap[modelId] = filteredIds;
+    }
+
     await hider.set(false);
     await hider.set(true, modelIdMap);
     await fragments.core.update(true);
     updateFabBadges();
 
-    if (selectedBimElement && !filteredIds.has(selectedBimElement.localId)) {
-        await clearBimSelection(true);
+    if (selectedBimElement) {
+        const selectedIds = filteredByModel.get(selectedBimElement.modelId);
+        if (!selectedIds || !selectedIds.has(selectedBimElement.localId)) {
+            await clearBimSelection(true);
+        }
     }
 }
 
-function getFilteredModelIds() {
+function getFilteredModelIds(modelId) {
+    const categories = modelCategoriesById.get(String(modelId)) || new Map();
+    const properties = modelPropertiesById.get(String(modelId)) || new Map();
     let ids = new Set();
 
-    for (const [category, categoryIds] of modelCategories) {
-        const visible = categoryVisibility.has(category)
-            ? categoryVisibility.get(category)
-            : true;
+    for (const [category, categoryIds] of categories) {
+        const key = `${modelId}::${category}`;
+        const visible = categoryVisibility.has(key) ? categoryVisibility.get(key) : true;
         if (!visible) continue;
         for (const id of categoryIds) ids.add(id);
     }
@@ -1814,8 +1866,9 @@ function getFilteredModelIds() {
             if (!filtersByKey.has(filter.key)) filtersByKey.set(filter.key, []);
             filtersByKey.get(filter.key).push(filter.value);
         }
+
         for (const [key, values] of filtersByKey) {
-            const propertyValues = modelProperties.get(key);
+            const propertyValues = properties.get(key);
             if (!propertyValues) return new Set();
             const groupIds = new Set();
             for (const value of values) {
@@ -1828,6 +1881,7 @@ function getFilteredModelIds() {
             if (!ids.size) return ids;
         }
     }
+
     return ids;
 }
 
@@ -1841,7 +1895,8 @@ function setModelOpacity(opacity) {
     const value = THREE.MathUtils.clamp(opacity, 0, 1);
     if (!arModel) return;
 
-    arModel.traverse((object) => {
+    for (const [, entry] of loadedModels) {
+        entry.object.traverse((object) => {
         if (!object.isMesh || !object.material) return;
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         materials.forEach((material) => {
@@ -1871,7 +1926,8 @@ function setModelOpacity(opacity) {
             material.blending = original.blending;
             material.needsUpdate = true;
         });
-    });
+        });
+    }
 
     if (fragments && modelLoaded) fragments.core.update(true);
 }
@@ -1887,6 +1943,21 @@ function setModelOpacity(opacity) {
 // =====================================================
 
 // =====================================================
+// COORDENADAS DEL ANCLAJE DENTRO DEL CONTENEDOR COMÚN
+// =====================================================
+
+function getAnchorPositionInProjectSpace() {
+    const baseModel = fragments?.list?.get(primaryModelId);
+    if (!arModel || !baseModel?.object) return anchorPosition.clone();
+
+    arModel.updateMatrixWorld(true);
+    baseModel.object.updateMatrixWorld(true);
+
+    const anchorWorld = baseModel.object.localToWorld(anchorPosition.clone());
+    return arModel.worldToLocal(anchorWorld);
+}
+
+// =====================================================
 // COLOCAR MODELO ALINEADO CON LA NORMAL DEL ANCLAJE
 // =====================================================
 
@@ -1895,6 +1966,7 @@ function placeModelAt(position) {
     if (!arModel) return;
 
     const targetPosition = position.clone();
+    const anchorProjectPosition = getAnchorPositionInProjectSpace();
 
     // -------------------------------------------------
     // 1. RESTABLECER ROTACIÓN
@@ -1935,7 +2007,7 @@ function placeModelAt(position) {
 
     // Aplicamos primero la escala y después la rotación
     // al punto local del anclaje.
-    const rotatedAnchor = anchorPosition.clone()
+    const rotatedAnchor = anchorProjectPosition.clone()
         .multiply(arModel.scale)
         .applyQuaternion(arModel.quaternion);
 
@@ -2042,7 +2114,7 @@ function rotateModel(direction) {
     arModel.updateMatrixWorld(true);
 
     const anchorWorldPosition = arModel.localToWorld(
-        anchorPosition.clone()
+        getAnchorPositionInProjectSpace()
     );
 
     // Posición mundial del origen del modelo.
@@ -2087,6 +2159,112 @@ function rotateModel(direction) {
 
 
 // =====================================================
+// CARGA MÚLTIPLE DE MODELOS EN EL MISMO ESPACIO AR
+// =====================================================
+
+function mergeModelProperties(properties) {
+    for (const [key, values] of properties) {
+        if (!modelProperties.has(key)) modelProperties.set(key, new Map());
+        const target = modelProperties.get(key);
+        for (const value of values.keys()) target.set(value, true);
+    }
+}
+
+function getModelDisplayName(modelId) {
+    const value = String(modelId);
+    if (value.includes('|')) return value.split('|')[0];
+    return value === 'main' ? 'Modelo principal' : value;
+}
+
+async function loadIfcModel(url, modelId, displayName = null) {
+    const id = String(modelId || '').trim();
+    if (!url || !id) throw new Error('URL o identificador del modelo no válido');
+
+    if (fragments.list.get(id)) {
+        showToast(`ℹ️ El modelo ${displayName || getModelDisplayName(id)} ya está cargado`, 'info', 2500);
+        return fragments.list.get(id);
+    }
+
+    if (modelLoading) throw new Error('Ya hay otro modelo en proceso de carga');
+    modelLoading = true;
+    modelNamesById.set(id, displayName || getModelDisplayName(id));
+
+    try {
+        console.log('📥 Cargando IFC:', { url, modelId: id });
+        const response = await fetch(url + (url.includes('?') ? '&' : '?') + 'type=frag');
+        if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+
+        const buffer = await response.arrayBuffer();
+        await fragments.core.load(buffer, { modelId: id });
+
+        const model = fragments.list.get(id);
+        if (!model) throw new Error(`Modelo ${id} no encontrado en fragments.list`);
+
+        const properties = await buildModelProperties(model);
+        const categories = await buildModelCategories(model);
+
+        modelPropertiesById.set(id, properties);
+        modelCategoriesById.set(id, categories);
+        mergeModelProperties(properties);
+
+        if (id === primaryModelId) {
+            modelProperties = new Map(modelProperties);
+            modelCategories = categories;
+        }
+
+        buildPropertyUI();
+        buildCategoryUI();
+        renderPropertyFilters();
+        await applyAllFilters();
+        setModelOpacity(opacityValue);
+        await fragments.core.update(true);
+
+        let totalElements = 0;
+        for (const categoryIds of categories.values()) totalElements += categoryIds.length;
+
+        console.log('✅ IFC cargado en el espacio común:', {
+            modelId: id,
+            elements: totalElements,
+            categories: categories.size,
+            totalModels: loadedModels.size,
+        });
+
+        return model;
+    } finally {
+        modelLoading = false;
+    }
+}
+
+function setupMultipleModelLoading() {
+    document.getElementsByName('loadIfc').forEach((element) => {
+        element.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const url = element.dataset.url;
+            const rawId = element.dataset.name;
+            if (!url || !rawId) {
+                showToast('⚠️ No se pudo identificar el modelo seleccionado', 'error');
+                return;
+            }
+
+            const parts = rawId.split('|');
+            const modelId = rawId;
+            const displayName = parts.length > 1 ? parts.slice(0, -1).join('|') : rawId;
+
+            try {
+                showToast(`📥 Cargando ${displayName}...`, 'info', 8000);
+                await loadIfcModel(url, modelId, displayName);
+                showToast(`✅ ${displayName} agregado al mismo anclaje virtual`, 'success', 4000);
+            } catch (error) {
+                console.error('❌ Error cargando modelo adicional:', error);
+                showToast(error.message || '❌ Error cargando el modelo', 'error', 6000);
+            }
+        });
+    });
+}
+
+// =====================================================
 // SELECT EN AR
 // =====================================================
 
@@ -2117,21 +2295,23 @@ async function onARSelect() {
             if (!result) {
                 showToast('🔍 Apunta a una superficie del modelo', 'info', 2500);
             } else {
-                // Punto de impacto en espacio LOCAL del modelo (coordenadas IFC)
-                const localPos = arModel.worldToLocal(result.point.clone());
+                // Punto y normal en coordenadas locales del IFC que recibió el impacto.
+                const hitModel = result.fragmentsModel;
+                const hitModelId = String(hitModel.modelId);
+                const localPos = hitModel.object.worldToLocal(result.point.clone());
 
-                // Normal: de object-space → world → local del arModel
+                // Normal: de object-space → world → local del objeto IFC impactado.
                 const faceNormal = result.face
                     ? result.face.normal.clone()
                     : new THREE.Vector3(0, 1, 0);
                 const worldNormal = faceNormal.transformDirection(result.object.matrixWorld);
                 const localNormal = worldNormal
-                    .transformDirection(arModel.matrixWorld.clone().invert())
+                    .transformDirection(hitModel.object.matrixWorld.clone().invert())
                     .normalize();
 
-                console.log('🚩 Hit para marca → local:', localPos.toArray(), 'normal:', localNormal.toArray());
+                console.log('🚩 Hit para marca → modelo:', hitModelId, 'local:', localPos.toArray(), 'normal:', localNormal.toArray());
 
-                showIncidentForm(localPos, localNormal);
+                showIncidentForm(localPos, localNormal, hitModelId);
             }
         } catch (error) {
             console.error('❌ Error en modo marca:', error);
@@ -2184,7 +2364,7 @@ async function onARSelect() {
     position.setFromMatrixPosition(arReticle.matrix);
 
     // MODELO YA CARGADO → SOLO REPOSICIONAR (alineado al anclaje)
-    if (modelLoaded && arModel) {
+    if (fragments.list.get(primaryModelId) && arModel) {
         placeModelAt(position); // 🆕 aplica offset del anclaje
         console.log('📍 Modelo reposicionado');
         showToast(hasAnchorPosition ? '📍 Modelo reposicionado (alineado al anclaje)' : '📍 Modelo reposicionado', 'success');
@@ -2193,7 +2373,6 @@ async function onARSelect() {
     }
 
     if (modelLoading) return;
-    modelLoading = true;
 
     const url = container.dataset.url;
     if (!url) {
@@ -2203,52 +2382,25 @@ async function onARSelect() {
         return;
     }
 
-    // CARGAR IFC  (🔒 cargador intacto)
+    // Cargar el modelo principal. Todos los modelos posteriores se agregan
+    // al mismo arModel y heredan su transformación sin reiniciar el hit-test.
     try {
-        console.log('📥 Iniciando carga desde:', url);
         showToast('📥 Cargando modelo IFC...', 'info', 8000);
-
-        const response = await fetch(url + '?type=frag');
-        if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
-        const buffer = await response.arrayBuffer();
-        console.log('📦 Buffer recibido, tamaño:', buffer.byteLength);
-
-        await fragments.core.load(buffer, { modelId: 'main' });
-        console.log('✅ fragments.core.load resuelto');
-
-        const model = fragments.list.get('main');
-        if (!model) throw new Error('Modelo no encontrado en fragments.list');
-
-        console.log('🔍 Construyendo properties...');
-        modelProperties = await buildModelProperties(model);
-        console.log('✅ Properties:', modelProperties.size);
-
-        console.log('🔍 Construyendo categories...');
-        modelCategories = await buildModelCategories(model);
-        console.log('✅ Categories:', modelCategories.size);
-
-        buildPropertyUI();
-        buildCategoryUI();
-
-        let totalElements = 0;
-        for (const categoryIds of modelCategories.values()) totalElements += categoryIds.length;
-
-        showToast(`✅ Modelo cargado: ${totalElements} elementos, ${modelCategories.size} categorías`, 'success', 5000);
-        await fragments.core.update(true);
+        await loadIfcModel(url, primaryModelId, getModelDisplayName(primaryModelId));
 
         if (arModel) {
-            placeModelAt(position); // 🆕 coloca el modelo con el anclaje en el reticle
             arModel.scale.set(1, 1, 1);
+            placeModelAt(position);
             setModelOpacity(opacityValue);
 
-            buildIncidentMarkers(); // 🆕 marcadores 3D de incidencias/anclajes
-            renderIncidentList();   // 🆕
+            buildIncidentMarkers();
+            renderIncidentList();
 
-            console.log('✅ Modelo colocado en AR:', loadedModelId);
+            console.log('✅ Modelo principal colocado en AR:', primaryModelId);
             showToast(
                 hasAnchorPosition
-                    ? '📍 Modelo colocado en el anclaje. 🚩 crea marcas o 🎯 inspecciona elementos.'
-                    : '📍 Modelo colocado. Usa 🎯 para inspeccionar elementos.',
+                    ? '📍 Modelo colocado en el anclaje. Puedes agregar otros modelos del proyecto.'
+                    : '📍 Modelo colocado. Puedes agregar otros modelos del proyecto.',
                 'success',
                 5000
             );
@@ -2257,7 +2409,7 @@ async function onARSelect() {
     } catch (error) {
         console.error('❌ Error cargando IFC:', error);
         modelLoading = false;
-        showToast('❌ Error cargando el modelo IFC', 'error', 6000);
+        showToast(error.message || '❌ Error cargando el modelo IFC', 'error', 6000);
     }
 }
 
