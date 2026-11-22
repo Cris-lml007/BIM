@@ -194,7 +194,7 @@
                         @if (!$access)
                             <h3 class="fw-bold text-danger">Sin Acceso</h3>
                             <small class="text-muted">No tienes una licencia asignada</small>
-                            <a class="text-muted" href="mailto:admin@bimnova.com">Solicitar Membresia</a>
+                            <a class="text-muted" data-bs-toggle="modal" data-bs-target="#modal-plan" >Solicitar Membresia</a>
                         @elseif(!$access->is_active)
                             <h3 class="fw-bold text-warning">Bloqueado</h3>
                             <h6 class="text-secondary">Acceso suspendido por administrador</h6>
@@ -204,6 +204,8 @@
                             <small class="text-muted">
                                 Venció el {{ \Carbon\Carbon::parse($access->available_end)->format('Y-m-d') }}
                             </small>
+                            <small class="text-muted">No tienes una licencia asignada</small>
+                            <a class="text-muted" data-bs-toggle="modal" data-bs-target="#modal-plan" >Solicitar Membresia</a>
                         @else
                             @php
                                 $daysLeft = $today->diffInDays($access->available_end);
@@ -231,8 +233,17 @@
                 </div>
             </div>
 
+            <x-modal id="modal-plan" title="Planes">
+                <div class="modal-body">
+                        <img class="img-fluid" src="{{ asset('images/plan.jpg') }}"></img>
+                        <div class="d-flex justify-content-center w-100">
+                            <a href="mailto:{{ config('mail.from.address') }}" class="btn btn-primary">Contactanos</a>
+                        </div>
+                </div>
+            </x-modal>
+
             <div class="row g-3 mb-3">
-                @if($access)
+                @if ($access)
                     @php
                         $maxProjects = $access->max_projects;
                         $maxUsers = $access->max_users;
@@ -250,9 +261,10 @@
 
                     <div class="col-md-3">
                         <div class="card text-center shadow-sm rounded-4 py-3 border-0">
-                            <h3 class="fw-bold">{{ $usersUsed }} / {{ $maxUsers * $maxProjects}}</h3>
+                            <h3 class="fw-bold">{{ $usersUsed }} / {{ $maxUsers * $maxProjects }}</h3>
                             <h6 class="text-secondary"> {{ $maxUsers }} Miembros por proyecto</h6>
-                            <small class="fw-bold {{ $usersUsed >= $maxUsers * $maxProjects ? 'text-danger' : 'text-success' }}">
+                            <small
+                                class="fw-bold {{ $usersUsed >= $maxUsers * $maxProjects ? 'text-danger' : 'text-success' }}">
                                 {{ $usersUsed >= $maxUsers * $maxProjects ? 'Límite alcanzado' : 'En uso' }}
                             </small>
                         </div>
@@ -260,7 +272,7 @@
 
                     <div class="col-md-3">
                         <div class="card text-center shadow-sm rounded-4 py-3 border-0">
-                            <h3 class="fw-bold">{{ $storageUsedGB }}GB / {{ $maxStorageGB * $maxProjects}}GB</h3>
+                            <h3 class="fw-bold">{{ $storageUsedGB }}GB / {{ $maxStorageGB * $maxProjects }}GB</h3>
                             <h6 class="text-secondary">{{ $maxStorageGB }} GB por proyecto</h6>
                             <small class="fw-bold {{ $storagePercent >= 90 ? 'text-danger' : 'text-primary' }}">
                                 {{ round($storagePercent) }}% usado
@@ -335,7 +347,7 @@
 
         </div>
 
-        @if($access && $access->is_active)
+        @if ($access && $access->is_active)
             <livewire:app.projects-view :showOptions="false"></livewire:app.projects-view>
         @endif
     @endcan

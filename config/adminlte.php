@@ -65,7 +65,7 @@ return [
 
 
     'logo' => '<span style="color: #0d6efd;">BIM</span><span style="color: #fff;">Nova</span>',
-    'logo_img' => 'vendor/adminlte/dist/img/BIMNOVA.jpg',
+    'logo_img' => asset('images/logo.png'),
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
@@ -87,7 +87,7 @@ return [
     'auth_logo' => [
         'enabled' => false,
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
+            'path' => asset('images/logo.png'),
             'alt' => 'Auth Logo',
             'class' => '',
             'width' => 50,
@@ -114,7 +114,7 @@ return [
         'enabled' => true,
         'mode' => 'fullscreen',
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/BIMNOVA.jpg',
+            'path' => asset('images/logo.png'),
             'alt' => 'Preloader Image',
             'effect' => 'animation__rubberBand',
             'width' => 60,

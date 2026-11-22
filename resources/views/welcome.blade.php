@@ -1557,61 +1557,212 @@
             --bim-dark: #101820;
             --bim-muted: #64748b;
         }
-        html { scroll-behavior: smooth; scroll-padding-top: 90px; }
-        body { overflow-x: hidden; }
-        .site-header { background: rgba(8, 13, 22, .88); backdrop-filter: blur(14px); }
-        .brand-mark { color: var(--bim-primary); }
-        .hero-section { min-height: 82vh; padding: 5rem 0; }
-        .hero-copy { max-width: 720px; }
-        .hero-image { border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06); }
-        .section-kicker { color: var(--bim-primary); letter-spacing: .16em; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
-        .section-title { font-weight: 800; letter-spacing: -.035em; }
-        .glass-card { background: rgba(25, 34, 47, .78); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(10px); }
-        .feature-icon { width: 58px; height: 58px; display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; background: rgba(13,110,253,.15); color: #6ea8fe; font-size: 1.65rem; }
-        .service-card, .step-card, .reason-card { transition: transform .25s ease, border-color .25s ease; }
-        .service-card:hover, .step-card:hover, .reason-card:hover { transform: translateY(-6px); border-color: rgba(13,110,253,.65); }
-        .soft-section { background: #f8fafc; color: #172033; }
-        .soft-section .text-secondary { color: #64748b !important; }
-        .step-number { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bim-primary); color: #fff; font-weight: 800; }
-        .review-placeholder { border: 1px dashed #94a3b8; background: rgba(255,255,255,.7); }
-        .footer-link { color: rgba(255,255,255,.72); text-decoration: none; }
-        .footer-link:hover { color: #fff; }
-        @media (max-width: 991.98px) {
-            .hero-section { min-height: auto; padding: 5rem 0 4rem; }
-            .navbar-collapse { padding-top: 1rem; }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 90px;
         }
 
-/* Tutoriales - Carrusel */
-.tutoriales-carousel .tutorial-card { transition: transform .25s ease, box-shadow .25s ease; }
-.tutoriales-carousel .tutorial-card:hover { transform: translateY(-6px); box-shadow: 0 1rem 2rem rgba(0,0,0,.12) !important; }
-.tutorial-img-wrapper { position: relative; aspect-ratio: 16/9; overflow: hidden; background: #000; }
-.tutorial-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
-.tutorial-card:hover .tutorial-img-wrapper img { transform: scale(1.06); }
-.tutorial-play {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 3.5rem; background: rgba(0,0,0,.25);
-    opacity: .85; transition: opacity .25s ease, background .25s ease;
-}
-.tutorial-card:hover .tutorial-play { opacity: 1; background: rgba(0,0,0,.4); }
-.tutorial-control {
-    width: 3rem; opacity: 1;
-}
-.tutorial-arrow {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: var(--bim-primary); color: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 1.4rem; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
-    transition: background .2s ease;
-}
-.tutorial-arrow:hover { background: #0b5ed7; }
-.carousel-indicators [data-bs-target] { width: 10px; height: 10px; border-radius: 50%; border: 0; }
+        body {
+            overflow-x: hidden;
+        }
+
+        .site-header {
+            background: rgba(8, 13, 22, .88);
+            backdrop-filter: blur(14px);
+        }
+
+        .brand-mark {
+            color: var(--bim-primary);
+        }
+
+        .hero-section {
+            min-height: 82vh;
+            padding: 5rem 0;
+        }
+
+        .hero-copy {
+            max-width: 720px;
+        }
+
+        .hero-image {
+            border: 1px solid rgba(255, 255, 255, .15);
+            background: rgba(255, 255, 255, .06);
+        }
+
+        .section-kicker {
+            color: var(--bim-primary);
+            letter-spacing: .16em;
+            font-size: .78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            font-weight: 800;
+            letter-spacing: -.035em;
+        }
+
+        .glass-card {
+            background: rgba(25, 34, 47, .78);
+            border: 1px solid rgba(255, 255, 255, .1);
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-icon {
+            width: 58px;
+            height: 58px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: rgba(13, 110, 253, .15);
+            color: #6ea8fe;
+            font-size: 1.65rem;
+        }
+
+        .service-card,
+        .step-card,
+        .reason-card {
+            transition: transform .25s ease, border-color .25s ease;
+        }
+
+        .service-card:hover,
+        .step-card:hover,
+        .reason-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(13, 110, 253, .65);
+        }
+
+        .soft-section {
+            background: #f8fafc;
+            color: #172033;
+        }
+
+        .soft-section .text-secondary {
+            color: #64748b !important;
+        }
+
+        .step-number {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--bim-primary);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .review-placeholder {
+            border: 1px dashed #94a3b8;
+            background: rgba(255, 255, 255, .7);
+        }
+
+        .footer-link {
+            color: rgba(255, 255, 255, .72);
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            color: #fff;
+        }
+
+        @media (max-width: 991.98px) {
+            .hero-section {
+                min-height: auto;
+                padding: 5rem 0 4rem;
+            }
+
+            .navbar-collapse {
+                padding-top: 1rem;
+            }
+        }
+
+        /* Tutoriales - Carrusel */
+        .tutoriales-carousel .tutorial-card {
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .tutoriales-carousel .tutorial-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 1rem 2rem rgba(0, 0, 0, .12) !important;
+        }
+
+        .tutorial-img-wrapper {
+            position: relative;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .tutorial-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform .4s ease;
+        }
+
+        .tutorial-card:hover .tutorial-img-wrapper img {
+            transform: scale(1.06);
+        }
+
+        .tutorial-play {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 3.5rem;
+            background: rgba(0, 0, 0, .25);
+            opacity: .85;
+            transition: opacity .25s ease, background .25s ease;
+        }
+
+        .tutorial-card:hover .tutorial-play {
+            opacity: 1;
+            background: rgba(0, 0, 0, .4);
+        }
+
+        .tutorial-control {
+            width: 3rem;
+            opacity: 1;
+        }
+
+        .tutorial-arrow {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bim-primary);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+            transition: background .2s ease;
+        }
+
+        .tutorial-arrow:hover {
+            background: #0b5ed7;
+        }
+
+        .carousel-indicators [data-bs-target] {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 0;
+        }
     </style>
 
     <!-- NAVEGACIÓN PRINCIPAL -->
     <header class="site-header sticky-top border-bottom border-secondary border-opacity-25">
         <nav class="navbar navbar-expand-lg navbar-dark container py-3">
             <a class="navbar-brand d-flex align-items-center gap-2 me-lg-4" href="#inicio" aria-label="BIMNova, inicio">
-                <i class="bi bi-buildings-fill fs-2 brand-mark"></i>
+{{-- <i class="bi bi-buildings-fill fs-2 brand-mark"></i> --}}
+<img style="height:38px;" src="{{ asset('images/logo.png') }}"></img>
                 <span class="h3 mb-0 fw-bold">BIM<span class="text-primary">Nova</span></span>
             </a>
 
@@ -1622,17 +1773,23 @@
 
             <div class="collapse navbar-collapse" id="mainNavigation">
                 <ul class="navbar-nav mx-auto align-items-lg-center gap-lg-2">
-                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#servicios">Servicios</a></li>
-                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#nosotros">Sobre nosotros</a></li>
-                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#contacto">Contacto</a></li>
-                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#tutoriales">Tutoriales</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3"
+                            href="#servicios">Servicios</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3" href="#nosotros">Sobre
+                            nosotros</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3"
+                            href="#contacto">Contacto</a></li>
+                    <li class="nav-item"><a class="nav-link text-white fw-semibold px-lg-3"
+                            href="#tutoriales">Tutoriales</a></li>
                 </ul>
 
-                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-3 mt-lg-0">
+                <div
+                    class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-3 mt-lg-0">
                     @auth
                         <a href="{{ url('/dashboard') }}" class="btn btn-outline-light rounded-pill px-4">Mi plataforma</a>
                     @else
-                        <a href="{{ route('login') }}" class="btn btn-link text-white text-decoration-none fw-semibold">Iniciar sesión</a>
+                        <a href="{{ route('login') }}"
+                            class="btn btn-link text-white text-decoration-none fw-semibold">Iniciar sesión</a>
                         @if (Route::has('register'))
                             <a href="{{ route('register') }}" class="btn btn-primary rounded-pill px-4">Registrarse</a>
                         @endif
@@ -1648,7 +1805,8 @@
             <div class="container">
                 <div class="row align-items-center g-5">
                     <div class="col-lg-7" data-aos="fade-up">
-                        <span class="badge rounded-pill bg-primary bg-opacity-25 text-info border border-primary border-opacity-25 px-3 py-2 mb-4">
+                        <span
+                            class="badge rounded-pill bg-primary bg-opacity-25 text-info border border-primary border-opacity-25 px-3 py-2 mb-4">
                             BIM · INTELIGENCIA ARTIFICIAL · REALIDAD AUMENTADA
                         </span>
                         <div class="hero-copy">
@@ -1664,10 +1822,12 @@
                             </p>
                         </div>
                         <div class="d-flex flex-column flex-sm-row gap-3">
-                            <a href="#contacto" class="btn btn-primary btn-lg rounded-pill px-5 d-inline-flex align-items-center justify-content-center gap-2 shadow">
+                            <a href="#contacto"
+                                class="btn btn-primary btn-lg rounded-pill px-5 d-inline-flex align-items-center justify-content-center gap-2 shadow">
                                 Solicitar demo <i class="bi bi-arrow-right"></i>
                             </a>
-                            <a href="#como-funciona" class="btn btn-outline-light btn-lg rounded-pill px-5 d-inline-flex align-items-center justify-content-center gap-2">
+                            <a href="#como-funciona"
+                                class="btn btn-outline-light btn-lg rounded-pill px-5 d-inline-flex align-items-center justify-content-center gap-2">
                                 Prueba ahora <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                         </div>
@@ -1693,7 +1853,8 @@
                     <span class="section-kicker">Una nueva forma de construir</span>
                     <h2 class="section-title display-5 text-white mt-2">Tecnología que transforma cada proyecto</h2>
                     <p class="text-light opacity-75 fs-5 mx-auto" style="max-width: 760px;">
-                        Integramos información, visualización y gestión para tomar mejores decisiones durante todo el proceso constructivo.
+                        Integramos información, visualización y gestión para tomar mejores decisiones durante todo el
+                        proceso constructivo.
                     </p>
                 </div>
 
@@ -1702,43 +1863,59 @@
                         <article class="glass-card service-card rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-cash-coin"></i></div>
                             <h3 class="h4 fw-bold text-white">Optimización de costos y tiempos</h3>
-                            <p class="text-light opacity-75 mb-0">La coordinación interdisciplinaria y la detección temprana de conflictos permiten minimizar retrabajos y desperdicios. El resultado: proyectos más ágiles, con una gestión eficiente de recursos y un ahorro significativo en inversión.</p>
+                            <p class="text-light opacity-75 mb-0">La coordinación interdisciplinaria y la detección
+                                temprana de conflictos permiten minimizar retrabajos y desperdicios. El resultado:
+                                proyectos más ágiles, con una gestión eficiente de recursos y un ahorro significativo en
+                                inversión.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="80">
                         <article class="glass-card service-card rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-phone"></i></div>
                             <h3 class="h4 fw-bold text-white">Visualización interactiva en Realidad Aumentada</h3>
-                            <p class="text-light opacity-75 mb-0">Los clientes pueden explorar su obra antes de construirla, interactuando con modelos 3D aumentados que facilitan la comprensión del diseño. Esto mejora la comunicación con inversionistas y usuarios finales, generando confianza y claridad.</p>
+                            <p class="text-light opacity-75 mb-0">Los clientes pueden explorar su obra antes de
+                                construirla, interactuando con modelos 3D aumentados que facilitan la comprensión del
+                                diseño. Esto mejora la comunicación con inversionistas y usuarios finales, generando
+                                confianza y claridad.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="160">
                         <article class="glass-card service-card rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-kanban"></i></div>
                             <h3 class="h4 fw-bold text-white">Gestión integral del proyecto</h3>
-                            <p class="text-light opacity-75 mb-0">Desde la planificación hasta la ejecución, se ofrece un acompañamiento estratégico que asegura calidad en cada fase. La trazabilidad digital permite monitorear avances y tomar decisiones informadas en tiempo real.</p>
+                            <p class="text-light opacity-75 mb-0">Desde la planificación hasta la ejecución, se ofrece
+                                un acompañamiento estratégico que asegura calidad en cada fase. La trazabilidad digital
+                                permite monitorear avances y tomar decisiones informadas en tiempo real.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up">
                         <article class="glass-card service-card rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-cpu"></i></div>
                             <h3 class="h4 fw-bold text-white">Innovación tecnológica aplicada</h3>
-                            <p class="text-light opacity-75 mb-0">La combinación de modelado digital y realidad aumentada convierte la planificación en una experiencia inmersiva. Esto moderniza la presentación de proyectos y fortalece la competitividad frente a propuestas tradicionales.</p>
+                            <p class="text-light opacity-75 mb-0">La combinación de modelado digital y realidad
+                                aumentada convierte la planificación en una experiencia inmersiva. Esto moderniza la
+                                presentación de proyectos y fortalece la competitividad frente a propuestas
+                                tradicionales.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="80">
                         <article class="glass-card service-card rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-person-check"></i></div>
                             <h3 class="h4 fw-bold text-white">Soporte estratégico y personalizado</h3>
-                            <p class="text-light opacity-75 mb-0">Cada cliente recibe soluciones adaptadas a sus necesidades específicas. El enfoque no es solo técnico, sino también comercial y visual, garantizando que el proyecto sea atractivo, rentable y sostenible.</p>
+                            <p class="text-light opacity-75 mb-0">Cada cliente recibe soluciones adaptadas a sus
+                                necesidades específicas. El enfoque no es solo técnico, sino también comercial y visual,
+                                garantizando que el proyecto sea atractivo, rentable y sostenible.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="160">
-                        <article class="glass-card service-card rounded-4 p-4 h-100 d-flex flex-column justify-content-center align-items-start">
+                        <article
+                            class="glass-card service-card rounded-4 p-4 h-100 d-flex flex-column justify-content-center align-items-start">
                             <div class="feature-icon mb-4"><i class="bi bi-stars"></i></div>
                             <h3 class="h4 fw-bold text-white">Lleva tu proyecto al siguiente nivel</h3>
-                            <p class="text-light opacity-75">Conoce cómo BIMNova puede ayudarte a visualizar y gestionar tu obra.</p>
-                            <a href="#contacto" class="btn btn-outline-primary rounded-pill px-4">Solicitar asesoría <i class="bi bi-arrow-right ms-1"></i></a>
+                            <p class="text-light opacity-75">Conoce cómo BIMNova puede ayudarte a visualizar y
+                                gestionar tu obra.</p>
+                            <a href="#contacto" class="btn btn-outline-primary rounded-pill px-4">Solicitar asesoría
+                                <i class="bi bi-arrow-right ms-1"></i></a>
                         </article>
                     </div>
                 </div>
@@ -1751,42 +1928,52 @@
                 <div class="text-center mb-5" data-aos="fade-up">
                     <span class="section-kicker">Qué hacemos</span>
                     <h2 class="section-title display-5 mt-2">Nuestros servicios</h2>
-                    <p class="text-secondary fs-5 mx-auto" style="max-width: 700px;">Soluciones integrales para planificar, construir, supervisar y presentar proyectos con tecnología.</p>
+                    <p class="text-secondary fs-5 mx-auto" style="max-width: 700px;">Soluciones integrales para
+                        planificar, construir, supervisar y presentar proyectos con tecnología.</p>
                 </div>
                 <div class="row g-4">
                     <div class="col-md-6 col-lg-4" data-aos="fade-up">
                         <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-layers"></i></div>
                             <h3 class="h4 fw-bold">Asesorías BIM</h3>
-                            <p class="text-secondary mb-0">Planificación integral con modelado avanzado, simulaciones 4D y control del ciclo de vida del proyecto.</p>
+                            <p class="text-secondary mb-0">Planificación integral con modelado avanzado, simulaciones
+                                4D y control del ciclo de vida del proyecto.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="60">
                         <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-phone-landscape"></i></div>
                             <h3 class="h4 fw-bold">Aplicación de Realidad Aumentada</h3>
-                            <p class="text-secondary mb-0">Visualización interactiva de proyectos antes de construir, presentaciones inmersivas para clientes e inversionistas y reducción de errores en obra.</p>
+                            <p class="text-secondary mb-0">Visualización interactiva de proyectos antes de construir,
+                                presentaciones inmersivas para clientes e inversionistas y reducción de errores en obra.
+                            </p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="120">
                         <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-building"></i></div>
                             <h3 class="h4 fw-bold">Construcciones en general</h3>
-                            <p class="text-secondary mb-0">Desarrollo de proyectos residenciales, comerciales e industriales con calidad estructural, sostenibilidad y eficiencia en recursos.</p>
+                            <p class="text-secondary mb-0">Desarrollo de proyectos residenciales, comerciales e
+                                industriales con calidad estructural, sostenibilidad y eficiencia en recursos.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-6" data-aos="fade-up">
                         <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-clipboard2-check"></i></div>
                             <h3 class="h4 fw-bold">Supervisión y Gestión de Proyectos</h3>
-                            <p class="text-secondary mb-0">Coordinación interdisciplinaria, control de calidad conforme a normativas NB/ISO, monitoreo de avances y resolución de problemas en obra. Garantiza eficiencia, cumplimiento y resultados confiables en cada fase.</p>
+                            <p class="text-secondary mb-0">Coordinación interdisciplinaria, control de calidad conforme
+                                a normativas NB/ISO, monitoreo de avances y resolución de problemas en obra. Garantiza
+                                eficiencia, cumplimiento y resultados confiables en cada fase.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-6" data-aos="fade-up" data-aos-delay="80">
                         <article class="card service-card border-0 shadow-sm rounded-4 p-4 h-100">
                             <div class="feature-icon mb-4"><i class="bi bi-badge-3d"></i></div>
                             <h3 class="h4 fw-bold">Visualización Inmersiva con RA</h3>
-                            <p class="text-secondary mb-0">Experiencias digitales diseñadas para mostrar departamentos y proyectos de manera clara y atractiva. La visualización inmersiva permite transmitir confianza, destacar el diseño y acelerar la decisión de compra, convirtiéndose en una herramienta clave para la venta inmobiliaria.</p>
+                            <p class="text-secondary mb-0">Experiencias digitales diseñadas para mostrar departamentos
+                                y proyectos de manera clara y atractiva. La visualización inmersiva permite transmitir
+                                confianza, destacar el diseño y acelerar la decisión de compra, convirtiéndose en una
+                                herramienta clave para la venta inmobiliaria.</p>
                         </article>
                     </div>
                 </div>
@@ -1799,7 +1986,8 @@
                 <div class="text-center mb-5" data-aos="fade-up">
                     <span class="section-kicker">Empieza en pocos pasos</span>
                     <h2 class="section-title display-5 text-white mt-2">¿Cómo se usa la plataforma?</h2>
-                    <p class="text-white-50 fs-5">Una experiencia sencilla para llevar tus modelos digitales al entorno real.</p>
+                    <p class="text-white-50 fs-5">Una experiencia sencilla para llevar tus modelos digitales al entorno
+                        real.</p>
                 </div>
                 <div class="row g-4">
                     <div class="col-sm-6 col-lg-3" data-aos="fade-up">
@@ -1808,25 +1996,30 @@
                                 <span class="step-number">1</span><i class="bi bi-eyeglasses fs-1 text-primary"></i>
                             </div>
                             <h3 class="h5 fw-bold text-white">Explora la experiencia AR</h3>
-                            <p class="text-white-50 mb-0">Accede a nuestra aplicación y descubre cómo tu proyecto cobra vida en realidad aumentada.</p>
+                            <p class="text-white-50 mb-0">Accede a nuestra aplicación y descubre cómo tu proyecto cobra
+                                vida en realidad aumentada.</p>
                         </article>
                     </div>
                     <div class="col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="60">
                         <article class="glass-card step-card rounded-4 p-4 h-100">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <span class="step-number">2</span><i class="bi bi-cloud-arrow-up fs-1 text-primary"></i>
+                                <span class="step-number">2</span><i
+                                    class="bi bi-cloud-arrow-up fs-1 text-primary"></i>
                             </div>
                             <h3 class="h5 fw-bold text-white">Carga tu proyecto digital</h3>
-                            <p class="text-white-50 mb-0">Sube tus modelos desde cualquier software compatible y visualízalos en segundos.</p>
+                            <p class="text-white-50 mb-0">Sube tus modelos desde cualquier software compatible y
+                                visualízalos en segundos.</p>
                         </article>
                     </div>
                     <div class="col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="120">
                         <article class="glass-card step-card rounded-4 p-4 h-100">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <span class="step-number">3</span><i class="bi bi-hand-index-thumb fs-1 text-primary"></i>
+                                <span class="step-number">3</span><i
+                                    class="bi bi-hand-index-thumb fs-1 text-primary"></i>
                             </div>
                             <h3 class="h5 fw-bold text-white">Interactúa en tiempo real</h3>
-                            <p class="text-white-50 mb-0">Recorre tu obra, detecta detalles y ajusta decisiones directamente en el entorno aumentado.</p>
+                            <p class="text-white-50 mb-0">Recorre tu obra, detecta detalles y ajusta decisiones
+                                directamente en el entorno aumentado.</p>
                         </article>
                     </div>
                     <div class="col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="180">
@@ -1835,18 +2028,22 @@
                                 <span class="step-number">4</span><i class="bi bi-people fs-1 text-primary"></i>
                             </div>
                             <h3 class="h5 fw-bold text-white">Comparte y colabora</h3>
-                            <p class="text-white-50 mb-0">Invita a clientes e inversionistas a vivir la experiencia, mejorando comunicación y confianza.</p>
+                            <p class="text-white-50 mb-0">Invita a clientes e inversionistas a vivir la experiencia,
+                                mejorando comunicación y confianza.</p>
                         </article>
                     </div>
                 </div>
                 <div class="text-center mt-5">
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="btn btn-primary btn-lg rounded-pill px-5">Ir a la plataforma <i class="bi bi-arrow-right ms-2"></i></a>
+                        <a href="{{ url('/dashboard') }}" class="btn btn-primary btn-lg rounded-pill px-5">Ir a la
+                            plataforma <i class="bi bi-arrow-right ms-2"></i></a>
                     @else
                         @if (Route::has('register'))
-                            <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-5">Crear una cuenta <i class="bi bi-arrow-right ms-2"></i></a>
+                            <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-5">Crear una
+                                cuenta <i class="bi bi-arrow-right ms-2"></i></a>
                         @else
-                            <a href="#contacto" class="btn btn-primary btn-lg rounded-pill px-5">Solicitar información <i class="bi bi-arrow-right ms-2"></i></a>
+                            <a href="#contacto" class="btn btn-primary btn-lg rounded-pill px-5">Solicitar información <i
+                                    class="bi bi-arrow-right ms-2"></i></a>
                         @endif
                     @endauth
                 </div>
@@ -1860,8 +2057,10 @@
                     <div class="col-lg-5" data-aos="fade-right">
                         <div class="position-relative">
                             <img src="{{ asset('images/portada.png') }}" alt="Tecnología BIMNova aplicada a proyectos"
-                                class="img-fluid rounded-4 shadow-lg w-100" style="max-height: 560px; object-fit: cover;">
-                            <div class="position-absolute bottom-0 start-0 translate-middle-y ms-3 bg-primary text-white rounded-4 p-3 shadow">
+                                class="img-fluid rounded-4 shadow-lg w-100"
+                                style="max-height: 560px; object-fit: cover;">
+                            <div
+                                class="position-absolute bottom-0 start-0 translate-middle-y ms-3 bg-primary text-white rounded-4 p-3 shadow">
                                 <i class="bi bi-building-check fs-2"></i>
                                 <div class="fw-bold">BIMNova</div>
                                 <small>Proyectos Integrales</small>
@@ -1872,13 +2071,19 @@
                         <span class="section-kicker">Quiénes somos</span>
                         <h2 class="section-title display-5 mt-2 mb-4">Sobre nosotros</h2>
                         <p class="fs-5 text-secondary">
-                            En BIMNova Proyectos Integrales somos especialistas en BIM Management y tecnologías digitales aplicadas a la construcción. Nuestra misión es transformar la manera en que se planifican y gestionan los proyectos, integrando modelado avanzado, coordinación interdisciplinaria y experiencias interactivas en Realidad Aumentada.
+                            En BIMNova Proyectos Integrales somos especialistas en BIM Management y tecnologías
+                            digitales aplicadas a la construcción. Nuestra misión es transformar la manera en que se
+                            planifican y gestionan los proyectos, integrando modelado avanzado, coordinación
+                            interdisciplinaria y experiencias interactivas en Realidad Aumentada.
                         </p>
                         <p class="text-secondary mb-4">
-                            Nos enfocamos en ofrecer soluciones que combinan innovación, eficiencia y claridad, asegurando que cada cliente pueda visualizar, comprender y decidir con confianza antes de ejecutar su obra.
+                            Nos enfocamos en ofrecer soluciones que combinan innovación, eficiencia y claridad,
+                            asegurando que cada cliente pueda visualizar, comprender y decidir con confianza antes de
+                            ejecutar su obra.
                         </p>
                         <p class="text-secondary mb-0">
-                            Con un enfoque estratégico y tecnológico, convertimos la complejidad de los proyectos en procesos más simples, accesibles y rentables.
+                            Con un enfoque estratégico y tecnológico, convertimos la complejidad de los proyectos en
+                            procesos más simples, accesibles y rentables.
                         </p>
                     </div>
                 </div>
@@ -1897,42 +2102,49 @@
                         <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
                             <i class="bi bi-clock-history fs-2 text-primary mb-3 d-block"></i>
                             <h3 class="h5 fw-bold">Ahorro en costos y tiempos</h3>
-                            <p class="text-secondary mb-0">Detectamos conflictos antes de la ejecución, optimizamos recursos y reducimos retrabajos, logrando proyectos más ágiles y rentables.</p>
+                            <p class="text-secondary mb-0">Detectamos conflictos antes de la ejecución, optimizamos
+                                recursos y reducimos retrabajos, logrando proyectos más ágiles y rentables.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="50">
                         <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
                             <i class="bi bi-mouse fs-2 text-primary mb-3 d-block"></i>
                             <h3 class="h5 fw-bold">Facilidad de uso</h3>
-                            <p class="text-secondary mb-0">Nuestras soluciones digitales están diseñadas para ser intuitivas y accesibles, permitiendo que cualquier cliente o equipo interactúe con los modelos sin necesidad de conocimientos técnicos avanzados.</p>
+                            <p class="text-secondary mb-0">Nuestras soluciones digitales están diseñadas para ser
+                                intuitivas y accesibles, permitiendo que cualquier cliente o equipo interactúe con los
+                                modelos sin necesidad de conocimientos técnicos avanzados.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
                         <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
                             <i class="bi bi-lightbulb fs-2 text-primary mb-3 d-block"></i>
                             <h3 class="h5 fw-bold">Innovación tecnológica</h3>
-                            <p class="text-secondary mb-0">Aplicamos Realidad Aumentada para visualizar tu obra antes de construirla, mejorando comunicación y confianza con clientes e inversionistas.</p>
+                            <p class="text-secondary mb-0">Aplicamos Realidad Aumentada para visualizar tu obra antes
+                                de construirla, mejorando comunicación y confianza con clientes e inversionistas.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up">
                         <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
                             <i class="bi bi-clipboard-data fs-2 text-primary mb-3 d-block"></i>
                             <h3 class="h5 fw-bold">Gestión integral y supervisión</h3>
-                            <p class="text-secondary mb-0">Ofrecemos coordinación interdisciplinaria, control de calidad y monitoreo constante que aseguran eficiencia y cumplimiento normativo.</p>
+                            <p class="text-secondary mb-0">Ofrecemos coordinación interdisciplinaria, control de
+                                calidad y monitoreo constante que aseguran eficiencia y cumplimiento normativo.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="50">
                         <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
                             <i class="bi bi-person-heart fs-2 text-primary mb-3 d-block"></i>
                             <h3 class="h5 fw-bold">Enfoque personalizado</h3>
-                            <p class="text-secondary mb-0">Cada cliente recibe soluciones adaptadas a sus necesidades, con propuestas claras, creativas y estratégicas.</p>
+                            <p class="text-secondary mb-0">Cada cliente recibe soluciones adaptadas a sus necesidades,
+                                con propuestas claras, creativas y estratégicas.</p>
                         </article>
                     </div>
                     <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
                         <article class="reason-card bg-white rounded-4 shadow-sm p-4 h-100">
                             <i class="bi bi-shield-check fs-2 text-primary mb-3 d-block"></i>
                             <h3 class="h5 fw-bold">Confianza y transparencia</h3>
-                            <p class="text-secondary mb-0">Trabajamos con reportes técnicos, comparativas visuales y comunicación constante para que cada paso del proyecto sea seguro y verificable.</p>
+                            <p class="text-secondary mb-0">Trabajamos con reportes técnicos, comparativas visuales y
+                                comunicación constante para que cada paso del proyecto sea seguro y verificable.</p>
                         </article>
                     </div>
                 </div>
@@ -1946,126 +2158,309 @@
                     <span class="section-kicker">La experiencia de nuestros clientes</span>
                     <h2 class="section-title display-5 text-white mt-2">Confianza construida en equipo</h2>
                     <p class="text-white-50 fs-5 mx-auto" style="max-width: 680px;">
-                        Queremos que cada experiencia con BIMNova se refleje en resultados, comunicación y confianza.
+                        Lo que dicen los profesionales de la industria que confían en BIMNova para impulsar y supervisar
+                        sus proyectos.
                     </p>
                 </div>
                 <div class="row g-4">
+                    <!-- Reseña 1 -->
                     <div class="col-md-4" data-aos="fade-up">
-                        <div class="review-placeholder rounded-4 p-4 h-100 text-center">
-                            <i class="bi bi-chat-square-quote fs-1 text-primary mb-3 d-block"></i>
-                            <h3 class="h5 fw-bold">Experiencias de clientes</h3>
-                            <p class="text-secondary mb-0">Aquí se publicarán reseñas verificadas de clientes y colaboradores.</p>
-                        </div>
+                        <article
+                            class="glass-card service-card rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="text-warning small">
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill"></i>
+                                    </div>
+                                    <i class="bi bi-quote fs-1 text-primary opacity-50"></i>
+                                </div>
+                                <p class="text-light opacity-75 fst-italic mb-4">
+                                    "La posibilidad de acceder a los modelos 3D desde un dispositivo móvil simplifica
+                                    mucho el trabajo en campo. Es una solución interesante para mejorar la coordinación
+                                    entre oficina técnica y personal de obra."
+                                </p>
+                            </div>
+                            <div
+                                class="d-flex align-items-center gap-3 pt-3 border-top border-secondary border-opacity-25">
+                                <img src="{{ asset('images/reviews/1.png') }}" alt="Ing. Ximena Dias"
+                                    class="rounded-circle border border-2 border-primary shadow-sm"
+                                    style="width: 54px; height: 54px; object-fit: cover;"
+                                    onerror="this.src='https://ui-avatars.com/api/?name=Ximena+Dias&background=0d6efd&color=fff'">
+                                <div>
+                                    <h3 class="h6 fw-bold text-white mb-0">Ing. Ximena Dias</h3>
+                                    <small class="text-primary fw-semibold">Modeladora BIM</small>
+                                </div>
+                            </div>
+                        </article>
                     </div>
+
+                    <!-- Reseña 2 -->
                     <div class="col-md-4" data-aos="fade-up" data-aos-delay="70">
-                        <div class="review-placeholder rounded-4 p-4 h-100 text-center">
-                            <i class="bi bi-star-half fs-1 text-primary mb-3 d-block"></i>
-                            <h3 class="h5 fw-bold">Resultados y satisfacción</h3>
-                            <p class="text-secondary mb-0">Este espacio permitirá destacar opiniones sobre el servicio y los resultados de cada proyecto.</p>
-                        </div>
+                        <article
+                            class="glass-card service-card rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="text-warning small">
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill"></i>
+                                    </div>
+                                    <i class="bi bi-quote fs-1 text-primary opacity-50"></i>
+                                </div>
+                                <p class="text-light opacity-75 fst-italic mb-4">
+                                    "La plataforma BIMNOVA nos permite visualizar el avance de nuestros proyectos de una
+                                    manera mucho más práctica. La integración de modelos 3D con realidad aumentada
+                                    facilita la supervisión y mejora la comunicación en obra."
+                                </p>
+                            </div>
+                            <div
+                                class="d-flex align-items-center gap-3 pt-3 border-top border-secondary border-opacity-25">
+                                <img src="{{ asset('images/reviews/2.png') }}" alt="Ing. Maura Llanos"
+                                    class="rounded-circle border border-2 border-primary shadow-sm"
+                                    style="width: 54px; height: 54px; object-fit: cover;"
+                                    onerror="this.src='https://ui-avatars.com/api/?name=Maura+Llanos&background=0d6efd&color=fff'">
+                                <div>
+                                    <h3 class="h6 fw-bold text-white mb-0">Ing. Maura Llanos</h3>
+                                    <small class="text-primary fw-semibold">BIM MANAGER</small>
+                                </div>
+                            </div>
+                        </article>
                     </div>
+
+                    <!-- Reseña 3 -->
                     <div class="col-md-4" data-aos="fade-up" data-aos-delay="140">
-                        <div class="review-placeholder rounded-4 p-4 h-100 text-center">
-                            <i class="bi bi-people fs-1 text-primary mb-3 d-block"></i>
-                            <h3 class="h5 fw-bold">Construyamos juntos</h3>
-                            <p class="text-secondary mb-0">¿Trabajaste con nosotros? Contáctanos para compartir tu experiencia.</p>
-                        </div>
+                        <article
+                            class="glass-card service-card rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="text-warning small">
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <i class="bi bi-star-fill"></i>
+                                    </div>
+                                    <i class="bi bi-quote fs-1 text-primary opacity-50"></i>
+                                </div>
+                                <p class="text-light opacity-75 fst-italic mb-4">
+                                    "Nos parece una herramienta innovadora que permite llevar los modelos BIM
+                                    directamente al sitio de construcción. La posibilidad de visualizar el proyecto en
+                                    su ubicación real es una gran ventaja."
+                                </p>
+                            </div>
+                            <div
+                                class="d-flex align-items-center gap-3 pt-3 border-top border-secondary border-opacity-25">
+                                <img src="{{ asset('images/reviews/3.png') }}" alt="Ing. Saul Bermudez"
+                                    class="rounded-circle border border-2 border-primary shadow-sm"
+                                    style="width: 54px; height: 54px; object-fit: cover;"
+                                    onerror="this.src='https://ui-avatars.com/api/?name=Saul+Bermudez&background=0d6efd&color=fff'">
+                                <div>
+                                    <h3 class="h6 fw-bold text-white mb-0">Ing. Saul Bermudez</h3>
+                                    <small class="text-primary fw-semibold">GERENTE AXFER</small>
+                                </div>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </div>
         </section>
 
-<!-- TUTORIALES -->
-<section id="tutoriales" class="soft-section py-5">
-    <div class="container py-5">
-        <div class="text-center mb-5" data-aos="fade-up">
-            <span class="section-kicker">Aprende con BIMNova</span>
-            <h2 class="section-title display-5 mt-2">Tutoriales y formación</h2>
-            <p class="text-secondary fs-5">Recursos para conocer la plataforma y aprovechar las herramientas digitales.</p>
-        </div>
-
-        @if($tutorials->isNotEmpty())
-            @php
-                $chunks = $tutorials->chunk(3);
-            @endphp
-
-            <div id="tutorialesCarousel" class="carousel slide tutoriales-carousel" data-bs-ride="carousel" data-aos="fade-up">
-                <div class="carousel-inner px-5">
-
-                    @foreach($chunks as $chunkIndex => $chunk)
-                        <div class="carousel-item {{ $chunkIndex === 0 ? 'active' : '' }}">
-                            <div class="row g-4 justify-content-center">
-                                @foreach($chunk as $tutorial)
-                                    <div class="col-md-6 col-lg-4">
-                                        <article class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
-                                            <div class="tutorial-img-wrapper">
-                                                <img src="{{ $tutorial->thumbnail_url }}"
-                                                     alt="{{ $tutorial->title }}"
-                                                     class="w-100">
-                                                <span class="tutorial-play">
-                                                    <i class="bi bi-play-circle-fill"></i>
-                                                </span>
-                                            </div>
-                                            <div class="card-body p-4 d-flex flex-column">
-                                                <h3 class="h5 fw-bold">{{ $tutorial->title }}</h3>
-                                                <p class="text-secondary flex-grow-1">{{ $tutorial->description }}</p>
-                                                <a href="{{ $tutorial->youtube_url }}"
-                                                   target="_blank"
-                                                   rel="noopener"
-                                                   class="btn btn-danger rounded-pill align-self-start px-4">
-                                                    <i class="bi bi-youtube me-2"></i>Ver video
-                                                </a>
-                                            </div>
-                                        </article>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endforeach
-
+        <!-- TUTORIALES -->
+        <section id="tutoriales" class="soft-section py-5">
+            <div class="container py-5">
+                <div class="text-center mb-5" data-aos="fade-up">
+                    <span class="section-kicker">Aprende con BIMNova</span>
+                    <h2 class="section-title display-5 mt-2">Tutoriales y formación</h2>
+                    <p class="text-secondary fs-5">Recursos para conocer la plataforma y aprovechar las herramientas
+                        digitales.</p>
                 </div>
 
-                <!-- Controles (solo si hay más de 1 slide) -->
-                @if($chunks->count() > 1)
-                    <button class="carousel-control-prev tutorial-control" type="button"
-                            data-bs-target="#tutorialesCarousel" data-bs-slide="prev">
-                        <span class="tutorial-arrow"><i class="bi bi-chevron-left"></i></span>
-                        <span class="visually-hidden">Anterior</span>
-                    </button>
-                    <button class="carousel-control-next tutorial-control" type="button"
-                            data-bs-target="#tutorialesCarousel" data-bs-slide="next">
-                        <span class="tutorial-arrow"><i class="bi bi-chevron-right"></i></span>
-                        <span class="visually-hidden">Siguiente</span>
-                    </button>
-                @endif
+                @if ($tutorials->isNotEmpty())
+                    @php
+                        $chunks = $tutorials->chunk(3);
+                    @endphp
 
-                <!-- Indicadores dinámicos -->
-                @if($chunks->count() > 1)
-                    <div class="carousel-indicators position-static mt-4">
-                        @foreach($chunks as $i => $chunk)
-                            <button type="button"
-                                    data-bs-target="#tutorialesCarousel"
-                                    data-bs-slide-to="{{ $i }}"
-                                    class="{{ $i === 0 ? 'active' : '' }} bg-primary"
-                                    aria-current="{{ $i === 0 ? 'true' : 'false' }}"
-                                    aria-label="Slide {{ $i + 1 }}">
+                    <div id="tutorialesCarousel" class="carousel slide tutoriales-carousel" data-bs-ride="carousel"
+                        data-aos="fade-up">
+                        <div class="carousel-inner px-5">
+
+                            @foreach ($chunks as $chunkIndex => $chunk)
+                                <div class="carousel-item {{ $chunkIndex === 0 ? 'active' : '' }}">
+                                    <div class="row g-4 justify-content-center">
+                                        @foreach ($chunk as $tutorial)
+                                            <div class="col-md-6 col-lg-4">
+                                                <article
+                                                    class="card tutorial-card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                                                    <div class="tutorial-img-wrapper">
+                                                        <img src="{{ $tutorial->thumbnail_url }}"
+                                                            alt="{{ $tutorial->title }}" class="w-100">
+                                                        <span class="tutorial-play">
+                                                            <i class="bi bi-play-circle-fill"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div class="card-body p-4 d-flex flex-column">
+                                                        <h3 class="h5 fw-bold">{{ $tutorial->title }}</h3>
+                                                        <p class="text-secondary flex-grow-1">
+                                                            {{ $tutorial->description }}</p>
+                                                        <a href="{{ $tutorial->youtube_url }}" target="_blank"
+                                                            rel="noopener"
+                                                            class="btn btn-danger rounded-pill align-self-start px-4">
+                                                            <i class="bi bi-youtube me-2"></i>Ver video
+                                                        </a>
+                                                    </div>
+                                                </article>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+
+                        </div>
+
+                        <!-- Controles (solo si hay más de 1 slide) -->
+                        @if ($chunks->count() > 1)
+                            <button class="carousel-control-prev tutorial-control" type="button"
+                                data-bs-target="#tutorialesCarousel" data-bs-slide="prev">
+                                <span class="tutorial-arrow"><i class="bi bi-chevron-left"></i></span>
+                                <span class="visually-hidden">Anterior</span>
                             </button>
-                        @endforeach
+                            <button class="carousel-control-next tutorial-control" type="button"
+                                data-bs-target="#tutorialesCarousel" data-bs-slide="next">
+                                <span class="tutorial-arrow"><i class="bi bi-chevron-right"></i></span>
+                                <span class="visually-hidden">Siguiente</span>
+                            </button>
+                        @endif
+
+                        <!-- Indicadores dinámicos -->
+                        @if ($chunks->count() > 1)
+                            <div class="carousel-indicators position-static mt-4">
+                                @foreach ($chunks as $i => $chunk)
+                                    <button type="button" data-bs-target="#tutorialesCarousel"
+                                        data-bs-slide-to="{{ $i }}"
+                                        class="{{ $i === 0 ? 'active' : '' }} bg-primary"
+                                        aria-current="{{ $i === 0 ? 'true' : 'false' }}"
+                                        aria-label="Slide {{ $i + 1 }}">
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <!-- Estado vacío -->
+                    <div class="text-center py-5" data-aos="fade-up">
+                        <i class="bi bi-collection-play fs-1 text-primary mb-3 d-block"></i>
+                        <h3 class="h5 fw-bold">Próximamente</h3>
+                        <p class="text-secondary">Estamos preparando los tutoriales. ¡Vuelve pronto!</p>
                     </div>
                 @endif
             </div>
-
-        @else
-            <!-- Estado vacío -->
-            <div class="text-center py-5" data-aos="fade-up">
-                <i class="bi bi-collection-play fs-1 text-primary mb-3 d-block"></i>
-                <h3 class="h5 fw-bold">Próximamente</h3>
-                <p class="text-secondary">Estamos preparando los tutoriales. ¡Vuelve pronto!</p>
-            </div>
-        @endif
-    </div>
-</section>
+        </section>
     </main>
+
+    <!-- MODAL DE CONTACTO -->
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div
+                class="modal-content glass-card border border-secondary border-opacity-25 text-white rounded-4 shadow-lg">
+
+                <!-- Encabezado del Modal -->
+                <div class="modal-header border-bottom border-secondary border-opacity-25 p-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="feature-icon" style="width: 44px; height: 44px; font-size: 1.2rem;">
+                            <i class="bi bi-envelope-paper-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-0 text-white" id="contactModalLabel">Hablemos de tu
+                                proyecto</h2>
+                            <small class="text-white-50">Completa tus datos y nos pondremos en contacto.</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
+                </div>
+
+                <!-- Formulario -->
+                <form id="contactForm">
+                    @csrf
+                    <div class="modal-body p-4">
+
+                        <!-- Campo Nombre -->
+                        <div class="mb-3">
+                            <label for="contact_name" class="form-label text-light small fw-semibold">Nombre completo
+                                <span class="text-primary">*</span></label>
+                            <div class="input-group">
+                                <span
+                                    class="input-group-text bg-dark border-secondary border-opacity-25 text-white-50">
+                                    <i class="bi bi-person"></i>
+                                </span>
+                                <input type="text"
+                                    class="form-control bg-dark text-white border-secondary border-opacity-25"
+                                    id="contact_name" name="name" placeholder="Ej. Juan Pérez" required>
+                            </div>
+                        </div>
+
+                        <!-- Campos Correo y Teléfono en 2 columnas -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="contact_email" class="form-label text-light small fw-semibold">Correo
+                                    electrónico <span class="text-primary">*</span></label>
+                                <div class="input-group">
+                                    <span
+                                        class="input-group-text bg-dark border-secondary border-opacity-25 text-white-50">
+                                        <i class="bi bi-envelope"></i>
+                                    </span>
+                                    <input type="email"
+                                        class="form-control bg-dark text-white border-secondary border-opacity-25"
+                                        id="contact_email" name="email" placeholder="nombre@empresa.com" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="contact_phone" class="form-label text-light small fw-semibold">Teléfono /
+                                    WhatsApp <span class="text-primary">*</span></label>
+                                <div class="input-group">
+                                    <span
+                                        class="input-group-text bg-dark border-secondary border-opacity-25 text-white-50">
+                                        <i class="bi bi-telephone"></i>
+                                    </span>
+                                    <input type="tel"
+                                        class="form-control bg-dark text-white border-secondary border-opacity-25"
+                                        id="contact_phone" name="phone" placeholder="+591 70000000" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campo Mensaje -->
+                        <div class="mb-3">
+                            <label for="contact_message" class="form-label text-light small fw-semibold">Mensaje <span
+                                    class="text-primary">*</span></label>
+                            <textarea class="form-control bg-dark text-white border-secondary border-opacity-25" id="contact_message"
+                                name="message" rows="4" placeholder="Cuéntanos sobre tu proyecto o consulta..." required></textarea>
+                        </div>
+
+                    </div>
+
+                    <!-- Footer del Modal -->
+                    <div
+                        class="modal-footer border-top border-secondary border-opacity-25 p-4 d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-light rounded-pill px-4"
+                            data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">
+                            <i class="bi bi-send-fill me-2"></i>Preparar correo
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
 
     <!-- CONTACTO / PIE DE PÁGINA -->
     <footer id="contacto" class="bg-black text-white pt-5 pb-4 border-top border-primary border-opacity-25">
@@ -2077,7 +2472,8 @@
                         <span class="h3 fw-bold mb-0 text-white">BIM<span class="text-primary">Nova</span></span>
                     </a>
                     <p class="text-white-50 mb-0">
-                        BIMNova Proyectos Integrales. Innovación, modelado digital y Realidad Aumentada para una construcción más clara, eficiente y conectada.
+                        BIMNova Proyectos Integrales. Innovación, modelado digital y Realidad Aumentada para una
+                        construcción más clara, eficiente y conectada.
                     </p>
                 </div>
                 <div class="col-sm-6 col-lg-3">
@@ -2092,13 +2488,18 @@
                 <div class="col-sm-6 col-lg-4">
                     <h2 class="h5 fw-bold mb-3">Hablemos de tu proyecto</h2>
                     <p class="text-white-50">Solicita una demostración o consulta por nuestros servicios y cursos.</p>
-                    <a href="mailto:{{ config('mail.from.address') }}" class="btn btn-primary rounded-pill px-4">
+
+                    <!-- Botón que abre el Modal -->
+                    <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal"
+                        data-bs-target="#contactModal">
                         <i class="bi bi-envelope me-2"></i>Solicitar información
-                    </a>
+                    </button>
                 </div>
             </div>
-            <div class="border-top border-secondary border-opacity-25 pt-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
-                <p class="text-white-50 small mb-0">© {{ date('Y') }} <strong>BIMNova Proyectos Integrales</strong>. Todos los derechos reservados.</p>
+            <div
+                class="border-top border-secondary border-opacity-25 pt-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                <p class="text-white-50 small mb-0">© {{ date('Y') }} <strong>BIMNova Proyectos
+                        Integrales</strong>. Todos los derechos reservados.</p>
                 <a href="#inicio" class="footer-link small">Volver al inicio <i class="bi bi-arrow-up ms-1"></i></a>
             </div>
         </div>
@@ -2111,7 +2512,40 @@
             offset: 80,
         });
     </script>
+    <script>
+        document.getElementById('contactForm').addEventListener('submit', function(event) {
+            event.preventDefault();
 
+            // Cambia el correo de respaldo por el correo real de BIMNova.
+            const destinatario = @json(config('mail.from.address') ?: 'contacto@bimnova.com');
+
+            const datos = new FormData(this);
+
+            const nombre = (datos.get('name') || '').trim();
+            const correo = (datos.get('email') || '').trim();
+            const telefono = (datos.get('phone') || '').trim();
+            const mensaje = (datos.get('message') || '').trim();
+
+            const asunto = `Solicitud de información BIMNova - ${nombre}`;
+
+            const cuerpo = [
+                'Solicitud de información desde el sitio web BIMNova',
+                '',
+                `Nombre: ${nombre}`,
+                `Correo: ${correo}`,
+                `Teléfono: ${telefono}`,
+                '',
+                'Mensaje:',
+                mensaje
+            ].join('\n');
+
+            const mailto = `mailto:${destinatario}` +
+                `?subject=${encodeURIComponent(asunto)}` +
+                `&body=${encodeURIComponent(cuerpo)}`;
+
+            window.location.href = mailto;
+        });
+    </script>
 </body>
 
 </html>
