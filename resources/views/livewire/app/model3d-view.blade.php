@@ -13,7 +13,7 @@
                 </div>
 
                 <button data-bs-toggle="modal" data-bs-target="#modal-3d" class="btn btn-primary"
-                    @if ($project->models->count() >= Auth::user()->access->max_models) disabled @endif><i class="fa fa-plus"></i>
+                            @if ($project->models->count() >= $project->owner->access->max_models) disabled @endif><i class="fa fa-plus"></i>
                     Subir
                     Modelo 3D</button>
             </div>

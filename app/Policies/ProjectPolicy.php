@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enum\RoleProject;
+use App\Enum\RoleSaas;
 use App\Enum\Status;
 use App\Models\Project;
 use App\Models\User;
@@ -25,10 +26,12 @@ class ProjectPolicy
     public function view(User $user, Project $project): bool
     {
         return Project::where('id',$project->id)->where(function(Builder $q) use ($user){
+            if($user->role == RoleSaas::ADMIN) return;
+
             $q->where('user_id',$user->id)->orWhereHas('members',function(Builder $builder) use ($user){
                 $builder->where('user_id',$user->id)->where('is_active',Status::ACTIVE);
-            });
-        })->exists();
+                });
+        }) ->exists();
         // return false;
     }
 

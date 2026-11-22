@@ -36,6 +36,14 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
+        Gate::define('saas-admin', function ($user) {
+            return $user->role === RoleSaas::ADMIN;
+        });
+
+        Gate::define('audit-project', function ($user, $project) {
+            return $user->role === RoleSaas::ADMIN;
+        });
+
 
         Paginator::useBootstrap();
 
@@ -52,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('isUser', function (User $user) {
-            return $user->role == RoleSaas::USER;
+            return $user->role == RoleSaas::USER || RoleSaas::ADMIN;
         });
 
         Event::listen(BuildingMenu::class, function (BuildingMenu $event) {
@@ -104,20 +112,20 @@ class AppServiceProvider extends ServiceProvider
 
             if(auth()->user()->role != RoleSaas::ADMIN){
                 // if( $this->getRoleByProject() != RoleProject::OWNER->value){ //es propietario
-                    $event->menu->addAfter('dashboard',[
+                $event->menu->addAfter('dashboard',[
                     'key' => 'new-project',
                     'text' => 'Nuevo Proyecto',
                     'icon' => 'fas fa-plus',
                     'route' => 'app.projects',
-                    ]);
-                    $after = 'new-project';
+                ]);
+                $after = 'new-project';
                 // }
 
                 $event->menu->addAfter($after,[
-                        'text' => 'Proyectos',
-                         'icon' => 'fas fa-city',
-                // 'route' => 'app.projects',
-                'submenu' => $menu
+                    'text' => 'Proyectos',
+                    'icon' => 'fas fa-city',
+                    // 'route' => 'app.projects',
+                    'submenu' => $menu
                 ]);
             }
         });

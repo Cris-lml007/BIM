@@ -6,7 +6,10 @@ use App\Http\Controllers\DocumentsController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\InvitationController;
+use App\Livewire\Admin\Report;
 use App\Livewire\Admin\TutorialManager;
+use App\Livewire\Admin\UserAudit;
+use App\Livewire\Admin\UserAuditDetail;
 use App\Livewire\Admin\UsersForm;
 use App\Livewire\App\AnchorsView;
 use App\Livewire\App\IncidentDetail;
@@ -48,6 +51,20 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
         Route::get('/users/{id}', UsersForm::class)->name('administration.users.form');
         Route::get('/access', [App\Http\Controllers\AccessController::class, 'show'])->name('administration.access');
         Route::get('/tutorial-manager',TutorialManager::class)->name('administration.tutorials');
+        Route::get('/reports', Report::class)->name('admin.reports');
+
+        Route::middleware(['auth', 'can:saas-admin'])
+            ->prefix('auditor')
+            ->name('admin.audit.')
+            ->group(function () {
+                Route::get('/', UserAudit::class)->name('index');
+
+                Route::get('/user/{user}', UserAuditDetail::class)
+                    ->name('user');
+
+                Route::get('/proyecto/{project}', ProjectView::class)
+                    ->name('project');
+            });
     });
 
 

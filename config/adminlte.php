@@ -65,7 +65,7 @@ return [
 
 
     'logo' => '<span style="color: #0d6efd;">BIM</span><span style="color: #fff;">Nova</span>',
-    'logo_img' => asset('images/logo.png'),
+    'logo_img' => 'images/logo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
@@ -87,7 +87,7 @@ return [
     'auth_logo' => [
         'enabled' => false,
         'img' => [
-            'path' => asset('images/logo.png'),
+            'path' => 'images/logo.png',
             'alt' => 'Auth Logo',
             'class' => '',
             'width' => 50,
@@ -114,7 +114,7 @@ return [
         'enabled' => true,
         'mode' => 'fullscreen',
         'img' => [
-            'path' => asset('images/logo.png'),
+            'path' => 'images/logo.png',
             'alt' => 'Preloader Image',
             'effect' => 'animation__rubberBand',
             'width' => 60,
@@ -331,9 +331,21 @@ return [
             'can' => 'isAdministration'
         ],
         [
+            'text' => 'Auditor',
+            'route' => 'admin.audit.index',
+            'icon' => 'fa fa-search',
+            'can' => 'isAdministration'
+        ],
+        [
             'text' => 'Gestión de Tutoriales',
             'route' => 'administration.tutorials',
             'icon' => 'fa fa-video',
+            'can' => 'isAdministration'
+        ],
+        [
+            'text' => 'Reportes',
+            'route' => 'admin.reports',
+            'icon' => 'fa fa-file',
             'can' => 'isAdministration'
         ],
         ['header' => 'CONFIGURACIÓN DE CUENTA'],
