@@ -46,7 +46,8 @@
                         </div>
                         <a href="{{ route('app.project.model3d.id', ['project' => $this->project->id, 'model' => $item->id]) }}"
                             class="btn btn-primary"
-                            style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
+                            style="border-radius: 0;border-top-right-radius: 0;">Abrir</a>
+                        <button data-id="{{ $item->id }}" class="btn btn-danger remove-model" style="border-top-right-radius: 0;border-top-left-radius: 0;">Eliminar</button>
                     </div>
                 </div>
             @endforeach
@@ -58,3 +59,31 @@
     </x-modal>
 </div>
 
+@script
+<script>
+const btns = document.querySelectorAll('.remove-model');
+
+btns.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    console.log('Hiciste clic en:', btn.textContent);
+        console.log('Su ID es:', btn.dataset.id);
+        Swal.fire({
+            icon: 'question',
+            title: 'Borrar Modelo?',
+            text: 'Borrar este modelo tambien borrara anclar y incidencias enlazadas',
+            confirmButtonColor: "red",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Si, Borrar!",
+            showCancelButton: true,
+            cancelButtonColor: 'gray',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+                if(result.isConfirmed){
+                    $wire.removeModel(btn.dataset.id);
+                }
+
+        });
+  });
+});
+</script>
+@endscript

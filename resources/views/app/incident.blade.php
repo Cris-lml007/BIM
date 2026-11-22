@@ -9,7 +9,7 @@
                 </small>
                 <h3 class="mb-0">Incidentes</h3>
             </div>
-            <button data-bs-toggle="modal" data-bs-target="#modal-incident" class="btn btn-primary"
+            <button data-bs-toggle="modal" data-bs-target="#modal-incident" class="btn btn-primary d-none"
                 @if (empty($project->ownerAccess()) || !$project->is_active) disabled @endif>
                 <i class="fa fa-plus"></i> Registrar
             </button>
