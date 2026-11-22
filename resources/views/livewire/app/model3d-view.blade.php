@@ -12,8 +12,8 @@
                     <h3 class="mb-0">Modelo 3D</h3>
                 </div>
 
-                <button data-bs-toggle="modal" data-bs-target="#modal-3d" class="btn btn-primary"><i
-                        class="fa fa-plus"></i>
+                <button data-bs-toggle="modal" data-bs-target="#modal-3d" class="btn btn-primary"
+                    @if ($project->models->count() >= Auth::user()->access->max_models) disabled @endif><i class="fa fa-plus"></i>
                     Subir
                     Modelo 3D</button>
             </div>
@@ -45,7 +45,8 @@
                             <span>fecha: {{ \Carbon\Carbon::parse($item->created_at)->format('D M Y') }}</span>
                         </div>
                         <a href="{{ route('app.project.model3d.id', ['project' => $this->project->id, 'model' => $item->id]) }}"
-                            class="btn btn-primary" style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
+                            class="btn btn-primary"
+                            style="border-top-left-radius: 0;border-top-right-radius: 0;">Abrir</a>
                     </div>
                 </div>
             @endforeach
@@ -56,3 +57,4 @@
         <livewire:app.model3d-form :project="$project" wire:key="model3d-form"></livewire:app.model3d-form>
     </x-modal>
 </div>
+

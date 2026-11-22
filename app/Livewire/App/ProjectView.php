@@ -3,6 +3,7 @@
 namespace App\Livewire\App;
 
 use App\Models\Project;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ProjectView extends Component
@@ -28,7 +29,7 @@ class ProjectView extends Component
 
         // Estadísticas básicas
         $stats = [
-            'models3d' => $documents->filter(fn($doc) => str_contains($doc->type, 'ifc') || str_contains($doc->type, '3d'))->count(),
+            'models3d' => $this->project->models->count(),
             'plans' => $documents->filter(fn($doc) => str_contains($doc->type, 'pdf'))->count(),
             'documents' => $documents->count(),
             'members' => $this->project->members()->count() + $this->project->pendingInvitations()->count() + 1, // +1 por el owner

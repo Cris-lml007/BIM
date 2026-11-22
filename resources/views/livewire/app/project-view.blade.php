@@ -14,7 +14,9 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <p class="text-muted mb-1 small">Modelos 3D</p>
-                                    <h2 class="display-6 fw-semibold mb-0">{{ $stats['models3d'] }}</h2>
+                                    <h2
+                                        class="display-6 fw-semibold mb-0 @if ($stats['models3d'] >= Auth::user()->access->max_models) text-danger @endif">
+                                        {{ $stats['models3d'] }}</h2>
                                 </div>
                                 <div class="bg-purple bg-opacity-10 rounded-3 p-3">
                                     <i class="fas fa-cube fa-2x text-purple"></i>

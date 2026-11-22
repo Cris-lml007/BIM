@@ -36,6 +36,11 @@ class Model3dForm extends Component
             'description' => 'required',
             'file' => 'required|file|extensions:glb,ifc'
         ]);
+
+        if($this->project->models->count() >= Auth::user()->access->max_models){
+            return $this->js('Swal.fire({icon: "warning", title: "Numero de Modelos Maximos Superados"})');
+        }
+
         $type = $this->file->getClientOriginalExtension();
 
         $id = $this->project->id;
