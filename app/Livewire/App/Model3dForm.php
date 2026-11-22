@@ -34,7 +34,7 @@ class Model3dForm extends Component
         $this->validate([
             'name' => 'required',
             'description' => 'required',
-            'file' => 'required|file|extensions:glb,ifc'
+            'file' => 'required|file|extensions:ifc'
         ]);
 
         if($this->project->models->count() >= Auth::user()->access->max_models){
