@@ -11,6 +11,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -108,7 +109,7 @@ class User extends Authenticatable
         if (!$this->access) {
             return false;
         }
-        
+
         $maxProjectsAllowed = $this->access->max_projects ?? 0;
         $currentProjectsCount = $this->projectsOwner()->count();
 
@@ -151,24 +152,65 @@ class User extends Authenticatable
         return $this->getMembersCount() + 1; // +1 para incluir al usuario titular
     }
 
-    /**
-     * Obtener el almacenamiento usado en MB por los proyectos del usuario
-     */
-    public function getStorageUsedMB(): float
+
+    private function getFolderSize(string $folder): int
     {
-        $projects = $this->projectsOwner()->pluck('id');
-        
-        if ($projects->isEmpty()) {
+        $disk = Storage::disk('local');
+
+        if (!$disk->exists($folder)) {
             return 0;
         }
 
-        // Sumar el tamaño de todos los documentos en los proyectos del usuario
-        $storageBytes = Document::whereIn('project_id', $projects)
-            ->sum('size') ?? 0;
+        $totalSize = 0;
 
-        // Convertir a MB (el campo 'size' se asume que está en bytes)
-        return round($storageBytes / (1024 * 1024), 2);
+        foreach ($disk->allFiles($folder) as $file) {
+            $totalSize += $disk->size($file);
+        }
+
+        return $totalSize;
     }
+
+
+    /**
+     * Obtener el almacenamiento usado en MB por los proyectos del usuario
+     */
+    public function getStorageUsedMB()
+    {
+        $projects = $this->projectsOwner()->pluck('id');
+
+        $projectsStorage = [];
+
+        foreach ($projects as $projectId) {
+            $folder = "projects/{$projectId}";
+
+            $size = $this->getFolderSize($folder);
+
+            $projectsStorage[] = [
+                'project_id' => $projectId,
+                'size_bytes' => $size,
+                'size_mb' => round($size / 1024 / 1024, 2),
+                'size_gb' => round($size / 1024 / 1024 / 1024, 3),
+            ];
+        }
+        $totalBytes = collect($projectsStorage)->sum('size_bytes');
+
+        $totalMIB = round($totalBytes / 1024 / 1024, 2);
+        $totalGB = round($totalBytes / 1024 / 1024 / 1024, 3);
+
+        return $totalMIB;
+        //
+        // if ($projects->isEmpty()) {
+        //     return 0;
+        // }
+        //
+        // // Sumar el tamaño de todos los documentos en los proyectos del usuario
+        // $storageBytes = Document::whereIn('project_id', $projects)
+        //     ->sum('size') ?? 0;
+        //
+        // // Convertir a MB (el campo 'size' se asume que está en bytes)
+        // return round($storageBytes / (1024 * 1024), 2);
+    }
+
     public function projectBlockedCount(): int
     {
         return $this->projectsOwner()->where('is_active', false)->count();

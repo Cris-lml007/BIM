@@ -176,7 +176,7 @@ class HomeController extends Controller
             ];
         } else {
             $daysLeft = $today->diffInDays($access->available_end);
-            
+
             if ($daysLeft <= 7) {
                 $alerts[] = [
                     'type' => 'warning',
@@ -249,7 +249,7 @@ class HomeController extends Controller
         $projectsUsed = $user->projectsOwner()->count();
         $usersUsed = $user->getAccessUsersCount();
         $storageUsedMB = $user->getStorageUsedMB();
-        
+
         $maxProjects = $access ? $access->max_projects : 0;
         $maxUsers = $access ? $access->max_users : 0;
         $maxStorageMB = $access ? $access->max_storage : 0;
