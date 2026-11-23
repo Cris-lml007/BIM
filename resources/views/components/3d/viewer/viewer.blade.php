@@ -345,8 +345,8 @@
 
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link active" id="anchors-tab" data-bs-toggle="tab"
-                                        data-bs-target="#anchors-content" role="tab" aria-controls="anchors-content"
-                                        aria-selected="true">
+                                        data-bs-target="#anchors-content" role="tab"
+                                        aria-controls="anchors-content" aria-selected="true">
                                         <i class="fas fa-map-marker-alt mr-1"></i>
                                         Anclajes
                                         <span class="badge badge-primary" id="anchors-count">0</span>
@@ -355,8 +355,8 @@
 
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link" id="incidents-tab" data-bs-toggle="tab"
-                                        data-bs-target="#incidents-content" role="tab" aria-controls="incidents-content"
-                                        aria-selected="false">
+                                        data-bs-target="#incidents-content" role="tab"
+                                        aria-controls="incidents-content" aria-selected="false">
                                         <i class="fas fa-exclamation-circle mr-1"></i>
                                         Incidencias
                                         <span class="badge badge-danger" id="incidents-count">0</span>
@@ -607,35 +607,27 @@
     {{-- MODAL MODELOS --}}
     {{-- ========================================= --}}
 
+
     <div class="modal fade" tabindex="-1" id="modal-models" data-bs-theme="dark">
-
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
-
             <div class="modal-content border-0 shadow-lg">
 
                 <div class="modal-header border-bottom border-secondary">
-
                     <h5 class="modal-title fw-semibold">
-
                         <i class="nf nf-fa-cube text-primary me-2"></i>
                         Cargar Modelos
-
                     </h5>
 
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal">
-                    </button>
-
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
-
-                    <div class="row g-3">
+                    <div class="row g-3" id="modal-models-list" data-project-id="{{ $project->id }}">
 
                         @foreach ($models as $item)
                             <div class="col-md-6 col-lg-4">
-
                                 <div class="model-card p-3 h-100 d-flex flex-column justify-content-between"
-                                    data-url="{{ route('app.Attachment', $item->id) }}"
+                                    data-url="{{ route('app.Attachment', $item->model->id) }}"
                                     data-name="{{ $item->name . '|' . $item->id }}" name="loadIfc"
                                     data-bs-dismiss="modal">
 
@@ -651,20 +643,20 @@
                                     <button class="btn btn-sm btn-primary w-100 mt-3">
                                         Cargar
                                     </button>
-
                                 </div>
-
                             </div>
                         @endforeach
 
                     </div>
 
+                    <div id="offline-models-message" class="text-center text-secondary py-3 d-none">
+                        <i class="nf nf-fa-circle-info me-1"></i>
+                        No hay modelos descargados para este proyecto.
+                    </div>
                 </div>
 
             </div>
-
         </div>
-
     </div>
 
     {{-- ========================================= --}}

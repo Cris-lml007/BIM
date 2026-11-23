@@ -122,20 +122,58 @@ async function initViewer(container) {
     world.renderer.onAfterUpdate.add(() => stats.end());
 }
 
-async function ifcLoader(url,id){
-    const fragPaths = [
-        url+'?type=frag'
-    ];
 
-    await Promise.all(
-        fragPaths.map(async (path) => {
-            const modelId = id;
-            if (!modelId) return null;
-            const file = await fetch(path);
-            const buffer = await file.arrayBuffer();
-            return fragments.core.load(buffer, { modelId });
-        }),
-    );
+
+async function ifcLoader(url, id) {
+
+    // =====================================
+    // CARGA DEL FRAG ONLINE / OFFLINE
+    // =====================================
+
+    const fragUrl = new URL(url, window.location.origin);
+    fragUrl.searchParams.set('type', 'frag');
+
+    if (!id) {
+        throw new Error('No se proporcionó un identificador para el modelo.');
+    }
+
+    console.log('[BIMNova] Cargando modelo:', {
+        id,
+        url: fragUrl.href
+    });
+
+    const response = await fetch(fragUrl);
+
+    console.log('[BIMNova] Respuesta FRAG:', {
+        status: response.status,
+        ok: response.ok,
+        contentType: response.headers.get('content-type'),
+        savedOffline: response.headers.get('X-BIMNova-Offline-Saved')
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `No se pudo obtener el FRAG. HTTP ${response.status}: ${fragUrl.href}`
+        );
+    }
+
+    const buffer = await response.arrayBuffer();
+
+    console.log('[BIMNova] Tamaño FRAG:', buffer.byteLength);
+
+    if (buffer.byteLength === 0) {
+        throw new Error('El archivo FRAG está vacío.');
+    }
+
+    await fragments.core.load(buffer, {
+        modelId: id
+    });
+
+    fragments.core.update();
+
+    // =====================================
+    // ACTUALIZAR INTERFAZ
+    // =====================================
 
     renderModelsList();
     await processModel();
@@ -150,60 +188,90 @@ async function ifcLoader(url,id){
     measurer.color = new THREE.Color("#494cb6");
     measurer.snappings = [FRAGS.SnappingClass.POINT];
 
+    // =====================================
+    // GEOMETRÍAS PARA MEDICIÓN
+    // =====================================
+
     const meshes = [];
 
     for (const [, model] of fragments.list) {
+
         const idsWithGeometry = await model.getItemsIdsWithGeometry();
         const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
 
         const geometries = new Map();
 
         for (const itemId in allMeshesData) {
+
             const meshData = allMeshesData[itemId];
+
             for (const geomData of meshData) {
+
                 if (
                     !geomData.positions ||
-                        !geomData.indices ||
-                        !geomData.transform ||
-                        !geomData.representationId
+                    !geomData.indices ||
+                    !geomData.transform ||
+                    !geomData.representationId
                 ) {
                     continue;
                 }
 
                 const representationId = geomData.representationId;
+
                 if (!geometries.has(representationId)) {
+
                     const geometry = new THREE.BufferGeometry();
+
                     geometry.setAttribute(
                         "position",
-                        new THREE.Float32BufferAttribute(geomData.positions, 3),
+                        new THREE.Float32BufferAttribute(geomData.positions, 3)
                     );
+
                     geometry.setIndex(Array.from(geomData.indices));
+
                     geometries.set(representationId, geometry);
                 }
 
                 const geometry = geometries.get(representationId);
 
                 const mesh = new THREE.Mesh(geometry);
+
                 mesh.applyMatrix4(geomData.transform);
                 mesh.applyMatrix4(model.object.matrixWorld);
                 mesh.updateWorldMatrix(true, true);
+
                 meshes.push(mesh);
             }
         }
     }
 
+    // =====================================
+    // MEDICIÓN SÍNCRONA
+    // =====================================
+
     const pastDelay = measurer.delay;
+
     const makeSynchronous = async (value) => {
+
         if (value) {
-            measurer.pickerMode = OBF.GraphicVertexPickerMode.SYNCHRONOUS;
+
+            measurer.pickerMode =
+                OBF.GraphicVertexPickerMode.SYNCHRONOUS;
+
             measurer.delay = 0;
+
             for (const mesh of meshes) {
                 world.meshes.add(mesh);
             }
+
             return;
         }
-        measurer.pickerMode = OBF.GraphicVertexPickerMode.DEFAULT;
+
+        measurer.pickerMode =
+            OBF.GraphicVertexPickerMode.DEFAULT;
+
         measurer.delay = pastDelay;
+
         for (const mesh of meshes) {
             world.meshes.delete(mesh);
         }
@@ -211,10 +279,21 @@ async function ifcLoader(url,id){
 
     await makeSynchronous(true);
 
+    // =====================================
+    // CLASIFICACIÓN BIM
+    // =====================================
 
     classifier = components.get(OBC.Classifier);
-    await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
+
+    await classifier.byIfcBuildingStorey({
+        classificationName: "Levels"
+    });
+
     buildLevelsUIFromClassifier();
+
+    // =====================================
+    // RAYCASTING MULTIMODELO
+    // =====================================
 
     const raycasted = async (data) => {
 
@@ -222,8 +301,7 @@ async function ifcLoader(url,id){
 
         for (const [, model] of fragments.list) {
 
-            const result =
-                await model.raycast(data);
+            const result = await model.raycast(data);
 
             if (result) {
 
@@ -243,7 +321,7 @@ async function ifcLoader(url,id){
 
             if (
                 results[i].distance <
-                    closestResult.distance
+                closestResult.distance
             ) {
                 closestResult = results[i];
             }
@@ -255,51 +333,79 @@ async function ifcLoader(url,id){
     const mouse = new THREE.Vector2();
 
     let onRaycastHoverResult = (_result) => {};
+
     container.addEventListener("pointermove", async (event) => {
+
         mouse.x = event.clientX;
         mouse.y = event.clientY;
+
         const result = await raycasted({
             camera: world.camera.three,
             mouse,
             dom: world.renderer.three.domElement,
         });
+
         function format3(n) {
             return Number.isFinite(n) ? n.toFixed(3) : '0.000';
         }
-        if(result){
+
+        if (result) {
+
             document.getElementById('xyz').innerHTML =
                 `XYZ: (${format3(result.point.x)}, ${format3(result.point.y)}, ${format3(result.point.z)})`;
         }
-        if(activeTool == 'anchor' || activeTool == 'issue'){
+
+        if (activeTool == 'anchor' || activeTool == 'issue') {
             onRaycastHoverResult(result);
         }
     });
+
+    // =====================================
+    // MARCADOR DE RAYCASTING
+    // =====================================
+
     const lineGeometry = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(0, 0, 0),
         new THREE.Vector3(0, 0, 2),
     ]);
 
-    const lineMaterial = new THREE.LineBasicMaterial({ color: "#6528d7" });
+    const lineMaterial = new THREE.LineBasicMaterial({
+        color: "#6528d7"
+    });
+
     const line = new THREE.Line(lineGeometry, lineMaterial);
+
     world.scene.three.add(line);
+
     marker = components.get(OBF.Marker);
     marker.threshold = 10;
 
     onRaycastHoverResult = (result) => {
+
         line.visible = !!result;
+
         if (!result) return;
-        // console.log(result);
+
         const { point, normal } = result;
+
         if (!normal) return;
+
         line.position.copy(point);
+
         const look = point.clone().add(normal);
+
         line.lookAt(look);
     };
+
+    // =====================================
+    // CLICK: ANCLAS E INCIDENCIAS
+    // =====================================
+
     container.addEventListener("click", async (event) => {
 
         if (
             activeTool !== 'anchor' &&
-                activeTool !== 'issue'
+            activeTool !== 'issue'
         ) {
             return;
         }
@@ -320,16 +426,18 @@ async function ifcLoader(url,id){
         onRaycastClickResult(result);
     });
 
+    // =====================================
+    // DOBLE CLICK: HERRAMIENTAS Y BIM
+    // =====================================
+
     container.addEventListener("dblclick", async (event) => {
 
-        // =====================================
         // HERRAMIENTAS
-        // =====================================
 
         if (activeTool === 'clipper') {
 
             if (clipper.enabled) {
-                //await clipper.create(world);
+                // await clipper.create(world);
             }
 
             return;
@@ -344,25 +452,16 @@ async function ifcLoader(url,id){
             return;
         }
 
-
-        // =====================================
         // ANCLA / INCIDENCIA
-        // =====================================
 
         if (
             activeTool === 'anchor' ||
-                activeTool === 'issue'
+            activeTool === 'issue'
         ) {
             return;
         }
 
-
-        // =====================================
-        // BIM
-        // =====================================
-
-        // Si no hay ninguna herramienta activa,
-        // el doble click selecciona BIM.
+        // SELECCIÓN BIM
 
         mouse.x = event.clientX;
         mouse.y = event.clientY;
@@ -383,6 +482,9 @@ async function ifcLoader(url,id){
         );
     });
 
+    // =====================================
+    // BOUNDING BOX GLOBAL
+    // =====================================
 
     box_world = new THREE.Box3();
 
@@ -392,9 +494,11 @@ async function ifcLoader(url,id){
 
     min = box_world.min;
     max = box_world.max;
+
     center = box_world.getCenter(new THREE.Vector3());
 
     clipperInitialValues = {
+
         xMin: min.x,
         xMax: max.x,
 
@@ -406,47 +510,397 @@ async function ifcLoader(url,id){
     };
 
     createSectionPlanes();
+
+    // =====================================
+    // ANCLAS E INCIDENCIAS
+    // =====================================
+
     let v = $wire.anchors;
     let w = $wire.incidents;
 
-    for(let i = 0;i < v.length;i++){
+    for (let i = 0; i < v.length; i++) {
+
         let item = {
+
             id: v[i].id,
             name: v[i].title,
             model: v[i].mode_id,
+
             type: 'anchor',
-            x:  parseFloat(v[i].x),
+
+            x: parseFloat(v[i].x),
             y: parseFloat(v[i].y),
             z: parseFloat(v[i].z),
+
             normalX: parseFloat(v[i].normal_x ?? 0) ?? 0,
             normalY: parseFloat(v[i].normal_y ?? 1) ?? 1,
             normalZ: parseFloat(v[i].normal_z ?? 0) ?? 0,
-            status: v[i].is_active ? 'activo': 'inhabilitado'
+
+            status: v[i].is_active ? 'activo' : 'inhabilitado'
         };
+
         anchors.push(item);
+
         createMarker(item);
         addToTable(item);
     }
-    for(let i = 0;i < w.length;i++){
+
+    for (let i = 0; i < w.length; i++) {
+
         let item = {
+
             id: w[i].id,
             name: w[i].title,
             model: w[i].mode_id,
+
             type: 'incident',
-            x:  parseFloat(w[i].x),
+
+            x: parseFloat(w[i].x),
             y: parseFloat(w[i].y),
             z: parseFloat(w[i].z),
+
             normalX: parseFloat(w[i].normal_x ?? 0) ?? 0,
             normalY: parseFloat(w[i].normal_y ?? 1) ?? 1,
             normalZ: parseFloat(w[i].normal_z ?? 0) ?? 0,
-            status: w[i].status ? 'Abierto': 'Cerrado'
+
+            status: w[i].status ? 'Abierto' : 'Cerrado'
         };
+
         anchors.push(item);
+
         createMarker(item);
         addToTable(item);
     }
 
 }
+
+
+// async function ifcLoader(url,id){
+//     const fragPaths = [
+//         url+'?type=frag'
+//     ];
+//
+//     await Promise.all(
+//         fragPaths.map(async (path) => {
+//             const modelId = id;
+//             if (!modelId) return null;
+//             const file = await fetch(path);
+//             const buffer = await file.arrayBuffer();
+//             return fragments.core.load(buffer, { modelId });
+//         }),
+//     );
+//
+//     renderModelsList();
+//     await processModel();
+//
+//     const casters = components.get(OBC.Raycasters);
+//     casters.get(world);
+//
+//     clipper = components.get(OBC.Clipper);
+//
+//     measurer = components.get(OBF.LengthMeasurement);
+//     measurer.world = world;
+//     measurer.color = new THREE.Color("#494cb6");
+//     measurer.snappings = [FRAGS.SnappingClass.POINT];
+//
+//     const meshes = [];
+//
+//     for (const [, model] of fragments.list) {
+//         const idsWithGeometry = await model.getItemsIdsWithGeometry();
+//         const allMeshesData = await model.getItemsGeometry(idsWithGeometry);
+//
+//         const geometries = new Map();
+//
+//         for (const itemId in allMeshesData) {
+//             const meshData = allMeshesData[itemId];
+//             for (const geomData of meshData) {
+//                 if (
+//                     !geomData.positions ||
+//                         !geomData.indices ||
+//                         !geomData.transform ||
+//                         !geomData.representationId
+//                 ) {
+//                     continue;
+//                 }
+//
+//                 const representationId = geomData.representationId;
+//                 if (!geometries.has(representationId)) {
+//                     const geometry = new THREE.BufferGeometry();
+//                     geometry.setAttribute(
+//                         "position",
+//                         new THREE.Float32BufferAttribute(geomData.positions, 3),
+//                     );
+//                     geometry.setIndex(Array.from(geomData.indices));
+//                     geometries.set(representationId, geometry);
+//                 }
+//
+//                 const geometry = geometries.get(representationId);
+//
+//                 const mesh = new THREE.Mesh(geometry);
+//                 mesh.applyMatrix4(geomData.transform);
+//                 mesh.applyMatrix4(model.object.matrixWorld);
+//                 mesh.updateWorldMatrix(true, true);
+//                 meshes.push(mesh);
+//             }
+//         }
+//     }
+//
+//     const pastDelay = measurer.delay;
+//     const makeSynchronous = async (value) => {
+//         if (value) {
+//             measurer.pickerMode = OBF.GraphicVertexPickerMode.SYNCHRONOUS;
+//             measurer.delay = 0;
+//             for (const mesh of meshes) {
+//                 world.meshes.add(mesh);
+//             }
+//             return;
+//         }
+//         measurer.pickerMode = OBF.GraphicVertexPickerMode.DEFAULT;
+//         measurer.delay = pastDelay;
+//         for (const mesh of meshes) {
+//             world.meshes.delete(mesh);
+//         }
+//     };
+//
+//     await makeSynchronous(true);
+//
+//
+//     classifier = components.get(OBC.Classifier);
+//     await classifier.byIfcBuildingStorey({ classificationName: "Levels" });
+//     buildLevelsUIFromClassifier();
+//
+//     const raycasted = async (data) => {
+//
+//         const results = [];
+//
+//         for (const [, model] of fragments.list) {
+//
+//             const result =
+//                 await model.raycast(data);
+//
+//             if (result) {
+//
+//                 result.fragmentsModel = model;
+//
+//                 results.push(result);
+//             }
+//         }
+//
+//         if (results.length === 0) {
+//             return null;
+//         }
+//
+//         let closestResult = results[0];
+//
+//         for (let i = 1; i < results.length; i++) {
+//
+//             if (
+//                 results[i].distance <
+//                     closestResult.distance
+//             ) {
+//                 closestResult = results[i];
+//             }
+//         }
+//
+//         return closestResult;
+//     };
+//
+//     const mouse = new THREE.Vector2();
+//
+//     let onRaycastHoverResult = (_result) => {};
+//     container.addEventListener("pointermove", async (event) => {
+//         mouse.x = event.clientX;
+//         mouse.y = event.clientY;
+//         const result = await raycasted({
+//             camera: world.camera.three,
+//             mouse,
+//             dom: world.renderer.three.domElement,
+//         });
+//         function format3(n) {
+//             return Number.isFinite(n) ? n.toFixed(3) : '0.000';
+//         }
+//         if(result){
+//             document.getElementById('xyz').innerHTML =
+//                 `XYZ: (${format3(result.point.x)}, ${format3(result.point.y)}, ${format3(result.point.z)})`;
+//         }
+//         if(activeTool == 'anchor' || activeTool == 'issue'){
+//             onRaycastHoverResult(result);
+//         }
+//     });
+//     const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+//         new THREE.Vector3(0, 0, 0),
+//         new THREE.Vector3(0, 0, 2),
+//     ]);
+//
+//     const lineMaterial = new THREE.LineBasicMaterial({ color: "#6528d7" });
+//     const line = new THREE.Line(lineGeometry, lineMaterial);
+//     world.scene.three.add(line);
+//     marker = components.get(OBF.Marker);
+//     marker.threshold = 10;
+//
+//     onRaycastHoverResult = (result) => {
+//         line.visible = !!result;
+//         if (!result) return;
+//         // console.log(result);
+//         const { point, normal } = result;
+//         if (!normal) return;
+//         line.position.copy(point);
+//         const look = point.clone().add(normal);
+//         line.lookAt(look);
+//     };
+//     container.addEventListener("click", async (event) => {
+//
+//         if (
+//             activeTool !== 'anchor' &&
+//                 activeTool !== 'issue'
+//         ) {
+//             return;
+//         }
+//
+//         mouse.x = event.clientX;
+//         mouse.y = event.clientY;
+//
+//         const result = await raycasted({
+//             camera: world.camera.three,
+//             mouse,
+//             dom: world.renderer.three.domElement,
+//         });
+//
+//         if (!result) {
+//             return;
+//         }
+//
+//         onRaycastClickResult(result);
+//     });
+//
+//     container.addEventListener("dblclick", async (event) => {
+//
+//         // =====================================
+//         // HERRAMIENTAS
+//         // =====================================
+//
+//         if (activeTool === 'clipper') {
+//
+//             if (clipper.enabled) {
+//                 //await clipper.create(world);
+//             }
+//
+//             return;
+//         }
+//
+//         if (activeTool === 'ruler') {
+//
+//             if (measurer.enabled) {
+//                 await measurer.create();
+//             }
+//
+//             return;
+//         }
+//
+//
+//         // =====================================
+//         // ANCLA / INCIDENCIA
+//         // =====================================
+//
+//         if (
+//             activeTool === 'anchor' ||
+//                 activeTool === 'issue'
+//         ) {
+//             return;
+//         }
+//
+//
+//         // =====================================
+//         // BIM
+//         // =====================================
+//
+//         // Si no hay ninguna herramienta activa,
+//         // el doble click selecciona BIM.
+//
+//         mouse.x = event.clientX;
+//         mouse.y = event.clientY;
+//
+//         const result = await raycasted({
+//             camera: world.camera.three,
+//             mouse,
+//             dom: world.renderer.three.domElement,
+//         });
+//
+//         if (!result) {
+//             return;
+//         }
+//
+//         await selectBimElement(
+//             result.fragmentsModel,
+//             result.localId
+//         );
+//     });
+//
+//
+//     box_world = new THREE.Box3();
+//
+//     for (const [, model] of fragments.list) {
+//         box_world.expandByObject(model.object);
+//     }
+//
+//     min = box_world.min;
+//     max = box_world.max;
+//     center = box_world.getCenter(new THREE.Vector3());
+//
+//     clipperInitialValues = {
+//         xMin: min.x,
+//         xMax: max.x,
+//
+//         yMin: min.y,
+//         yMax: max.y,
+//
+//         zMin: min.z,
+//         zMax: max.z,
+//     };
+//
+//     createSectionPlanes();
+//     let v = $wire.anchors;
+//     let w = $wire.incidents;
+//
+//     for(let i = 0;i < v.length;i++){
+//         let item = {
+//             id: v[i].id,
+//             name: v[i].title,
+//             model: v[i].mode_id,
+//             type: 'anchor',
+//             x:  parseFloat(v[i].x),
+//             y: parseFloat(v[i].y),
+//             z: parseFloat(v[i].z),
+//             normalX: parseFloat(v[i].normal_x ?? 0) ?? 0,
+//             normalY: parseFloat(v[i].normal_y ?? 1) ?? 1,
+//             normalZ: parseFloat(v[i].normal_z ?? 0) ?? 0,
+//             status: v[i].is_active ? 'activo': 'inhabilitado'
+//         };
+//         anchors.push(item);
+//         createMarker(item);
+//         addToTable(item);
+//     }
+//     for(let i = 0;i < w.length;i++){
+//         let item = {
+//             id: w[i].id,
+//             name: w[i].title,
+//             model: w[i].mode_id,
+//             type: 'incident',
+//             x:  parseFloat(w[i].x),
+//             y: parseFloat(w[i].y),
+//             z: parseFloat(w[i].z),
+//             normalX: parseFloat(w[i].normal_x ?? 0) ?? 0,
+//             normalY: parseFloat(w[i].normal_y ?? 1) ?? 1,
+//             normalZ: parseFloat(w[i].normal_z ?? 0) ?? 0,
+//             status: w[i].status ? 'Abierto': 'Cerrado'
+//         };
+//         anchors.push(item);
+//         createMarker(item);
+//         addToTable(item);
+//     }
+//
+// }
+//
 
 function buildElementInfoUI({ info, propertySets }) {
 
@@ -2484,20 +2938,200 @@ toggle.addEventListener('click', () => {
 
 
 
-document.getElementsByName('loadIfc').forEach((e) => {
-    e.addEventListener('click',async ()=>{
-        showLoading()
-        try {
-            let u = e.dataset.url;
-            let id = e.dataset.name //+ Math.floor(Math.random() * 100) + 1;
-            await ifcLoader(u, id)
-            fragments.core.update()
-        } catch (error) {
 
+/* =========================================================
+   MODELOS ONLINE / OFFLINE
+========================================================= */
+
+const modelsContainer = document.getElementById('modal-models-list');
+const offlineModelsMessage = document.getElementById('offline-models-message');
+
+const onlineModelsHTML = modelsContainer?.innerHTML ?? '';
+const currentProjectId = modelsContainer?.dataset.projectId;
+
+
+/**
+ * Recupera los modelos descargados del proyecto actual.
+ */
+async function loadOfflineModels() {
+
+    if (!modelsContainer || !currentProjectId) return;
+
+    try {
+
+        if (!window.BIMNovaOffline) {
+            console.warn('BIMNovaOffline no está disponible.');
+            return;
         }
-        hideLoading()
-    })
-})
+
+        const projects = await BIMNovaOffline.getProjects();
+
+        const project = projects.find(p =>
+            String(p.projectId) === String(currentProjectId) &&
+            p.status === 'downloaded'
+        );
+
+        if (!project || !project.manifest) {
+            modelsContainer.innerHTML = '';
+
+            offlineModelsMessage?.classList.remove('d-none');
+
+            return;
+        }
+
+        const models = project.manifest.models || [];
+
+        modelsContainer.innerHTML = '';
+
+        offlineModelsMessage?.classList.add('d-none');
+
+        let availableModels = 0;
+
+        models.forEach(model => {
+
+            if (!model.frag?.url) return;
+
+            availableModels++;
+
+            const column = document.createElement('div');
+            column.className = 'col-md-6 col-lg-4';
+
+            const card = document.createElement('div');
+
+            card.className =
+                'model-card p-3 h-100 d-flex flex-column justify-content-between';
+
+            /*
+             * ifcLoader actualmente agrega ?type=frag.
+             * Por eso retiramos el query de la URL del manifiesto.
+             */
+const fragUrl = new URL(model.frag.url, window.location.origin);
+
+card.dataset.url = fragUrl.href;
+card.dataset.name = `${model.name}|${model.id}`;
+
+            card.setAttribute('name', 'loadIfc');
+            card.setAttribute('data-bs-dismiss', 'modal');
+
+            const iconContainer = document.createElement('div');
+            iconContainer.className = 'text-center mb-2';
+
+            const icon = document.createElement('i');
+            icon.className = 'nf nf-fa-cube model-icon';
+
+            iconContainer.appendChild(icon);
+
+            const title = document.createElement('div');
+            title.className =
+                'text-center small fw-semibold text-truncate';
+
+            title.textContent = model.name;
+            title.title = model.name;
+
+            const button = document.createElement('button');
+            button.className = 'btn btn-sm btn-primary w-100 mt-3';
+            button.textContent = 'Cargar';
+
+            card.appendChild(iconContainer);
+            card.appendChild(title);
+            card.appendChild(button);
+
+            column.appendChild(card);
+
+            modelsContainer.appendChild(column);
+
+        });
+
+        if (availableModels === 0) {
+            offlineModelsMessage?.classList.remove('d-none');
+        }
+
+        console.log(
+            `[BIMNova Offline] ${availableModels} modelos disponibles`
+        );
+
+    } catch (error) {
+
+        console.error(
+            '[BIMNova Offline] Error recuperando modelos:',
+            error
+        );
+
+    }
+}
+
+
+/**
+ * Cambia entre los modelos online y offline.
+ */
+function updateModelsAvailability() {
+
+    if (!modelsContainer) return;
+
+    if (navigator.onLine) {
+
+        modelsContainer.innerHTML = onlineModelsHTML;
+
+        offlineModelsMessage?.classList.add('d-none');
+
+    } else {
+
+        loadOfflineModels();
+
+    }
+}
+
+
+/* Actualizar al abrir el modal */
+document.getElementById('modal-models')?.addEventListener(
+    'show.bs.modal',
+    updateModelsAvailability
+);
+
+
+/* Actualizar al recuperar o perder conexión */
+window.addEventListener('offline', updateModelsAvailability);
+
+window.addEventListener('online', updateModelsAvailability);
+
+
+/* =========================================================
+   CARGAR MODELOS
+========================================================= */
+
+/*
+ * Delegación de eventos:
+ * funciona tanto con tarjetas generadas por Blade
+ * como con tarjetas creadas dinámicamente desde IndexedDB.
+ */
+document.addEventListener('click', async (event) => {
+
+    const card = event.target.closest('[name="loadIfc"]');
+
+    if (!card) return;
+
+    showLoading();
+
+    try {
+
+        const url = card.dataset.url;
+        const id = card.dataset.name;
+
+        await ifcLoader(url, id);
+
+        fragments.core.update();
+
+    } catch (error) {
+
+        console.error('Error cargando modelo:', error);
+
+    } finally {
+
+        hideLoading();
+
+    }
+
+});
 
 document.getElementById('btn-fit').addEventListener('click',async() =>{
     await world.camera.controls.setLookAt(68, 23, -8.5, 0, 0, 0);
