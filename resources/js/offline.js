@@ -2,20 +2,15 @@ const BIMNovaOffline = (() => {
 
     let registration = null;
 
-    /**
-     * Obtener el ID del usuario autenticado.
-     */
     function getUserId() {
         return document
             .querySelector('meta[name="bimnova-user-id"]')
             ?.content || null;
     }
 
-    /**
-     * Enviar mensajes al Service Worker.
-     */
     function sendMessage(type, data = {}) {
         return new Promise((resolve, reject) => {
+
             const controller = navigator.serviceWorker.controller;
 
             if (!controller) {
@@ -32,6 +27,13 @@ const BIMNovaOffline = (() => {
                 resolve(event.data);
             };
 
+            channel.port1.onmessageerror = () => {
+                channel.port1.close();
+                reject(new Error(
+                    'No se pudo recibir la respuesta del Service Worker.'
+                ));
+            };
+
             controller.postMessage(
                 { type, ...data },
                 [channel.port2]
@@ -39,10 +41,8 @@ const BIMNovaOffline = (() => {
         });
     }
 
-    /**
-     * Inicializar el sistema offline.
-     */
     async function init() {
+
         if (!('serviceWorker' in navigator)) {
             console.warn(
                 'Este navegador no soporta Service Worker.'
@@ -58,6 +58,7 @@ const BIMNovaOffline = (() => {
         }
 
         try {
+
             registration = await navigator.serviceWorker.register(
                 '/sw.js',
                 { scope: '/' }
@@ -90,6 +91,7 @@ const BIMNovaOffline = (() => {
             return true;
 
         } catch (error) {
+
             console.error(
                 'Error inicializando BIMNova Offline:',
                 error
@@ -100,10 +102,7 @@ const BIMNovaOffline = (() => {
     }
 
     /**
-     * Descargar archivos explícitamente para uso offline.
-     *
-     * El Service Worker solamente almacenará los archivos
-     * que reciban la cabecera X-BIMNova-Offline-Download.
+     * Descargar archivos FRAG explícitamente.
      */
     async function downloadFiles(urls, onProgress = null) {
 
@@ -128,6 +127,7 @@ const BIMNovaOffline = (() => {
             let result;
 
             try {
+
                 const response = await fetch(url, {
                     method: 'GET',
                     credentials: 'same-origin',
@@ -138,12 +138,17 @@ const BIMNovaOffline = (() => {
 
                 if (!response.ok) {
                     throw new Error(
-                        `No se pudo descargar ${url}: ${response.status}`
+                        `Error HTTP ${response.status}: ${url}`
+                    );
+                }
+                if (
+                    response.headers.get('X-BIMNova-Offline-Saved') !== '1'
+                ) {
+                    throw new Error(
+                        `El FRAG respondió correctamente, pero no pudo guardarse offline: ${url}`
                     );
                 }
 
-                // Consumir completamente la respuesta.
-                // El Service Worker almacena su propia copia.
                 await response.arrayBuffer();
 
                 result = {
@@ -171,6 +176,9 @@ const BIMNovaOffline = (() => {
                 onProgress({
                     current: index + 1,
                     total: urls.length,
+                    percentage: Math.round(
+                        ((index + 1) / urls.length) * 100
+                    ),
                     url,
                     result
                 });
@@ -181,9 +189,200 @@ const BIMNovaOffline = (() => {
     }
 
     /**
-     * Eliminar la descarga offline de un proyecto.
+     * Guardar el manifiesto de un proyecto en IndexedDB.
      */
-    async function deleteProjectDownload(projectId) {
+    async function saveProjectManifest(manifest, status = 'downloading') {
+
+        const userId = getUserId();
+
+        const result = await sendMessage('SAVE_PROJECT', {
+            userId,
+            project: {
+                ...manifest,
+                status
+            }
+        });
+
+        if (!result?.success) {
+            throw new Error(
+                'No se pudo guardar el proyecto en IndexedDB.'
+            );
+        }
+
+        return result.project;
+    }
+
+    /**
+     * Actualizar estado del proyecto.
+     */
+    async function updateProjectStatus(projectId, status) {
+
+        const userId = getUserId();
+
+        const result = await sendMessage(
+            'UPDATE_PROJECT_STATUS',
+            {
+                userId,
+                projectId: String(projectId),
+                status
+            }
+        );
+
+        if (!result?.success) {
+            throw new Error(
+                'No se pudo actualizar el estado del proyecto.'
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Descargar un proyecto completo.
+     */
+    async function downloadProject(projectId, onProgress = null) {
+
+        const userId = getUserId();
+
+        if (!userId) {
+            throw new Error(
+                'No se pudo identificar al usuario autenticado.'
+            );
+        }
+
+        if (!navigator.onLine) {
+            throw new Error(
+                'Necesitas conexión a Internet para descargar el proyecto.'
+            );
+        }
+
+        if (!navigator.serviceWorker.controller) {
+            throw new Error(
+                'El Service Worker todavía no está activo.'
+            );
+        }
+
+        const endpoint =
+            `/dashboard/offline/projects/${encodeURIComponent(projectId)}`;
+
+        try {
+
+            // 1. Obtener manifiesto del proyecto.
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    `No se pudo obtener el proyecto: HTTP ${response.status}`
+                );
+            }
+
+            const manifest = await response.json();
+
+            if (!manifest.success || !manifest.project) {
+                throw new Error(
+                    'La respuesta del servidor no contiene un proyecto válido.'
+                );
+            }
+
+            const projectIdFromServer = String(
+                manifest.project.id
+            );
+
+            // 2. Identificar los FRAG disponibles.
+            const modelsWithFrag = (manifest.models || [])
+                .filter(model => model.frag?.url);
+
+            const urls = modelsWithFrag.map(
+                model => model.frag.url
+            );
+
+            // 3. Guardar manifiesto con estado downloading.
+            await saveProjectManifest(
+                manifest,
+                'downloading'
+            );
+
+            // 4. Descargar todos los FRAG.
+            let results = [];
+
+            if (urls.length) {
+
+                results = await downloadFiles(
+                    urls,
+                    progress => {
+
+                        if (typeof onProgress === 'function') {
+                            onProgress({
+                                phase: 'files',
+                                project: manifest.project,
+                                current: progress.current,
+                                total: progress.total,
+                                percentage: progress.percentage,
+                                url: progress.url,
+                                result: progress.result
+                            });
+                        }
+                    }
+                );
+            }
+
+            const successful = results.filter(
+                result => result.success
+            ).length;
+
+            const failed = results.filter(
+                result => !result.success
+            );
+
+            // 5. Actualizar estado según el resultado.
+            const allDownloaded = failed.length === 0;
+
+            await updateProjectStatus(
+                projectIdFromServer,
+                allDownloaded ? 'downloaded' : 'partial'
+            );
+
+            const summary = {
+                success: allDownloaded,
+                project: manifest.project,
+                total: urls.length,
+                downloaded: successful,
+                failed: failed.length,
+                results
+            };
+
+            if (typeof onProgress === 'function') {
+                onProgress({
+                    phase: 'completed',
+                    project: manifest.project,
+                    percentage: 100,
+                    summary
+                });
+            }
+
+            return summary;
+
+        } catch (error) {
+
+            console.error(
+                'Error descargando proyecto offline:',
+                error
+            );
+
+            throw error;
+        }
+    }
+
+    /**
+     * Consultar proyectos guardados offline.
+     */
+    async function getProjects() {
 
         const userId = getUserId();
 
@@ -193,9 +392,30 @@ const BIMNovaOffline = (() => {
             );
         }
 
-        if (!navigator.serviceWorker.controller) {
+        const result = await sendMessage(
+            'GET_USER_PROJECTS',
+            { userId }
+        );
+
+        if (!result?.success) {
             throw new Error(
-                'El Service Worker todavía no está activo.'
+                'No se pudieron consultar los proyectos offline.'
+            );
+        }
+
+        return result.projects || [];
+    }
+
+    /**
+     * Eliminar descarga de un proyecto.
+     */
+    async function deleteProjectDownload(projectId) {
+
+        const userId = getUserId();
+
+        if (!userId) {
+            throw new Error(
+                'No se pudo identificar al usuario.'
             );
         }
 
@@ -211,7 +431,7 @@ const BIMNovaOffline = (() => {
     }
 
     /**
-     * Eliminar todos los archivos offline del usuario.
+     * Eliminar todos los datos offline del usuario.
      */
     async function clearCurrentUser() {
 
@@ -231,6 +451,8 @@ const BIMNovaOffline = (() => {
     return {
         init,
         downloadFiles,
+        downloadProject,
+        getProjects,
         deleteProjectDownload,
         clearCurrentUser,
 
@@ -249,9 +471,6 @@ window.BIMNovaOffline = BIMNovaOffline;
 
 BIMNovaOffline.init();
 
-/**
- * Eventos de conectividad.
- */
 window.addEventListener('online', () => {
     window.dispatchEvent(
         new CustomEvent('bimnova:online')
