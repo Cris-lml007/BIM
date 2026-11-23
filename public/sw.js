@@ -122,9 +122,20 @@ function buildFileKey(userId, url) {
  * fue solicitada explícitamente por el usuario.
  */
 async function saveFrag(userId, url, response) {
+    console.log('[BIMNova SW] Validando FRAG:', {
+        url,
+        userId,
+        status: response.status,
+        cacheable: response.headers.get('X-BIMNova-Cacheable'),
+        responseUserId: response.headers.get('X-BIMNova-User-Id'),
+        projectId: response.headers.get('X-BIMNova-Project-Id'),
+        contentType: response.headers.get('Content-Type')
+    });
+
     if (!userId || !response.ok) return false;
 
     if (response.headers.get('X-BIMNova-Cacheable') !== '1') {
+        console.warn('[BIMNova SW] FRAG no autorizado para almacenamiento offline.');
         return false;
     }
 
@@ -266,7 +277,7 @@ async function getProject(userId, projectId) {
 }
 
 /**
- * Obtener proyectos descargados de un usuario.
+ * Obtener proyectos de un usuario.
  */
 async function getUserProjects(userId) {
     const records = await dbOperation(
@@ -527,9 +538,7 @@ self.addEventListener('message', event => {
     const data = event.data || {};
 
     const respond = async () => {
-
         try {
-
             let result;
 
             switch (data.type) {
@@ -625,7 +634,6 @@ self.addEventListener('message', event => {
             event.ports?.[0]?.postMessage(result);
 
         } catch (error) {
-
             console.error(
                 '[BIMNova SW] Error procesando mensaje:',
                 error
@@ -665,12 +673,13 @@ self.addEventListener('fetch', event => {
         const headers = new Headers(request.headers);
         headers.delete(DOWNLOAD_HEADER);
 
+        // Para descargas explícitas, evitar la caché HTTP.
         const networkRequest = new Request(request, {
-            headers
+            headers,
+            cache: explicitDownload ? 'no-store' : request.cache
         });
 
         try {
-
             const response = await fetch(networkRequest);
 
             if (!response.ok) {
@@ -678,14 +687,12 @@ self.addEventListener('fetch', event => {
             }
 
             if (explicitDownload) {
-
                 console.log(
                     '[BIMNova SW] Descarga offline solicitada:',
                     request.url
                 );
 
                 try {
-
                     const saved = await saveFrag(
                         userId,
                         request.url,
@@ -709,7 +716,6 @@ self.addEventListener('fetch', event => {
                     });
 
                 } catch (error) {
-
                     console.error(
                         '[BIMNova SW] Error almacenando FRAG:',
                         error
@@ -735,7 +741,6 @@ self.addEventListener('fetch', event => {
             return response;
 
         } catch (error) {
-
             console.warn(
                 '[BIMNova SW] Sin conexión. Buscando FRAG local:',
                 request.url

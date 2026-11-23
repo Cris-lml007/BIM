@@ -1545,7 +1545,20 @@
                 initial-value: ""
             }
         </style>
-    @endif
+@endif
+<meta name="theme-color" content="#0F172A">
+
+<meta name="description"
+    content="BIMNova: plataforma de visualización BIM, gestión de proyectos y realidad aumentada.">
+
+<link rel="manifest" href="{{ asset('manifest.json') }}">
+
+<link rel="icon" type="image/png"
+    sizes="192x192"
+    href="{{ asset('icons/bimnova-192.png') }}">
+
+<link rel="apple-touch-icon"
+    href="{{ asset('icons/bimnova-192.png') }}">
 </head>
 
 <body class="bg-dark text-white d-flex flex-column min-vh-100"
@@ -1761,8 +1774,8 @@
     <header class="site-header sticky-top border-bottom border-secondary border-opacity-25">
         <nav class="navbar navbar-expand-lg navbar-dark container py-3">
             <a class="navbar-brand d-flex align-items-center gap-2 me-lg-4" href="#inicio" aria-label="BIMNova, inicio">
-{{-- <i class="bi bi-buildings-fill fs-2 brand-mark"></i> --}}
-<img style="height:38px;" src="{{ asset('images/logo.png') }}"></img>
+                {{-- <i class="bi bi-buildings-fill fs-2 brand-mark"></i> --}}
+                <img style="height:38px;" src="{{ asset('images/logo.png') }}"></img>
                 <span class="h3 mb-0 fw-bold">BIM<span class="text-primary">Nova</span></span>
             </a>
 
@@ -1785,15 +1798,28 @@
 
                 <div
                     class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center gap-2 mt-3 mt-lg-0">
+
+                    <button type="button" id="installAppBtn" class="btn btn-light rounded-pill px-4 d-none">
+                        <i class="fas fa-download mr-1"></i>
+                        Instalar BIMNova
+                    </button>
+
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="btn btn-outline-light rounded-pill px-4">Mi plataforma</a>
+                        <a href="{{ url('/dashboard') }}" class="btn btn-outline-light rounded-pill px-4">
+                            Mi plataforma
+                        </a>
                     @else
-                        <a href="{{ route('login') }}"
-                            class="btn btn-link text-white text-decoration-none fw-semibold">Iniciar sesión</a>
+                        <a href="{{ route('login') }}" class="btn btn-link text-white text-decoration-none fw-semibold">
+                            Iniciar sesión
+                        </a>
+
                         @if (Route::has('register'))
-                            <a href="{{ route('register') }}" class="btn btn-primary rounded-pill px-4">Registrarse</a>
+                            <a href="{{ route('register') }}" class="btn btn-primary rounded-pill px-4">
+                                Registrarse
+                            </a>
                         @endif
                     @endauth
+
                 </div>
             </div>
         </nav>
@@ -2545,6 +2571,91 @@
 
             window.location.href = mailto;
         });
+    </script>
+
+    <script>
+
+document.addEventListener('DOMContentLoaded', () => {
+    const installButton = document.getElementById('installAppBtn');
+
+    if (!installButton) return;
+
+    let deferredPrompt = null;
+
+    const isStandalone = () =>
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true;
+
+    // Ocultar si ya está instalada.
+    if (isStandalone()) {
+        installButton.classList.add('d-none');
+        return;
+    }
+
+    // Detectar iOS.
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if (isIOS) {
+        installButton.classList.remove('d-none');
+
+        installButton.addEventListener('click', () => {
+            alert(
+                'Para instalar BIMNova:\n\n' +
+                '1. Pulsa el botón Compartir del navegador.\n' +
+                '2. Selecciona "Añadir a pantalla de inicio".\n' +
+                '3. Confirma la instalación.'
+            );
+        });
+
+        return;
+    }
+
+    // Evento de instalación de Chrome y Edge.
+    window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+
+        deferredPrompt = event;
+
+        installButton.classList.remove('d-none');
+
+        console.log('[BIMNova PWA] Instalación disponible.');
+    });
+
+    // Ejecutar instalación.
+    installButton.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+
+        installButton.disabled = true;
+
+        try {
+            deferredPrompt.prompt();
+
+            const result = await deferredPrompt.userChoice;
+
+            console.log('[BIMNova PWA] Resultado:', result.outcome);
+
+            deferredPrompt = null;
+
+            if (result.outcome === 'accepted') {
+                installButton.classList.add('d-none');
+            }
+
+        } catch (error) {
+            console.error('[BIMNova PWA] Error:', error);
+        } finally {
+            installButton.disabled = false;
+        }
+    });
+
+    // Instalación confirmada.
+    window.addEventListener('appinstalled', () => {
+        console.log('[BIMNova PWA] Aplicación instalada.');
+
+        deferredPrompt = null;
+
+        installButton.classList.add('d-none');
+    });
+});
     </script>
 </body>
 
