@@ -44,7 +44,20 @@
 
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Guargar</button>
+            <button type="submit"
+                    class="btn btn-primary"
+                    wire:loading.attr="disabled"
+                    wire:target="file,thumbnail,frag,save">
+
+    <span wire:loading.remove wire:target="file,thumbnail,frag,save">
+        Guardar
+    </span>
+
+                <span wire:loading wire:target="file,thumbnail,frag,save">
+        <span class="spinner-border spinner-border-sm"></span>
+        Procesando archivos...
+    </span>
+            </button>
             <button data-bs-dismiss="modal" type="reset" class="btn btn-secondary">Cancelar</button>
             <span wire:loading wire:target="save">
                 <span class="spinner-border spinner-border-sm"></span>
