@@ -8,9 +8,9 @@ use App\Models\Project;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Illuminate\Validation\ValidationException;
 
 class Model3dForm extends Component
 {
@@ -19,68 +19,100 @@ class Model3dForm extends Component
     public $name;
     public $description;
     public $file;
-    public Project $project;
     public $thumbnail;
     public $frag;
 
-    public function mount(Project $project){
+    public Project $project;
+
+    public function mount(Project $project)
+    {
         $this->project = $project;
-        // dd(phpinfo());
     }
 
-    public function save(){
-        // dd($this->thumbnail);
-        // dd($this->file->extension());
+    public function save()
+    {
         $this->validate([
-            'name' => 'required',
-            'description' => 'required',
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
             'file' => 'required|file|extensions:ifc',
             'thumbnail' => 'required|image|mimes:png',
             'frag' => 'required|file|extensions:frag',
         ]);
 
-        if($this->project->models->count() >= Auth::user()->access->max_models){
-            return $this->js('Swal.fire({icon: "warning", title: "Numero de Modelos Maximos Superados"})');
+        $user = Auth::user();
+
+        if ($this->project->models()->count() >= $user->access->max_models) {
+            return $this->js(
+                'Swal.fire({
+                    icon: "warning",
+                    title: "Número máximo de modelos superado"
+                })'
+            );
         }
 
-        $type = $this->file->getClientOriginalExtension();
+        $projectId = $this->project->id;
 
-        $id = $this->project->id;
+        Storage::makeDirectory("projects/{$projectId}");
+        Storage::makeDirectory("projects/{$projectId}/thumbnails");
 
-        if(!Storage::directoryExists("projects/$id")){
-            Storage::makeDirectory("projects/$id");
+        $type = strtolower($this->file->getClientOriginalExtension());
+
+        do {
+            $hash = Str::random(64);
+        } while (Attachment::where('file', "{$hash}.{$type}")->exists());
+
+        $ifcName = "{$hash}.{$type}";
+        $fragName = "{$hash}.frag";
+
+        // Guardar los archivos.
+        $ifcPath = $this->file->storeAs(
+            "projects/{$projectId}",
+            $ifcName
+        );
+
+        $fragPath = $this->frag->storeAs(
+            "projects/{$projectId}",
+            $fragName
+        );
+
+        if (!$ifcPath || !$fragPath) {
+            throw ValidationException::withMessages([
+                'file' => 'No se pudieron guardar los archivos del modelo. Intenta nuevamente.',
+            ]);
         }
 
+        // Crear el modelo.
         $model = Model3D::create([
             'name' => $this->name,
             'description' => $this->description,
-            'project_id' => $this->project->id,
-            'user_id' => Auth::user()->id
+            'project_id' => $projectId,
+            'user_id' => $user->id,
         ]);
-
-        do{
-            $hash = Str::random(64);
-        }while(Attachment::where('file',$hash)->exists());
-
-        $hash1 = "$hash.frag";
-        $hash = "$hash.$type";
-        $this->file->storeAs(path: "projects/$id",name: $hash);
-        $this->frag->storeAs(path: "projects/$id",name: $hash1);
 
         $attachment = Attachment::create([
             'name' => $model->name,
-            'file' => $hash,
+            'file' => $ifcName,
             'type' => $type,
-            'path' => "projects/$id",
+            'path' => "projects/{$projectId}",
             'fileable_id' => $model->id,
-            'fileable_type' => Model3D::class
+            'fileable_type' => Model3D::class,
         ]);
 
-        $this->thumbnail->storeAs(path: "projects/$id/thumbnails",name: $attachment->id.'.png');
+        $thumbnailPath = $this->thumbnail->storeAs(
+            "projects/{$projectId}/thumbnails",
+            $attachment->id . '.png'
+        );
 
-        return $this->redirect(route('app.project.model3d',$id));
+        if (!$thumbnailPath) {
+            throw ValidationException::withMessages([
+                'thumbnail' => 'No se pudo guardar la imagen de vista previa.',
+            ]);
+        }
+
+        return $this->redirect(
+            route('app.project.model3d', $projectId)
+        );
     }
-
 
     public function render()
     {
