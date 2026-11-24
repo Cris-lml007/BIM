@@ -6,6 +6,7 @@ use App\Http\Controllers\DocumentsController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\OfflineProjectController;
 use App\Livewire\Admin\Report;
 use App\Livewire\Admin\TutorialManager;
 use App\Livewire\Admin\UserAudit;
@@ -91,6 +92,12 @@ Route::prefix('/dashboard')->middleware('auth')->group(function () {
 
     Route::get('/documents/{document}/view', [DocumentsController::class, 'view'])
         ->name('documents.view');
+
+    Route::get(
+        'offline/projects/{project}',
+        [OfflineProjectController::class, 'show']
+    )->name('offline.projects.show');
+
 });
 
 Route::get('/invitation/{token}', [InvitationController::class, 'accept'])

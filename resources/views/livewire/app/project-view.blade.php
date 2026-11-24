@@ -1,10 +1,51 @@
 <div>
-    <x-slot name="header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h1 class="h2 fw-bold text-dark mb-0">{{ strtoupper($project->name) }}</h1>
+<x-slot name="header">
+    <div class="w-100">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h1 class="h2 fw-bold text-dark mb-2">
+                {{ strtoupper($project->name) }}
+            </h1>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button"
+                    id="btn-download-project"
+                    class="btn btn-sm btn-outline-primary"
+                    data-project-id="{{ $project->id }}">
+                    <i class="fas fa-cloud-download-alt mr-1"></i>
+                    Descargar proyecto
+                </button>
+
+                <button type="button"
+                    id="btn-delete-project"
+                    class="btn btn-sm btn-outline-danger d-none"
+                    data-project-id="{{ $project->id }}">
+                    <i class="fas fa-trash-alt mr-1"></i>
+                    Eliminar descarga offline
+                </button>
+            </div>
         </div>
 
-    </x-slot>
+        <div id="project-download-container" class="mt-3 d-none w-100">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <small id="project-download-status">
+                    Preparando descarga...
+                </small>
+
+                <small id="project-download-percentage">0%</small>
+            </div>
+
+            <div class="progress" style="height: 7px;">
+                <div id="project-download-progress"
+                    class="progress-bar"
+                    role="progressbar"
+                    style="width: 0%">
+                </div>
+            </div>
+        </div>
+
+    </div>
+</x-slot>
     <x-card>
         <div class="container-fluid py-4">
             <div class="row g-4">
@@ -15,7 +56,7 @@
                                 <div>
                                     <p class="text-muted mb-1 small">Modelos 3D</p>
                                     <h2
-            class="display-6 fw-semibold mb-0 @if ($stats['models3d'] >= $project->owner->access->max_models) text-danger @endif">
+                                        class="display-6 fw-semibold mb-0 @if ($stats['models3d'] >= $project->owner->access->max_models) text-danger @endif">
                                         {{ $stats['models3d'] }}</h2>
                                 </div>
                                 <div class="bg-purple bg-opacity-10 rounded-3 p-3">
@@ -254,3 +295,304 @@
         border-color: #f0f0f0;
     }
 </style>
+
+
+@script
+<script>
+(async function initProjectOffline() {
+
+    const downloadButton = document.getElementById('btn-download-project');
+    const deleteButton = document.getElementById('btn-delete-project');
+
+    const downloadContainer = document.getElementById('project-download-container');
+    const downloadStatus = document.getElementById('project-download-status');
+    const downloadPercentage = document.getElementById('project-download-percentage');
+    const downloadProgress = document.getElementById('project-download-progress');
+
+    if (!downloadButton || !deleteButton || !downloadContainer) {
+        console.warn('[BIMNova Offline] No se encontraron los elementos necesarios.');
+        return;
+    }
+
+    const projectId = String(downloadButton.dataset.projectId);
+
+    if (projectId !== String(deleteButton.dataset.projectId)) {
+        console.error('[BIMNova Offline] Los IDs de proyecto no coinciden.');
+        return;
+    }
+
+    const originalDownloadContent = downloadButton.innerHTML;
+    const originalDeleteContent = deleteButton.innerHTML;
+
+    let processing = false;
+
+    async function waitForOfflineModule(maxAttempts = 30) {
+        for (let i = 0; i < maxAttempts; i++) {
+            if (
+                window.BIMNovaOffline &&
+                typeof window.BIMNovaOffline.getProjects === 'function' &&
+                typeof window.BIMNovaOffline.downloadProject === 'function' &&
+                typeof window.BIMNovaOffline.deleteProjectDownload === 'function'
+            ) {
+                return true;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        return false;
+    }
+
+    function setDownloadButton(state) {
+        downloadButton.classList.remove('d-none');
+
+        switch (state) {
+            case 'loading':
+                downloadButton.disabled = true;
+                downloadButton.innerHTML =
+                    '<i class="fas fa-spinner fa-spin mr-1"></i> Descargando...';
+                break;
+
+            case 'downloaded':
+                downloadButton.classList.add('d-none');
+                downloadButton.disabled = false;
+                downloadButton.innerHTML = originalDownloadContent;
+                break;
+
+            case 'retry':
+                downloadButton.disabled = false;
+                downloadButton.innerHTML =
+                    '<i class="fas fa-redo mr-1"></i> Reintentar descarga';
+                break;
+
+            default:
+                downloadButton.disabled = false;
+                downloadButton.innerHTML = originalDownloadContent;
+        }
+    }
+
+    function setDeleteButton(state) {
+        switch (state) {
+            case 'hidden':
+                deleteButton.classList.add('d-none');
+                deleteButton.disabled = false;
+                deleteButton.innerHTML = originalDeleteContent;
+                break;
+
+            case 'loading':
+                deleteButton.classList.remove('d-none');
+                deleteButton.disabled = true;
+                deleteButton.innerHTML =
+                    '<i class="fas fa-spinner fa-spin mr-1"></i> Eliminando...';
+                break;
+
+            default:
+                deleteButton.classList.remove('d-none');
+                deleteButton.disabled = false;
+                deleteButton.innerHTML = originalDeleteContent;
+        }
+    }
+
+    function resetProgress() {
+        downloadContainer.classList.add('d-none');
+
+        downloadProgress.style.width = '0%';
+        downloadProgress.className = 'progress-bar';
+
+        downloadPercentage.textContent = '0%';
+        downloadStatus.textContent = 'Preparando descarga...';
+    }
+
+    async function refreshProjectState() {
+        const available = await waitForOfflineModule();
+
+        if (!available) {
+            console.warn('[BIMNova Offline] Módulo offline no disponible.');
+            return;
+        }
+
+        try {
+            const projects = await window.BIMNovaOffline.getProjects();
+
+            const project = projects.find(
+                item => String(item.projectId) === projectId
+            );
+
+            console.log('[BIMNova Offline] Estado del proyecto:', project);
+
+            if (project?.status === 'downloaded') {
+                setDownloadButton('downloaded');
+                setDeleteButton('visible');
+            } else if (project) {
+                // Si existe una descarga parcial, permitimos reintentar
+                // y también eliminar los archivos descargados.
+                setDownloadButton('retry');
+                setDeleteButton('visible');
+            } else {
+                setDownloadButton('default');
+                setDeleteButton('hidden');
+            }
+
+        } catch (error) {
+            console.error('[BIMNova Offline] Error consultando proyecto:', error);
+        }
+    }
+
+    // ELIMINAR DESCARGA OFFLINE
+    deleteButton.addEventListener('click', async () => {
+
+        if (processing) return;
+
+        const confirmed = confirm(
+            '¿Deseas eliminar la descarga offline de este proyecto?\n\n' +
+            'Los archivos originales del servidor no serán afectados.'
+        );
+
+        if (!confirmed) return;
+
+        processing = true;
+        setDeleteButton('loading');
+
+        try {
+            const available = await waitForOfflineModule();
+
+            if (!available) {
+                throw new Error('El módulo offline no está disponible.');
+            }
+
+            const deleted = await window.BIMNovaOffline.deleteProjectDownload(projectId);
+
+            const projects = await window.BIMNovaOffline.getProjects();
+
+            const remaining = projects.find(
+                item => String(item.projectId) === projectId
+            );
+
+            if (remaining) {
+                throw new Error('El proyecto continúa registrado en IndexedDB.');
+            }
+
+            setDeleteButton('hidden');
+            setDownloadButton('default');
+
+            resetProgress();
+
+            console.log('[BIMNova Offline] Descarga eliminada:', {
+                projectId,
+                deletedFiles: deleted
+            });
+
+            alert(
+                'La descarga offline fue eliminada correctamente.\n' +
+                'Archivos eliminados: ' + deleted
+            );
+
+        } catch (error) {
+            console.error('[BIMNova Offline] Error eliminando proyecto:', error);
+
+            setDeleteButton('visible');
+
+            alert('No se pudo eliminar la descarga offline: ' + error.message);
+
+        } finally {
+            processing = false;
+        }
+    });
+
+    // DESCARGAR PROYECTO
+    downloadButton.addEventListener('click', async () => {
+
+        if (processing) return;
+
+        if (!navigator.onLine) {
+            alert('Necesitas conexión a Internet para descargar el proyecto.');
+            return;
+        }
+
+        processing = true;
+        setDownloadButton('loading');
+
+        downloadContainer.classList.remove('d-none');
+
+        downloadProgress.className = 'progress-bar';
+        downloadProgress.style.width = '0%';
+
+        downloadPercentage.textContent = '0%';
+        downloadStatus.textContent = 'Preparando proyecto...';
+
+        try {
+            const available = await waitForOfflineModule();
+
+            if (!available) {
+                throw new Error('El módulo de descargas offline no está disponible.');
+            }
+
+            const result = await window.BIMNovaOffline.downloadProject(
+                projectId,
+                progress => {
+
+                    const percentage = progress.percentage ?? 0;
+
+                    downloadProgress.style.width = `${percentage}%`;
+                    downloadPercentage.textContent = `${percentage}%`;
+
+                    if (progress.phase === 'files') {
+                        downloadStatus.textContent =
+                            `Descargando modelos (${progress.current}/${progress.total})`;
+
+                    } else if (progress.phase === 'completed') {
+                        downloadStatus.textContent = 'Finalizando descarga...';
+                    }
+                }
+            );
+
+            downloadProgress.className = 'progress-bar';
+
+            if (result.success) {
+
+                downloadProgress.classList.add('bg-success');
+                downloadProgress.style.width = '100%';
+
+                downloadPercentage.textContent = '100%';
+
+                downloadStatus.textContent =
+                    `Proyecto descargado correctamente. ${result.downloaded} modelo(s).`;
+
+                setDownloadButton('downloaded');
+                setDeleteButton('visible');
+
+            } else {
+
+                downloadProgress.classList.add('bg-warning');
+
+                downloadStatus.textContent =
+                    `Descarga incompleta: ${result.downloaded} correcto(s), ` +
+                    `${result.failed} fallido(s).`;
+
+                setDownloadButton('retry');
+                setDeleteButton('visible');
+            }
+
+            console.log('[BIMNova Offline] Resultado:', result);
+
+        } catch (error) {
+
+            console.error('[BIMNova Offline] Error:', error);
+
+            downloadProgress.classList.add('bg-danger');
+
+            downloadStatus.textContent = 'Error al descargar el proyecto.';
+
+            setDownloadButton('retry');
+
+        } finally {
+            processing = false;
+        }
+    });
+
+    // Comprobar el estado al entrar a la página.
+    await refreshProjectState();
+
+})();
+</script>
+@endscript

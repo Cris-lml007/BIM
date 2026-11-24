@@ -1,0 +1,32 @@
+{
+    "id": "/",
+    "name": "BIMNova",
+    "short_name": "BIMNova",
+    "description": "Plataforma de visualización BIM, gestión de proyectos y realidad aumentada.",
+    "lang": "es",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#0F172A",
+    "theme_color": "#0F172A",
+    "categories": [
+        "productivity",
+        "business",
+        "education"
+    ],
+    "icons": [
+        {
+            "src": "/icons/bimnova-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/bimnova-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}

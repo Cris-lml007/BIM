@@ -1,5 +1,9 @@
 @extends('adminlte::page')
 
+@section('meta_tags')
+    <meta name="bimnova-user-id" content="{{ auth()->id() }}">
+@endsection
+
 @section('content')
     <div class="container">
         <div class="content-header" style="padding: 15px 0 !important;">

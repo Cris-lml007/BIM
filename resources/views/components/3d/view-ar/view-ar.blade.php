@@ -116,6 +116,20 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        .ar-model-load-card {
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 10px;
+            background: rgba(255,255,255,.06);
+            transition: background .2s ease, border-color .2s ease;
+        }
+
+        .ar-model-load-card:hover,
+        .ar-model-load-card:active {
+            background: rgba(37,99,235,.18);
+            border-color: rgba(59,130,246,.7);
+        }
+
         /* =====================================================
            FAB BAR
            ===================================================== */
@@ -916,6 +930,42 @@ data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
             </div>
         </div>
 
+        <!-- PANEL: CARGAR OTROS MODELOS DEL PROYECTO -->
+        <div id="ar-panel-models" class="ar-floating-panel">
+            <div class="ar-panel-header">
+                <span><i class="bi bi-boxes me-2"></i>Modelos del proyecto</span>
+                <button type="button" class="ar-panel-close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="ar-panel-body">
+                <p class="small text-white-50 mb-3">
+                    Los modelos se agregarán al mismo anclaje virtual, conservando sus coordenadas.
+                </p>
+                <div class="row g-2">
+                    @foreach ($models as $item)
+                        @if ($item->id !== $model->id)
+                            <div class="col-12">
+                                <div class="ar-model-load-card p-3 d-flex align-items-center justify-content-between gap-2"
+                                    data-url="{{ route('app.Attachment', $item->id) }}"
+                                    data-name="{{ $item->name . '|' . $item->id }}"
+                                    name="loadIfc">
+                                    <div class="d-flex align-items-center gap-2 min-w-0">
+                                        <i class="bi bi-box text-primary fs-4"></i>
+                                        <span class="small fw-semibold text-truncate" title="{{ $item->name }}">
+                                            {{ $item->name }}
+                                        </span>
+                                    </div>
+                                    <span class="badge bg-primary">Cargar</span>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
         <!-- PANEL: OPACIDAD -->
         <div id="ar-panel-opacity" class="ar-floating-panel">
             <div class="ar-panel-header">
@@ -1166,6 +1216,10 @@ data-anchor-normal-z="{{ $currentAnchor['normal_z'] ?? 0 }}">
 
         <!-- FAB BAR -->
         <div id="ar-fab-bar">
+
+            <button type="button" class="ar-fab" data-panel="models" title="Cargar modelos">
+                <i class="bi bi-boxes"></i>
+            </button>
 
             <button type="button" class="ar-fab" data-panel="opacity" title="Opacidad">
                 <i class="bi bi-droplet-half"></i>

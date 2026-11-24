@@ -19,6 +19,8 @@ import * as BUIC from '@thatopen/ui-obc'
 
 import { ARButton } from 'three/examples/jsm/Addons.js';
 
+import './offline.js';
+
 window.Swal = Swal;
 window.THREE = THREE;
 window.GLTFLoader = GLTFLoader;
